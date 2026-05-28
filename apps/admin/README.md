@@ -306,3 +306,4 @@ vercel --prod
 ```
 
 The `next.config.ts` sets `transpilePackages: ['@trackdesk/shared']` so the shared types package is compiled as part of the Next.js build without needing a pre-build step.
+
