@@ -18,10 +18,12 @@ export default function TimesheetsPage() {
 
   useEffect(() => {
     initAuth();
-    Promise.all([
-      apiClient.get<User[]>('/users'),
-      apiClient.get<Project[]>('/projects'),
-    ]).then(([u, p]) => { setUsers(u); setProjects(p); });
+    Promise.all([apiClient.get<User[]>('/users'), apiClient.get<Project[]>('/projects')]).then(
+      ([u, p]) => {
+        setUsers(u);
+        setProjects(p);
+      },
+    );
     load(1);
   }, []);
 
@@ -57,7 +59,11 @@ export default function TimesheetsPage() {
           onChange={(e) => setFilters((f) => ({ ...f, userId: e.target.value }))}
         >
           <option value="">All Employees</option>
-          {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
         </select>
         <select
           className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm"
@@ -65,13 +71,30 @@ export default function TimesheetsPage() {
           onChange={(e) => setFilters((f) => ({ ...f, projectId: e.target.value }))}
         >
           <option value="">All Projects</option>
-          {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
         </select>
-        <input type="date" className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm"
-          value={filters.startDate} onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))} />
-        <input type="date" className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm"
-          value={filters.endDate} onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))} />
-        <button className="bg-primary text-white text-sm px-4 py-2 rounded-lg" onClick={() => load(1)}>Apply</button>
+        <input
+          type="date"
+          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+          value={filters.startDate}
+          onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))}
+        />
+        <input
+          type="date"
+          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm"
+          value={filters.endDate}
+          onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))}
+        />
+        <button
+          className="bg-primary text-white text-sm px-4 py-2 rounded-lg"
+          onClick={() => load(1)}
+        >
+          Apply
+        </button>
       </div>
 
       <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
@@ -79,7 +102,9 @@ export default function TimesheetsPage() {
           <thead className="bg-slate-900 text-slate-400">
             <tr>
               {['Employee', 'Project', 'Description', 'Start', 'End', 'Duration'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
+                <th key={h} className="px-4 py-3 text-left font-medium">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -91,9 +116,15 @@ export default function TimesheetsPage() {
                 <tr key={e.id} className="hover:bg-slate-700/30">
                   <td className="px-4 py-3 font-medium">{user?.name ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-300">{project?.name ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-400 max-w-xs truncate">{e.description ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-400 whitespace-nowrap">{new Date(e.startedAt).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-slate-400 whitespace-nowrap">{e.endedAt ? new Date(e.endedAt).toLocaleString() : '—'}</td>
+                  <td className="px-4 py-3 text-slate-400 max-w-xs truncate">
+                    {e.description ?? '—'}
+                  </td>
+                  <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
+                    {new Date(e.startedAt).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-slate-400 whitespace-nowrap">
+                    {e.endedAt ? new Date(e.endedAt).toLocaleString() : '—'}
+                  </td>
                   <td className="px-4 py-3 font-mono">{formatDuration(e.durationSeconds)}</td>
                 </tr>
               );
@@ -106,11 +137,23 @@ export default function TimesheetsPage() {
       <div className="flex justify-between items-center mt-4 text-sm text-slate-400">
         <span>{total} total entries</span>
         <div className="flex gap-2">
-          <button className="px-3 py-1 rounded border border-slate-700 disabled:opacity-40"
-            disabled={page <= 1} onClick={() => load(page - 1)}>Prev</button>
-          <span className="px-2">{page} / {totalPages}</span>
-          <button className="px-3 py-1 rounded border border-slate-700 disabled:opacity-40"
-            disabled={page >= totalPages} onClick={() => load(page + 1)}>Next</button>
+          <button
+            className="px-3 py-1 rounded border border-slate-700 disabled:opacity-40"
+            disabled={page <= 1}
+            onClick={() => load(page - 1)}
+          >
+            Prev
+          </button>
+          <span className="px-2">
+            {page} / {totalPages}
+          </span>
+          <button
+            className="px-3 py-1 rounded border border-slate-700 disabled:opacity-40"
+            disabled={page >= totalPages}
+            onClick={() => load(page + 1)}
+          >
+            Next
+          </button>
         </div>
       </div>
     </AdminLayout>

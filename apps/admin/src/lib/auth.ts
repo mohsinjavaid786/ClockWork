@@ -13,10 +13,10 @@ export interface AdminUser {
 }
 
 export async function login(email: string, password: string): Promise<AdminUser> {
-  const data = await apiClient.post<{ accessToken: string; user: AdminUser }>(
-    '/auth/login',
-    { email, password },
-  );
+  const data = await apiClient.post<{ accessToken: string; user: AdminUser }>('/auth/login', {
+    email,
+    password,
+  });
   if (data.user.role !== 'admin') {
     throw new Error('ACCESS_DENIED');
   }
@@ -41,7 +41,11 @@ export function getStoredUser(): AdminUser | null {
   if (typeof window === 'undefined') return null;
   const raw = sessionStorage.getItem(USER_KEY);
   if (!raw) return null;
-  try { return JSON.parse(raw) as AdminUser; } catch { return null; }
+  try {
+    return JSON.parse(raw) as AdminUser;
+  } catch {
+    return null;
+  }
 }
 
 export function initAuth() {

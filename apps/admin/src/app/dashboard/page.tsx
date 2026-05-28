@@ -8,10 +8,20 @@ import { apiClient } from '@/lib/api';
 import { initAuth } from '@/lib/auth';
 import type { TimeEntry, User } from '@trackdesk/shared';
 
-interface LiveEmployee { name: string; email: string; elapsed: number; }
+interface LiveEmployee {
+  name: string;
+  email: string;
+  elapsed: number;
+}
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ todayHours: 0, activeNow: 0, screenshotsToday: 0, weeklyHours: 0, lastWeekHours: 0 });
+  const [stats, setStats] = useState({
+    todayHours: 0,
+    activeNow: 0,
+    screenshotsToday: 0,
+    weeklyHours: 0,
+    lastWeekHours: 0,
+  });
   const [liveEmployees, setLiveEmployees] = useState<LiveEmployee[]>([]);
   const [chartData, setChartData] = useState<DailyEntry[]>([]);
   const [employees, setEmployees] = useState<string[]>([]);
@@ -31,7 +41,9 @@ export default function DashboardPage() {
     weekStart.setHours(0, 0, 0, 0);
 
     const [entriesRes, screenshotsRes, usersRes] = await Promise.allSettled([
-      apiClient.get<{ data: TimeEntry[] }>(`/time-entries?startDate=${weekStart.toISOString()}&limit=200`),
+      apiClient.get<{ data: TimeEntry[] }>(
+        `/time-entries?startDate=${weekStart.toISOString()}&limit=200`,
+      ),
       apiClient.get<{ data: unknown[] }>(`/screenshots?startDate=${todayStr}T00:00:00Z`),
       apiClient.get<User[]>('/users'),
     ]);
@@ -56,10 +68,17 @@ export default function DashboardPage() {
         });
 
       setLiveEmployees(live);
-      setStats((s) => ({ ...s, todayHours: Math.round(todayHours * 10) / 10, activeNow: live.length, weeklyHours: Math.round(weeklyHours * 10) / 10 }));
+      setStats((s) => ({
+        ...s,
+        todayHours: Math.round(todayHours * 10) / 10,
+        activeNow: live.length,
+        weeklyHours: Math.round(weeklyHours * 10) / 10,
+      }));
 
       // Build chart data (last 7 days per employee)
-      const empNames = [...new Set(entries.map((e) => users.find((u) => u.id === e.userId)?.name ?? e.userId))];
+      const empNames = [
+        ...new Set(entries.map((e) => users.find((u) => u.id === e.userId)?.name ?? e.userId)),
+      ];
       const days: DailyEntry[] = [];
       for (let i = 6; i >= 0; i--) {
         const d = new Date(now);
@@ -68,9 +87,10 @@ export default function DashboardPage() {
         const row: DailyEntry = { date: dayStr.slice(5) };
         for (const name of empNames) {
           const user = users.find((u) => u.name === name);
-          const h = entries
-            .filter((e) => e.userId === user?.id && e.startedAt.startsWith(dayStr))
-            .reduce((s, e) => s + (e.durationSeconds ?? 0), 0) / 3600;
+          const h =
+            entries
+              .filter((e) => e.userId === user?.id && e.startedAt.startsWith(dayStr))
+              .reduce((s, e) => s + (e.durationSeconds ?? 0), 0) / 3600;
           row[name] = Math.round(h * 10) / 10;
         }
         days.push(row);

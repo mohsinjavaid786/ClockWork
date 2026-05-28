@@ -58,7 +58,11 @@ export default function SettingsPage() {
             value={config[key]}
             onChange={(e) => setConfig((c) => ({ ...c, [key]: e.target.value }))}
           >
-            {options.map((o) => <option key={o} value={o}>{o}</option>)}
+            {options.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
           </select>
         ) : (
           <input

@@ -8,7 +8,9 @@ import { apiClient } from '@/lib/api';
 import { initAuth } from '@/lib/auth';
 import type { User, TimeEntry, Screenshot } from '@trackdesk/shared';
 
-interface Props { params: Promise<{ userId: string }>; }
+interface Props {
+  params: Promise<{ userId: string }>;
+}
 
 export default function UserDetailPage({ params }: Props) {
   const { userId } = use(params);
@@ -29,8 +31,12 @@ export default function UserDetailPage({ params }: Props) {
   async function loadData(start: string, end: string) {
     const [u, e, s] = await Promise.allSettled([
       apiClient.get<User>(`/users/${userId}`),
-      apiClient.get<{ data: TimeEntry[] }>(`/time-entries?userId=${userId}&startDate=${start}&endDate=${end}&limit=100`),
-      apiClient.get<Screenshot[]>(`/screenshots?userId=${userId}&startDate=${start}&endDate=${end}`),
+      apiClient.get<{ data: TimeEntry[] }>(
+        `/time-entries?userId=${userId}&startDate=${start}&endDate=${end}&limit=100`,
+      ),
+      apiClient.get<Screenshot[]>(
+        `/screenshots?userId=${userId}&startDate=${start}&endDate=${end}`,
+      ),
     ]);
     if (u.status === 'fulfilled') setUser(u.value);
     if (e.status === 'fulfilled') setEntries(e.value.data);
@@ -44,7 +50,12 @@ export default function UserDetailPage({ params }: Props) {
     return `${h}h ${m}m`;
   }
 
-  if (!user) return <AdminLayout><p className="text-slate-400">Loading…</p></AdminLayout>;
+  if (!user)
+    return (
+      <AdminLayout>
+        <p className="text-slate-400">Loading…</p>
+      </AdminLayout>
+    );
 
   return (
     <AdminLayout>
@@ -57,7 +68,9 @@ export default function UserDetailPage({ params }: Props) {
           <h2 className="text-xl font-bold">{user.name}</h2>
           <p className="text-slate-400 text-sm">{user.email}</p>
         </div>
-        <Badge variant={user.isActive ? 'success' : 'error'}>{user.isActive ? 'Active' : 'Inactive'}</Badge>
+        <Badge variant={user.isActive ? 'success' : 'error'}>
+          {user.isActive ? 'Active' : 'Inactive'}
+        </Badge>
         <Badge variant={user.role === 'admin' ? 'warning' : 'default'}>{user.role}</Badge>
       </div>
 
@@ -84,7 +97,10 @@ export default function UserDetailPage({ params }: Props) {
           <h3 className="font-semibold mb-4">Time Entries</h3>
           <ul className="flex flex-col gap-2 max-h-64 overflow-y-auto">
             {entries.map((e) => (
-              <li key={e.id} className="flex justify-between items-center text-sm border-b border-slate-700 pb-2">
+              <li
+                key={e.id}
+                className="flex justify-between items-center text-sm border-b border-slate-700 pb-2"
+              >
                 <div>
                   <p className="font-medium">{e.description ?? 'No description'}</p>
                   <p className="text-slate-500 text-xs">{new Date(e.startedAt).toLocaleString()}</p>
@@ -112,7 +128,9 @@ export default function UserDetailPage({ params }: Props) {
                 )}
               </button>
             ))}
-            {screenshots.length === 0 && <p className="text-slate-500 text-sm col-span-3">No screenshots.</p>}
+            {screenshots.length === 0 && (
+              <p className="text-slate-500 text-sm col-span-3">No screenshots.</p>
+            )}
           </div>
         </div>
       </div>
@@ -126,10 +144,15 @@ export default function UserDetailPage({ params }: Props) {
           <div className="max-w-4xl w-full p-4">
             {selectedScreenshot.signedUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={selectedScreenshot.signedUrl} alt="full screenshot" className="w-full rounded-xl" />
+              <img
+                src={selectedScreenshot.signedUrl}
+                alt="full screenshot"
+                className="w-full rounded-xl"
+              />
             )}
             <p className="text-center text-slate-400 text-sm mt-2">
-              {new Date(selectedScreenshot.capturedAt).toLocaleString()} · Activity: {selectedScreenshot.activityPercent}%
+              {new Date(selectedScreenshot.capturedAt).toLocaleString()} · Activity:{' '}
+              {selectedScreenshot.activityPercent}%
             </p>
           </div>
         </div>

@@ -14,7 +14,10 @@ export default function TeamPage() {
   const [form, setForm] = useState({ name: '', email: '', role: 'member' as 'admin' | 'member' });
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { initAuth(); loadUsers(); }, []);
+  useEffect(() => {
+    initAuth();
+    loadUsers();
+  }, []);
 
   async function loadUsers() {
     const data = await apiClient.get<User[]>('/users');
@@ -55,7 +58,9 @@ export default function TeamPage() {
           <thead className="bg-slate-900 text-slate-400">
             <tr>
               {['Name', 'Email', 'Role', 'Status', 'Actions'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
+                <th key={h} className="px-4 py-3 text-left font-medium">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -63,7 +68,9 @@ export default function TeamPage() {
             {users.map((u) => (
               <tr key={u.id} className="hover:bg-slate-700/30 transition-colors">
                 <td className="px-4 py-3">
-                  <Link href={`/team/${u.id}`} className="font-medium hover:text-primary">{u.name}</Link>
+                  <Link href={`/team/${u.id}`} className="font-medium hover:text-primary">
+                    {u.name}
+                  </Link>
                 </td>
                 <td className="px-4 py-3 text-slate-400">{u.email}</td>
                 <td className="px-4 py-3">
@@ -105,7 +112,9 @@ export default function TeamPage() {
               <select
                 className="bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm"
                 value={form.role}
-                onChange={(e) => setForm((p) => ({ ...p, role: e.target.value as 'admin' | 'member' }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, role: e.target.value as 'admin' | 'member' }))
+                }
               >
                 <option value="member">Member</option>
                 <option value="admin">Admin</option>

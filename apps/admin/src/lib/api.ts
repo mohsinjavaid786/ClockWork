@@ -3,8 +3,12 @@ const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http:
 export class ApiClient {
   private token: string | null = null;
 
-  setToken(t: string) { this.token = t; }
-  clearToken() { this.token = null; }
+  setToken(t: string) {
+    this.token = t;
+  }
+  clearToken() {
+    this.token = null;
+  }
 
   private headers(extra: Record<string, string> = {}) {
     return {
