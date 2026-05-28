@@ -1,7 +1,8 @@
-import type { NextConfig } from 'next';
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    domains: [],
+  },
+}
 
-const nextConfig: NextConfig = {
-  transpilePackages: ['@trackdesk/shared'],
-};
-
-export default nextConfig;
+module.exports = nextConfig
