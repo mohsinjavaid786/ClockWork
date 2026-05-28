@@ -1,59 +1,108 @@
-const API_URL = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
-export class ApiClient {
-  private token: string | null = null;
-
-  setToken(t: string) {
-    this.token = t;
-  }
-  clearToken() {
-    this.token = null;
-  }
-
-  private headers(extra: Record<string, string> = {}) {
-    return {
-      'Content-Type': 'application/json',
-      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
-      ...extra,
-    };
-  }
-
-  async get<T>(path: string): Promise<T> {
-    const res = await fetch(`${API_URL}${path}`, { headers: this.headers() });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json() as Promise<T>;
-  }
-
-  async post<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${API_URL}${path}`, {
-      method: 'POST',
-      headers: this.headers(),
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json() as Promise<T>;
-  }
-
-  async patch<T>(path: string, body: unknown): Promise<T> {
-    const res = await fetch(`${API_URL}${path}`, {
-      method: 'PATCH',
-      headers: this.headers(),
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json() as Promise<T>;
-  }
-
-  async delete(path: string) {
-    const res = await fetch(`${API_URL}${path}`, { method: 'DELETE', headers: this.headers() });
-    if (!res.ok && res.status !== 204) throw new Error(await res.text());
-  }
-
-  async getBlob(path: string): Promise<Blob> {
-    const res = await fetch(`${API_URL}${path}`, { headers: this.headers({ 'Content-Type': '' }) });
-    if (!res.ok) throw new Error(await res.text());
-    return res.blob();
-  }
+function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('cw_token');
 }
 
-export const apiClient = new ApiClient();
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const token = getToken();
+  const res = await fetch(`${BASE}/api/v1${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init.headers ?? {}),
+    },
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+
+  const text = await res.text();
+  return text ? (JSON.parse(text) as T) : ({} as T);
+}
+
+export const api = {
+  auth: {
+    login: (email: string, password: string) =>
+      request<{ accessToken: string; user: { role: string; name: string; email: string; id: string } }>(
+        '/auth/login',
+        { method: 'POST', body: JSON.stringify({ email, password }) },
+      ),
+    me: () => request<{ id: string; name: string; email: string; role: string }>('/auth/me'),
+    logout: () => request('/auth/logout', { method: 'POST' }),
+  },
+
+  users: {
+    list: () => request<unknown[]>('/users'),
+    me: () => request<unknown>('/users/me'),
+    get: (id: string) => request<unknown>(`/users/${id}`),
+    invite: (body: unknown) =>
+      request('/users/invite', { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: unknown) =>
+      request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  },
+
+  projects: {
+    list: () => request<unknown[]>('/projects'),
+    get: (id: string) => request<unknown>(`/projects/${id}`),
+    create: (body: unknown) =>
+      request('/projects', { method: 'POST', body: JSON.stringify(body) }),
+    update: (id: string, body: unknown) =>
+      request(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    remove: (id: string) => request(`/projects/${id}`, { method: 'DELETE' }),
+  },
+
+  timeEntries: {
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+      return request<{ data: unknown[]; total: number; page: number; limit: number; totalPages: number }>(
+        `/time-entries${qs}`,
+      );
+    },
+    getActive: () => request<unknown[]>('/time-entries/active'),
+    remove: (id: string) => request(`/time-entries/${id}`, { method: 'DELETE' }),
+  },
+
+  screenshots: {
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+      return request<{ data: unknown[]; total: number; page: number; limit: number; totalPages: number }>(
+        `/screenshots${qs}`,
+      );
+    },
+  },
+
+  reports: {
+    stats: () =>
+      request<{ todayHours: number; activeNow: number; screenshotsToday: number; weeklyHours: number; weeklyChange: number }>(
+        '/reports/stats',
+      ),
+    weeklyChart: () =>
+      request<Array<{ day: string; date: string; hours: number }>>('/reports/weekly-chart'),
+    csvUrl: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+      return `${BASE}/api/v1/reports/csv${qs}`;
+    },
+    pdfUrl: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+      return `${BASE}/api/v1/reports/pdf${qs}`;
+    },
+  },
+
+  config: {
+    get: () =>
+      request<{ screenshotIntervalMinutes: number; companyName: string; timezone: string; slackWebhookUrl?: string }>(
+        '/config',
+      ),
+    update: (body: unknown) =>
+      request('/config', { method: 'PATCH', body: JSON.stringify(body) }),
+  },
+
+  webhooks: {
+    testSlack: () => request('/webhooks/slack/test', { method: 'POST' }),
+  },
+};

@@ -1,51 +1,27 @@
 /** @type {import('electron-builder').Configuration} */
-const config = {
-  appId: 'com.yourcompany.trackdesk',
-  productName: 'TrackDesk',
-  copyright: 'Copyright © 2024',
+module.exports = {
+  appId: 'com.clockwork.app',
+  productName: 'Clockwork',
+  copyright: 'Copyright © 2024 Clockwork',
   directories: {
     output: 'release',
     buildResources: 'resources',
   },
-  files: [
-    'dist-electron/**/*',
-    'dist-renderer/**/*',
-    'resources/**/*',
-  ],
-  extraResources: [
-    {
-      from: 'node_modules/sharp',
-      to: 'sharp',
-      filter: ['**/*'],
-    },
-    {
-      from: 'node_modules/uiohook-napi',
-      to: 'uiohook-napi',
-      filter: ['**/*'],
-    },
-  ],
+  files: ['dist-electron/**/*', 'dist-renderer/**/*'],
   mac: {
-    target: [
-      { target: 'dmg', arch: ['x64', 'arm64'] },
-      { target: 'zip', arch: ['x64', 'arm64'] },
-    ],
+    target: ['dmg', 'zip'],
     category: 'public.app-category.productivity',
-    hardenedRuntime: true,
-    gatekeeperAssess: false,
+    darkModeSupport: true,
   },
   win: {
-    target: [{ target: 'nsis', arch: ['x64'] }],
+    target: ['nsis'],
   },
-  nsis: {
-    oneClick: false,
-    allowToChangeInstallationDirectory: true,
-    createDesktopShortcut: true,
-    createStartMenuShortcut: true,
+  linux: {
+    target: ['AppImage'],
   },
   publish: {
     provider: 'github',
-    releaseType: 'release',
+    owner: 'mohsinjavaid786',
+    repo: 'clockwork',
   },
 };
-
-module.exports = config;

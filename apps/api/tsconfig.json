@@ -7,8 +7,9 @@
     "rootDir": "src",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
     "paths": {
-      "@trackdesk/shared": ["../../packages/shared/src"]
+      "@clockwork/shared": ["../../packages/shared/src"]
     }
   },
   "include": ["src"]

@@ -2,8 +2,10 @@
 const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
-  images: { domains: [] },
-  transpilePackages: ['@trackdesk/shared'],
+  transpilePackages: ['@clockwork/shared'],
+  images: {
+    domains: [],
+  },
 };
 
 module.exports = nextConfig;

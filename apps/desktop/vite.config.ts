@@ -1,20 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
+import { resolve } from 'path';
 
 export default defineConfig({
-  plugins: [react()],
   root: 'src/renderer',
-  build: {
-    outDir: '../../dist-renderer',
-    emptyOutDir: true,
-  },
+  plugins: [react()],
   resolve: {
     alias: {
-      '@trackdesk/shared': path.resolve(__dirname, '../../packages/shared/src'),
+      '@': resolve(__dirname, 'src'),
+      '@clockwork/shared': resolve(__dirname, '../../packages/shared/src'),
     },
   },
-  server: {
-    port: 5173,
+  build: {
+    outDir: resolve(__dirname, 'dist-renderer'),
+    emptyOutDir: true,
   },
 });

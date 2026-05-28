@@ -1,116 +1,90 @@
 import { safeStorage } from 'electron';
-import { AuthService } from './auth.service';
 
-const TIMER_STATE_KEY = 'trackdesk_timer';
-const API_URL = process.env.VITE_API_URL ?? 'http://localhost:3001';
+const TOKEN_KEY = 'cw_token';
+const USER_KEY = 'cw_user';
+const TIMER_KEY = 'cw_timer';
+
+interface StoredUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
 
 interface TimerState {
-  entryId: string;
-  startedAt: number;
+  running: boolean;
+  entryId?: string;
+  startedAt?: string;
   projectId?: string;
   description?: string;
 }
 
-export class TimerService {
-  private state: TimerState | null = null;
-  private interval: ReturnType<typeof setInterval> | null = null;
-  private tickCallback?: (elapsed: number) => void;
-
-  constructor(private readonly auth: AuthService) {
-    this.restore();
+function encrypt(value: string): Buffer {
+  if (safeStorage.isEncryptionAvailable()) {
+    return safeStorage.encryptString(value);
   }
+  return Buffer.from(value, 'utf8');
+}
 
-  async start(projectId?: string, description?: string) {
-    const token = this.auth.getToken();
-    if (!token) throw new Error('Not authenticated');
-
-    const res = await fetch(`${API_URL}/time-entries/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ projectId, description }),
-    });
-    if (!res.ok) throw new Error('Failed to start entry');
-
-    const entry = await res.json() as { id: string };
-    this.state = { entryId: entry.id, startedAt: Date.now(), projectId, description };
-    this.persist();
-    this.startTicking();
-    return this.state;
+function decrypt(buf: Buffer): string {
+  if (safeStorage.isEncryptionAvailable()) {
+    return safeStorage.decryptString(buf);
   }
+  return buf.toString('utf8');
+}
 
-  async stop() {
-    if (!this.state) throw new Error('No running timer');
-    const token = this.auth.getToken();
-    if (!token) throw new Error('Not authenticated');
+const store = new Map<string, Buffer>();
 
-    const res = await fetch(`${API_URL}/time-entries/stop`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ entryId: this.state.entryId }),
-    });
-    if (!res.ok) throw new Error('Failed to stop entry');
+export function saveToken(token: string) {
+  store.set(TOKEN_KEY, encrypt(token));
+}
 
-    this.state = null;
-    this.clearPersisted();
-    this.stopTicking();
-    return res.json();
+export function getToken(): string | null {
+  const buf = store.get(TOKEN_KEY);
+  if (!buf) return null;
+  try {
+    return decrypt(buf);
+  } catch {
+    return null;
   }
+}
 
-  getState() {
-    if (!this.state) return null;
-    return { ...this.state, elapsed: Date.now() - this.state.startedAt };
+export function clearToken() {
+  store.delete(TOKEN_KEY);
+}
+
+export function saveUser(user: StoredUser) {
+  store.set(USER_KEY, encrypt(JSON.stringify(user)));
+}
+
+export function getUser(): StoredUser | null {
+  const buf = store.get(USER_KEY);
+  if (!buf) return null;
+  try {
+    return JSON.parse(decrypt(buf)) as StoredUser;
+  } catch {
+    return null;
   }
+}
 
-  isRunning(): boolean {
-    return this.state !== null;
+export function clearUser() {
+  store.delete(USER_KEY);
+}
+
+export function saveTimerState(state: TimerState) {
+  store.set(TIMER_KEY, Buffer.from(JSON.stringify(state), 'utf8'));
+}
+
+export function getTimerState(): TimerState {
+  const buf = store.get(TIMER_KEY);
+  if (!buf) return { running: false };
+  try {
+    return JSON.parse(buf.toString('utf8')) as TimerState;
+  } catch {
+    return { running: false };
   }
+}
 
-  getCurrentEntryId(): string | undefined {
-    return this.state?.entryId;
-  }
-
-  onTick(cb: (elapsed: number) => void) {
-    this.tickCallback = cb;
-  }
-
-  private startTicking() {
-    this.interval = setInterval(() => {
-      if (this.state && this.tickCallback) {
-        this.tickCallback(Date.now() - this.state.startedAt);
-      }
-    }, 1000);
-  }
-
-  private stopTicking() {
-    if (this.interval) { clearInterval(this.interval); this.interval = null; }
-  }
-
-  private persist() {
-    if (!this.state) return;
-    const data = JSON.stringify(this.state);
-    if (safeStorage.isEncryptionAvailable()) {
-      process.env[TIMER_STATE_KEY] = safeStorage.encryptString(data).toString('base64');
-    } else {
-      process.env[TIMER_STATE_KEY] = data;
-    }
-  }
-
-  private restore() {
-    const raw = process.env[TIMER_STATE_KEY];
-    if (!raw) return;
-    try {
-      let data: string;
-      if (safeStorage.isEncryptionAvailable()) {
-        data = safeStorage.decryptString(Buffer.from(raw, 'base64'));
-      } else {
-        data = raw;
-      }
-      this.state = JSON.parse(data) as TimerState;
-      this.startTicking();
-    } catch {
-      // corrupted state — ignore
-    }
-  }
-
-  private clearPersisted() { delete process.env[TIMER_STATE_KEY]; }
+export function clearTimerState() {
+  store.delete(TIMER_KEY);
 }

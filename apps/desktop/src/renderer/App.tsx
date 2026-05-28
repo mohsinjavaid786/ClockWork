@@ -1,21 +1,60 @@
-import { useEffect, useState } from 'react';
-import { LoginPage } from './pages/LoginPage';
-import { TrackerPage } from './pages/TrackerPage';
+import React, { useEffect, useState } from 'react';
+import { LoginScreen } from './screens/LoginScreen';
+import { TrackerScreen } from './screens/TrackerScreen';
 
-interface UserInfo { id: string; email: string; name: string; role: string; }
+type AppState = 'loading' | 'login' | 'tracker';
 
 export function App() {
-  const [user, setUser] = useState<UserInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<AppState>('loading');
+  const [user, setUser] = useState<CwUser | null>(null);
 
   useEffect(() => {
-    window.trackdesk.auth.getUser().then((u) => {
-      setUser(u as UserInfo | null);
-      setLoading(false);
+    window.clockwork.auth.getUser().then((u) => {
+      if (u) {
+        setUser(u);
+        setState('tracker');
+      } else {
+        setState('login');
+      }
     });
   }, []);
 
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>Loading…</div>;
-  if (!user) return <LoginPage onLogin={setUser} />;
-  return <TrackerPage user={user} onLogout={() => setUser(null)} />;
+  if (state === 'loading') {
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg-base)',
+        }}
+      >
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>
+          CLOCKWORK
+        </span>
+      </div>
+    );
+  }
+
+  if (state === 'login') {
+    return (
+      <LoginScreen
+        onLogin={(u) => {
+          setUser(u);
+          setState('tracker');
+        }}
+      />
+    );
+  }
+
+  return (
+    <TrackerScreen
+      user={user!}
+      onLogout={() => {
+        setUser(null);
+        setState('login');
+      }}
+    />
+  );
 }

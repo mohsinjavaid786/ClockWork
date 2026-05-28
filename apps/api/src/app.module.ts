@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { SupabaseModule } from './common/supabase/supabase.module';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { TimeEntriesModule } from './time-entries/time-entries.module';
-import { ScreenshotsModule } from './screenshots/screenshots.module';
-import { ProjectsModule } from './projects/projects.module';
-import { ReportsModule } from './reports/reports.module';
-import { WebhooksModule } from './webhooks/webhooks.module';
-import { ConfigModule } from './config/config.module';
+import { SupabaseModule } from './supabase/supabase.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import { ProjectsModule } from './modules/projects/projects.module';
+import { TimeEntriesModule } from './modules/time-entries/time-entries.module';
+import { ScreenshotsModule } from './modules/screenshots/screenshots.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { ConfigModule } from './modules/config/config.module';
+import { SupabaseAuthGuard } from './guards/supabase-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
@@ -16,12 +19,16 @@ import { ConfigModule } from './config/config.module';
     SupabaseModule,
     AuthModule,
     UsersModule,
+    ProjectsModule,
     TimeEntriesModule,
     ScreenshotsModule,
-    ProjectsModule,
     ReportsModule,
     WebhooksModule,
     ConfigModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: SupabaseAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}
