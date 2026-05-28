@@ -1,12 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "apps/admin/package.json",
-      "use": "@vercel/next",
-      "config": {
-        "projectOutputDirectory": "apps/admin"
-      }
-    }
-  ]
+  "framework": "nextjs",
+  "buildCommand": "pnpm install --frozen-lockfile=false && cd apps/admin && pnpm run build",
+  "outputDirectory": "apps/admin/.next",
+  "installCommand": "echo 'install handled in build'"
 }
