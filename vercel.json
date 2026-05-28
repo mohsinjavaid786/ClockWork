@@ -1,7 +1,7 @@
 {
   "version": 2,
   "framework": "nextjs",
-  "buildCommand": "pnpm install --frozen-lockfile=false && cd apps/admin && pnpm run build",
-  "outputDirectory": "apps/admin/.next",
-  "installCommand": "echo 'install handled in build'"
+  "installCommand": "pnpm install --frozen-lockfile=false",
+  "buildCommand": "cd apps/admin && pnpm run build",
+  "outputDirectory": "apps/admin/.next"
 }
