@@ -1,7 +1,3 @@
 {
-  "version": 2,
-  "framework": "nextjs",
-  "installCommand": "pnpm install --frozen-lockfile=false",
-  "buildCommand": "cd apps/admin && pnpm run build",
-  "outputDirectory": "apps/admin/.next"
+  "version": 2
 }
