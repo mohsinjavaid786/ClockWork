@@ -1,59 +1,59 @@
-# packages/shared — TrackDesk Shared Types
+# packages/shared — @clockwork/shared
 
-A zero-dependency TypeScript package that exports interfaces, DTO types, and constants shared across all three apps (`apps/api`, `apps/admin`, `apps/desktop`).
+A zero-dependency TypeScript package that exports all domain types and IPC channel constants shared across `apps/api`, `apps/admin`, and `apps/desktop`.
 
-Having a single source of truth for these types means a change to a data shape (e.g. adding a field to `TimeEntry`) is immediately visible as a compile error in every app that uses it.
+A single source of truth: adding a field to `TimeEntry` immediately surfaces as a compile error in every app that uses it.
 
 ---
 
 ## Table of Contents
 
-- [What's in here](#whats-in-here)
-- [Installation in other packages](#installation-in-other-packages)
-- [Interfaces](#interfaces)
-- [DTOs](#dtos)
-- [Constants](#constants)
+- [Installation](#installation)
+- [Types](#types)
+- [IPC Channels](#ipc-channels)
 - [Building](#building)
 
 ---
 
-## What's in here
+## Installation
 
-```
-src/
-├── index.ts          # Re-exports everything from the three files below
-├── interfaces.ts     # Domain model interfaces (User, TimeEntry, Screenshot, …)
-├── dtos.ts           # Request/response shape types (LoginDto, InviteUserDto, …)
-└── constants.ts      # IPC channel names, timing thresholds, role constants
-```
-
----
-
-## Installation in other packages
-
-Because this is a workspace package, other apps reference it by name in their `package.json`:
+This is a workspace package. Other apps reference it by name:
 
 ```json
 "dependencies": {
-  "@trackdesk/shared": "workspace:*"
+  "@clockwork/shared": "workspace:*"
 }
 ```
 
-TypeScript path aliases in each app's `tsconfig.json` point the compiler at the source directly so you don't need to run a build step during development:
+Each app's `tsconfig.json` maps the import to the source directly so no pre-build step is needed during development:
 
 ```json
 "paths": {
-  "@trackdesk/shared": ["../../packages/shared/src"]
+  "@clockwork/shared": ["../../packages/shared/src"]
 }
 ```
 
 ---
 
-## Interfaces
+## Types
 
-**File:** `src/interfaces.ts`
+**File:** `src/types.ts`
 
-Domain model types that mirror the Supabase database rows (with camelCase fields instead of snake_case).
+Domain model interfaces mirroring the Supabase schema (camelCase instead of snake_case).
+
+### `UserRole`
+
+```typescript
+type UserRole = 'admin' | 'member';
+```
+
+### `EntryStatus`
+
+```typescript
+type EntryStatus = 'running' | 'stopped';
+```
+
+Used in `TimeEntry.status`. Replaces the old `isRunning: boolean` pattern. The database enforces at most one `'running'` entry per user via a partial unique index.
 
 ### `User`
 
@@ -62,10 +62,10 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'member';
-  avatarUrl?: string;
+  role: UserRole;
   isActive: boolean;
   timezone: string;
+  avatarUrl?: string;
   createdAt: string;
 }
 ```
@@ -77,9 +77,10 @@ interface Project {
   id: string;
   name: string;
   description?: string;
-  color: string;          // hex colour, e.g. '#6366f1'
+  color: string;           // hex color, e.g. '#6366F1'
   isArchived: boolean;
-  createdBy?: string;     // userId
+  createdBy: string;       // userId
+  totalHours?: number;     // computed by API, not stored in DB
   createdAt: string;
 }
 ```
@@ -93,10 +94,11 @@ interface TimeEntry {
   projectId?: string;
   description?: string;
   startedAt: string;       // ISO 8601
-  endedAt?: string;        // undefined if currently running
+  endedAt?: string;        // undefined while status = 'running'
   durationSeconds?: number;
-  isRunning: boolean;
-  createdAt: string;
+  status: EntryStatus;
+  user?: User;             // populated via JOIN on list endpoints
+  project?: Project;       // populated via JOIN on list endpoints
 }
 ```
 
@@ -107,11 +109,11 @@ interface Screenshot {
   id: string;
   userId: string;
   timeEntryId?: string;
-  storagePath: string;     // Supabase Storage path: {userId}/{date}/{ts}.jpg
+  storagePath: string;     // Supabase Storage path: {userId}/{timestamp}.png
   capturedAt: string;      // ISO 8601
   activityPercent: number; // 0–100
-  signedUrl?: string;      // populated by API on list endpoints (1-hour expiry)
-  createdAt: string;
+  signedUrl?: string;      // added by API on list/get endpoints (1-hour expiry)
+  user?: User;
 }
 ```
 
@@ -119,9 +121,46 @@ interface Screenshot {
 
 ```typescript
 interface AppConfig {
-  key: string;
-  value: string;
-  updatedAt: string;
+  screenshotIntervalMinutes: number;
+  companyName: string;
+  timezone: string;
+  slackWebhookUrl?: string;
+}
+```
+
+### `DashboardStats`
+
+```typescript
+interface DashboardStats {
+  todayHours: number;
+  activeNow: number;
+  screenshotsToday: number;
+  weeklyHours: number;
+  weeklyChange: number;    // percent change vs last week (can be negative)
+}
+```
+
+### `ActiveMember`
+
+```typescript
+interface ActiveMember {
+  userId: string;
+  name: string;
+  email: string;
+  projectName?: string;
+  description?: string;
+  elapsedSeconds: number;  // computed from startedAt at request time
+  startedAt: string;
+}
+```
+
+### `WeeklyChartData`
+
+```typescript
+interface WeeklyChartData {
+  day: string;    // 'Mon', 'Tue', …
+  date: string;   // 'YYYY-MM-DD'
+  hours: number;
 }
 ```
 
@@ -135,120 +174,49 @@ interface PaginatedResponse<T> {
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 ```
 
 ### `ApiError`
 
-Standard error shape returned by all API error responses:
+Standard error shape for all API error responses:
 
 ```typescript
 interface ApiError {
   error: string;
   statusCode: number;
-}
-```
-
-### `DashboardStats`
-
-```typescript
-interface DashboardStats {
-  totalHoursToday: number;
-  activeEmployeesNow: number;
-  screenshotsTakenToday: number;
-  weeklyHours: number;
-  lastWeeklyHours: number;
-}
-```
-
-### `ProjectStats`
-
-```typescript
-interface ProjectStats {
-  projectId: string;
-  totalHours: number;
-  activeMembers: number;
-  screenshotCount: number;
-}
-```
-
-### `ActivityWindow`
-
-```typescript
-interface ActivityWindow {
-  startTime: string;
-  endTime: string;
-  activeSeconds: number;
-  activityPercent: number;
-  isIdle: boolean;
+  message?: string;
 }
 ```
 
 ---
 
-## DTOs
+## IPC Channels
 
-**File:** `src/dtos.ts`
+**File:** `src/ipc-channels.ts`
 
-Request body and response types for the API. These are plain interfaces (not class-validator decorated), suitable for both frontend fetch calls and for documenting expected shapes.
-
-| DTO | Used by | Purpose |
-|---|---|---|
-| `LoginDto` | Admin, Desktop | `POST /auth/login` body |
-| `LoginResponseDto` | Admin, Desktop | `POST /auth/login` response |
-| `InviteUserDto` | Admin | `POST /users/invite` body |
-| `UpdateUserDto` | Admin | `PATCH /users/:id` body |
-| `CreateProjectDto` | Admin | `POST /projects` body |
-| `UpdateProjectDto` | Admin | `PATCH /projects/:id` body |
-| `StartTimeEntryDto` | Desktop | `POST /time-entries/start` body |
-| `StopTimeEntryDto` | Desktop | `POST /time-entries/stop` body |
-| `UploadScreenshotDto` | Desktop | `POST /screenshots/upload` form fields |
-| `TimeEntriesQueryDto` | Admin, Desktop | `GET /time-entries` query params |
-| `ReportsQueryDto` | Admin | `GET /reports/export/*` query params |
-| `UpdateConfigDto` | Admin | `PATCH /config` body |
-
----
-
-## Constants
-
-**File:** `src/constants.ts`
-
-### `IPC_CHANNELS`
-
-Typed string constants for all Electron IPC channel names. Using these constants in both `preload.ts` and React components prevents typos and makes refactoring safe.
+Typed string constants for all Electron IPC channel names. Used in both `apps/desktop/src/preload/index.ts` and `apps/desktop/src/main/index.ts`. Using the `IPC` object prevents typos and makes renaming a channel safe.
 
 ```typescript
-const IPC_CHANNELS = {
-  AUTH_LOGIN:          'auth:login',
-  AUTH_LOGOUT:         'auth:logout',
-  AUTH_GET_TOKEN:      'auth:get-token',
-  AUTH_GET_USER:       'auth:get-user',
-  TIMER_START:         'timer:start',
-  TIMER_STOP:          'timer:stop',
-  TIMER_GET_STATE:     'timer:get-state',
-  TIMER_TICK:          'timer:tick',
-  SCREENSHOT_CAPTURE:  'screenshot:capture',
-  SCREENSHOT_CAPTURED: 'screenshot:captured',
-  TRAY_UPDATE:         'tray:update',
-  APP_GET_VERSION:     'app:get-version',
-  APP_CHECK_UPDATE:    'app:check-update',
-} as const
+export const IPC = {
+  AUTH_LOGIN:         'auth:login',
+  AUTH_LOGOUT:        'auth:logout',
+  AUTH_GET_TOKEN:     'auth:get-token',
+  AUTH_GET_USER:      'auth:get-user',
+  TIMER_START:        'timer:start',
+  TIMER_STOP:         'timer:stop',
+  TIMER_GET_STATUS:   'timer:get-status',
+  SCREENSHOT_CAPTURE: 'screenshot:capture',
+  SCREENSHOT_UPLOAD:  'screenshot:upload',
+  ACTIVITY_GET:       'activity:get',
+  CONFIG_GET:         'config:get',
+  PROJECTS_LIST:      'projects:list',
+  APP_VERSION:        'app:version',
+} as const;
 ```
 
-### Timing thresholds
-
-```typescript
-SCREENSHOT_INTERVAL_MS = 10 * 60 * 1000   // 10 minutes
-IDLE_THRESHOLD_MS      =  5 * 60 * 1000   // 5 minutes of no input = idle
-ACTIVITY_WINDOW_MS     = 10 * 60 * 1000   // 10-minute activity calculation window
-```
-
-### `ROLES` and `Role`
-
-```typescript
-const ROLES = { ADMIN: 'admin', MEMBER: 'member' } as const
-type Role = 'admin' | 'member'
-```
+`typeof IPC[keyof typeof IPC]` gives the union of all channel strings, useful for typing `ipcMain.handle()` arguments.
 
 ---
 
@@ -256,10 +224,10 @@ type Role = 'admin' | 'member'
 
 ```bash
 # From this directory
-pnpm build       # tsc → dist/
+pnpm build       # tsc → dist/ with .d.ts + source maps
 
-# Watch mode for development
+# Watch mode
 pnpm dev
 ```
 
-Build output goes to `dist/` with `.d.ts` declaration files and source maps. In practice, during development all apps import from the source directly via tsconfig `paths` aliases, so you only need to run `pnpm build` when preparing a production build or publishing the package.
+During development all apps import directly from source via the `paths` alias, so you don't need to run `pnpm build` unless preparing a production artifact or publishing the package externally.
