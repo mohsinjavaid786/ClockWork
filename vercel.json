@@ -2,8 +2,5 @@
   "framework": "nextjs",
   "buildCommand": "pnpm --filter admin build",
   "outputDirectory": "apps/admin/.next",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@api_url"
-  }
+  "installCommand": "pnpm install --frozen-lockfile"
 }

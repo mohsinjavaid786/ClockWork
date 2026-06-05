@@ -1,14 +1,16 @@
 name: CI
 
+# Runs on every push to dev/production and on any PR targeting those branches.
+# Fails fast if any app fails to build — prevents broken code reaching production.
 on:
   push:
-    branches: [main]
+    branches: [main, dev, production]
   pull_request:
-    branches: [main]
+    branches: [dev, production]
 
 jobs:
   build:
-    name: Build all apps
+    name: Build — ${{ github.ref_name || github.head_ref }}
     runs-on: ubuntu-latest
 
     steps:
@@ -26,23 +28,26 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build shared package
+      - name: Build @clockwork/shared
         run: pnpm --filter @clockwork/shared build
 
-      - name: Build API
+      # ── API ────────────────────────────────────────────────────────────────
+      - name: Build API (NestJS 11)
         run: pnpm --filter api build
 
-      - name: Build admin portal
+      # ── Admin portal ────────────────────────────────────────────────────────
+      - name: Build admin portal (Next.js 15)
         run: pnpm --filter admin build
 
-      # Build the desktop renderer (Vite) and type-check the main process.
-      # electron-builder is not run here — that happens in the release workflow.
+      # ── Desktop ─────────────────────────────────────────────────────────────
+      # Only renderer (Vite) and main process (tsc --noEmit) here.
+      # Full electron-builder packaging happens in release.yml on version tags.
       - name: Build desktop renderer
         env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: pnpm --filter desktop exec vite build
 
       - name: Type-check desktop main process
         env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
         run: pnpm --filter desktop exec tsc -p tsconfig.electron.json --noEmit

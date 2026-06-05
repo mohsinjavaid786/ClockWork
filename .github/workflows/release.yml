@@ -1,6 +1,8 @@
 name: Release Desktop App
 
-# Triggered by pushing a version tag: git tag v1.2.3 && git push --tags
+# Triggered by pushing a version tag from the production branch.
+# Workflow: merge dev → production, then:
+#   git tag v1.2.3 && git push origin production --tags
 on:
   push:
     tags:
@@ -9,7 +11,7 @@ on:
 jobs:
   # ── Build macOS installer (.dmg + .zip) ──────────────────────────────────────
   build-macos:
-    name: Build macOS
+    name: Build macOS (Apple Silicon + Intel)
     runs-on: macos-latest
 
     steps:
@@ -27,13 +29,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build shared package
+      - name: Build @clockwork/shared
         run: pnpm --filter @clockwork/shared build
 
       - name: Build desktop (renderer + main)
         run: pnpm --filter desktop build
 
       - name: Package macOS installer
+        # --publish never: we upload via create-release job below
         run: cd apps/desktop && pnpm exec electron-builder --mac --publish never
 
       - name: Upload macOS artifacts
@@ -48,7 +51,7 @@ jobs:
 
   # ── Build Windows installer (.exe) ───────────────────────────────────────────
   build-windows:
-    name: Build Windows
+    name: Build Windows (x64)
     runs-on: windows-latest
 
     steps:
@@ -66,7 +69,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build shared package
+      - name: Build @clockwork/shared
         run: pnpm --filter @clockwork/shared build
 
       - name: Build desktop (renderer + main)
@@ -117,20 +120,19 @@ jobs:
 
             | Platform | File | Notes |
             |---|---|---|
-            | **macOS** | `Clockwork-*.dmg` | Apple Silicon + Intel |
+            | **macOS** | `Clockwork-*.dmg` | Apple Silicon + Intel universal |
             | **Windows** | `Clockwork Setup *.exe` | Windows 10/11 x64 |
 
             ### macOS — first-time installation
             1. Download `Clockwork-*.dmg`
             2. Open the `.dmg` and drag **Clockwork** to Applications
-            3. **First launch only:** right-click the app → **Open** → confirm
-               *(macOS Gatekeeper warning for unsigned apps — safe to proceed)*
+            3. **First launch only:** right-click → **Open** → confirm
+               *(Gatekeeper warning for unsigned apps — safe to proceed)*
 
             ### Windows — installation
             1. Download `Clockwork Setup *.exe`
             2. Run the installer
-            3. If Windows Defender SmartScreen appears → **More info** → **Run anyway**
+            3. If SmartScreen appears → **More info** → **Run anyway**
 
             ---
-
-            > **Auto-update:** Once installed, Clockwork checks for updates automatically on every launch. You won't need to download future versions manually.
+            > **Auto-update:** Clockwork checks for updates automatically on every launch.
