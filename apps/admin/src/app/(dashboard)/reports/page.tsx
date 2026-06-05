@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Download } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, isDemoMode } from '@/lib/api';
+import { getMockCsv, getMockHtml } from '@/lib/mock-data';
 import { PageHeader } from '@/components/PageHeader';
 
 export default function ReportsPage() {
@@ -17,20 +18,34 @@ export default function ReportsPage() {
     return p;
   }
 
+  function triggerDownload(blob: Blob, filename: string) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   function download(type: 'csv' | 'pdf') {
     setDownloading(type);
+
+    if (isDemoMode()) {
+      const content = type === 'csv' ? getMockCsv() : getMockHtml();
+      const mime = type === 'csv' ? 'text/csv' : 'text/html';
+      const filename = type === 'csv' ? 'clockwork-report.csv' : 'clockwork-report.html';
+      triggerDownload(new Blob([content], { type: mime }), filename);
+      setDownloading(null);
+      return;
+    }
+
     const token = localStorage.getItem('cw_token') ?? '';
     const params = buildParams();
-    const url =
-      type === 'csv' ? api.reports.csvUrl(params) : api.reports.pdfUrl(params);
+    const url = type === 'csv' ? api.reports.csvUrl(params) : api.reports.pdfUrl(params);
 
     fetch(url, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => res.blob())
       .then((blob) => {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = type === 'csv' ? 'clockwork-report.csv' : 'clockwork-report.html';
-        a.click();
+        triggerDownload(blob, type === 'csv' ? 'clockwork-report.csv' : 'clockwork-report.html');
       })
       .catch(console.error)
       .finally(() => setDownloading(null));

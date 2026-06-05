@@ -1,3 +1,5 @@
+import { getMockResponse, DEMO_EMAIL, DEMO_PASSWORD } from './mock-data';
+
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 function getToken(): string | null {
@@ -5,7 +7,30 @@ function getToken(): string | null {
   return localStorage.getItem('cw_token');
 }
 
+export function isDemoMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('cw_token') === 'demo';
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  // Demo login: intercept before any network call
+  if (path === '/auth/login' && init.body) {
+    const body = JSON.parse(init.body as string) as Record<string, string>;
+    if (body['email'] === DEMO_EMAIL && body['password'] === DEMO_PASSWORD) {
+      localStorage.setItem('cw_token', 'demo');
+      return {
+        accessToken: 'demo',
+        refreshToken: 'demo',
+        user: getMockResponse('/auth/me'),
+      } as unknown as T;
+    }
+  }
+
+  // All subsequent calls while in demo mode
+  if (getToken() === 'demo') {
+    return getMockResponse(path) as T;
+  }
+
   const token = getToken();
   const res = await fetch(`${BASE}/api/v1${path}`, {
     ...init,
@@ -33,7 +58,13 @@ export const api = {
         { method: 'POST', body: JSON.stringify({ email, password }) },
       ),
     me: () => request<{ id: string; name: string; email: string; role: string }>('/auth/me'),
-    logout: () => request('/auth/logout', { method: 'POST' }),
+    logout: () => {
+      if (isDemoMode()) {
+        localStorage.removeItem('cw_token');
+        return Promise.resolve({});
+      }
+      return request('/auth/logout', { method: 'POST' });
+    },
   },
 
   users: {
