@@ -122,6 +122,52 @@ function buildWeeklyChart() {
   });
 }
 
+// ─── Screenshots ──────────────────────────────────────────────────────────────
+
+function seededInt(a: number, b: number, min: number, max: number): number {
+  const n = Math.abs((a * 1664525 + b * 1013904223) | 0);
+  return min + (n % (max - min + 1));
+}
+
+export interface MockScreenshot {
+  id: string;
+  userId: string;
+  timeEntryId: string;
+  storagePath: string;
+  capturedAt: string;
+  activityPercent: number;
+  keyEvents: number;
+  mouseEvents: number;
+  user: { id: string; name: string; email: string };
+}
+
+export function getMockScreenshotsForEntry(entryId: string): MockScreenshot[] {
+  const entry = ENTRIES.find(e => e.id === entryId);
+  if (!entry || !entry.duration_seconds || entry.duration_seconds < 600) return [];
+
+  const INTERVAL = 600; // 10-minute screenshots
+  const count = Math.min(12, Math.floor(entry.duration_seconds / INTERVAL));
+  const startMs = new Date(entry.started_at).getTime();
+  const seed = entryId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+
+  return Array.from({ length: count }, (_, i) => {
+    const pct = seededInt(seed, i * 37, 52, 97);
+    const keys = seededInt(seed, i * 53, Math.floor(pct * 2.5), Math.floor(pct * 4.5));
+    const mouse = seededInt(seed, i * 71, Math.floor(pct * 1.2), Math.floor(pct * 2.8));
+    return {
+      id: `ss-${entryId}-${i}`,
+      userId: entry.user_id,
+      timeEntryId: entryId,
+      storagePath: `demo/${entryId}/${i}.png`,
+      capturedAt: new Date(startMs + (i + 1) * INTERVAL * 1000).toISOString(),
+      activityPercent: pct,
+      keyEvents: keys,
+      mouseEvents: mouse,
+      user: entry.user as MockScreenshot['user'],
+    };
+  });
+}
+
 // ─── Mock Response Router ─────────────────────────────────────────────────────
 
 function basePath(path: string) { return path.split('?')[0]; }
@@ -183,7 +229,14 @@ export function getMockResponse(path: string): unknown {
   if (base === '/time-entries/active') return ACTIVE_MEMBERS;
 
   // Screenshots
-  if (base === '/screenshots') return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+  if (base === '/screenshots') {
+    const timeEntryId = qp(path).get('timeEntryId');
+    if (timeEntryId) {
+      const shots = getMockScreenshotsForEntry(timeEntryId);
+      return { data: shots, total: shots.length, page: 1, limit: 50, totalPages: 1 };
+    }
+    return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+  }
 
   // Reports
   if (base === '/reports/stats') return {
