@@ -168,6 +168,69 @@ export function getMockScreenshotsForEntry(entryId: string): MockScreenshot[] {
   });
 }
 
+// ─── Day / Week helpers ───────────────────────────────────────────────────────
+
+export interface DayMeta { hours: number; hasOvertime: boolean; entryCount: number }
+
+export function getDaysWithEntries(userId?: string): Map<string, DayMeta> {
+  const map = new Map<string, DayMeta>();
+  const source = userId ? ENTRIES.filter(e => e.user_id === userId) : ENTRIES;
+  source.forEach(e => {
+    const day = e.started_at.split('T')[0]!;
+    const prev = map.get(day) ?? { hours: 0, hasOvertime: false, entryCount: 0 };
+    const h = prev.hours + (e.duration_seconds ?? 0) / 3600;
+    map.set(day, { hours: h, hasOvertime: h > 8, entryCount: prev.entryCount + 1 });
+  });
+  return map;
+}
+
+export function getEntriesForDay(dateStr: string, userId?: string) {
+  return ENTRIES.filter(e =>
+    e.started_at.startsWith(dateStr) && (!userId || e.user_id === userId),
+  );
+}
+
+// ─── Per-minute activity (for screenshot modal) ───────────────────────────────
+
+const ACTIVE_WINDOWS = [
+  'Visual Studio Code — index.ts',
+  'Visual Studio Code — styles.css',
+  'Google Chrome — GitHub',
+  'Google Chrome — localhost:3000',
+  'Figma — Component Library',
+  'Terminal — zsh',
+  'Slack — #engineering',
+  'Linear — Sprint Board',
+  'Notion — Tech Specs',
+  'iTerm2 — git log',
+];
+
+export function getMockActiveWindow(shotId: string): string {
+  const s = shotId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return ACTIVE_WINDOWS[s % ACTIVE_WINDOWS.length]!;
+}
+
+export function getMockMinuteActivity(
+  capturedAt: string,
+  activityPercent: number,
+  shotId: string,
+): Array<{ time: string; keyboard: number; mouse: number }> {
+  const seed = shotId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const windowStart = new Date(capturedAt).getTime() - 600_000;
+  const active = activityPercent > 15;
+
+  return Array.from({ length: 10 }, (_, i) => {
+    const t = new Date(windowStart + i * 60_000).toLocaleTimeString('en-US', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    const keys = active ? seededInt(seed, i * 13, 0, Math.max(1, Math.floor(activityPercent * 0.35))) : 0;
+    const mouse = active
+      ? seededInt(seed, i * 17, 3, Math.max(5, Math.floor(activityPercent * 0.45)))
+      : seededInt(seed, i * 7, 0, 4);
+    return { time: t, keyboard: keys, mouse };
+  });
+}
+
 // ─── Mock Response Router ─────────────────────────────────────────────────────
 
 function basePath(path: string) { return path.split('?')[0]; }
@@ -225,7 +288,24 @@ export function getMockResponse(path: string): unknown {
   if (projMatch) return PROJECTS.find(p => p.id === projMatch[1]) ?? PROJECTS[0];
 
   // Time entries
-  if (base === '/time-entries') return paginateEntries(path);
+  if (base === '/time-entries') {
+    const params = qp(path);
+    const from = params.get('from');
+    const to = params.get('to');
+    if (from && to) {
+      // Day detail: return entries within the date range
+      const fromDay = from.split('T')[0]!;
+      const toDay = to.split('T')[0]!;
+      const filtered = ENTRIES.filter(e => {
+        const d = e.started_at.split('T')[0]!;
+        return d >= fromDay && d <= toDay;
+      });
+      const userId = params.get('userId');
+      const byUser = userId ? filtered.filter(e => e.user_id === userId) : filtered;
+      return { data: byUser, total: byUser.length, page: 1, limit: 50, totalPages: 1 };
+    }
+    return paginateEntries(path);
+  }
   if (base === '/time-entries/active') return ACTIVE_MEMBERS;
 
   // Screenshots

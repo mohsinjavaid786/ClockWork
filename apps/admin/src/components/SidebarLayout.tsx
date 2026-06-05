@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Users,
   Clock,
+  CalendarDays,
   FolderKanban,
   BarChart2,
   Settings,
@@ -16,12 +17,13 @@ import { useAuth } from '@/context/auth-context';
 import { isDemoMode } from '@/lib/api';
 
 const nav = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/team', label: 'Team', icon: Users },
-  { href: '/timesheets', label: 'Timesheets', icon: Clock },
-  { href: '/projects', label: 'Projects', icon: FolderKanban },
-  { href: '/reports', label: 'Reports', icon: BarChart2 },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
+  { href: '/team',        label: 'Team',         icon: Users },
+  { href: '/timesheets',  label: 'Timesheets',   icon: Clock },
+  { href: '/work-diary',  label: 'Work Diary',   icon: CalendarDays },
+  { href: '/projects',    label: 'Projects',     icon: FolderKanban },
+  { href: '/reports',     label: 'Reports',      icon: BarChart2 },
+  { href: '/settings',    label: 'Settings',     icon: Settings },
 ];
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
