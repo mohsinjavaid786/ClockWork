@@ -3,6 +3,7 @@ packages:
   - 'packages/*'
 allowBuilds:
   '@nestjs/core': true
+  '@scarf/scarf': false
   electron: true
   esbuild: true
   sharp: true
