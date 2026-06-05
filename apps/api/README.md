@@ -1,130 +1,212 @@
 # apps/api — Clockwork NestJS Backend
 
-The REST API that powers both the admin portal and the desktop app. Built with NestJS 10, backed by Supabase (PostgreSQL + Auth + Storage), running on port `3001` with a global `/api/v1` prefix.
+> REST API powering the admin portal and desktop app. NestJS 10, Supabase PostgreSQL, global `/api/v1` prefix, Swagger at `/api/docs`.
 
 ---
 
-## Table of Contents
+## Features
 
-- [Stack](#stack)
-- [Project Layout](#project-layout)
-- [Environment Variables](#environment-variables)
-- [Running Locally](#running-locally)
-- [Module Reference](#module-reference)
-- [Request / Response Conventions](#request--response-conventions)
-- [Authentication & Authorization](#authentication--authorization)
-- [Building & Deploying](#building--deploying)
-
----
-
-## Stack
-
-| Concern | Library |
+| Feature | Details |
 |---|---|
-| Framework | NestJS 10 + Express |
-| Database client | @supabase/supabase-js v2 (service role key) |
-| Validation | class-validator + class-transformer |
-| API docs | @nestjs/swagger (Swagger UI at `/api/docs`) |
-| Cron jobs | @nestjs/schedule |
-| File upload | multer (via `@nestjs/platform-express`) |
+| **JWT auth** | Every protected request validated against Supabase Auth; no local JWT decoding |
+| **Role-based access** | `@Roles('admin')` decorator — admins get full access, members get own-data only |
+| **One-timer constraint** | PostgreSQL partial unique index prevents two `running` entries per user at the DB level |
+| **Screenshot upload** | Multipart endpoint; blurred file stored to private Supabase Storage; signed URLs generated on read (1-hour expiry) |
+| **Dashboard stats** | `GET /reports/stats` — today's hours, active-now count, weekly hours, week-over-week change |
+| **Weekly chart** | `GET /reports/weekly-chart` — last 7 days hourly data for bar chart rendering |
+| **CSV export** | `GET /reports/csv` — streams `text/csv` with all time entries |
+| **HTML report** | `GET /reports/pdf` — printable HTML report download |
+| **Daily Slack cron** | `@nestjs/schedule` posts yesterday's summary at 09:00 UTC |
+| **Swagger docs** | Full interactive API docs at `/api/docs` with bearer auth |
+| **Active members** | `GET /time-entries/active` — all currently running timers with elapsed seconds |
 
 ---
 
-## Project Layout
+## Module Architecture
 
 ```
-src/
-├── main.ts                         # Bootstrap: global prefix, CORS, Swagger, ValidationPipe
-├── app.module.ts                   # Root module — imports all feature modules, registers APP_GUARDs
+AppModule
 │
-├── supabase/
-│   ├── supabase.module.ts          # @Global() — provides SupabaseService to all modules
-│   └── supabase.service.ts         # Singleton Supabase client (service role key)
+├── SupabaseModule (@Global)
+│   └── SupabaseService          ← Supabase JS client (service role key)
+│       └── injected into every feature service
 │
-├── guards/
-│   ├── supabase-auth.guard.ts      # JWT verification, loads role/is_active from users table
-│   └── roles.guard.ts              # Checks @Roles('admin') metadata
+├── APP_GUARD: SupabaseAuthGuard ← applied to ALL routes globally
+│   └── reads Bearer token → supabase.auth.getUser()
+│       → loads role + is_active from public.users
+│       → attaches { id, email, role, isActive } to request.user
 │
-├── decorators/
-│   ├── public.decorator.ts         # @Public() — skip auth guard
-│   ├── roles.decorator.ts          # @Roles('admin') — require admin role
-│   └── current-user.decorator.ts   # @CurrentUser() — inject AuthUser from request
+├── APP_GUARD: RolesGuard        ← reads @Roles() metadata
+│   └── throws 403 if role doesn't match
 │
-├── filters/
-│   └── http-exception.filter.ts    # Uniform error shape: { statusCode, error, path, timestamp }
+├── AuthModule
+│   ├── POST /auth/login         @Public() — skips auth guard
+│   ├── POST /auth/logout
+│   └── GET  /auth/me
 │
-└── modules/
-    ├── auth/                        # Login, logout, /me
-    ├── users/                       # List, invite, get by ID, patch
-    ├── projects/                    # CRUD + total hours
-    ├── time-entries/                # Start, stop, list, active feed, delete
-    ├── screenshots/                 # Upload, list with signed URLs, get signed URL
-    ├── reports/                     # Stats, weekly chart, CSV stream, HTML report
-    ├── webhooks/                    # Slack test + daily cron summary
-    └── config/                      # Get / patch app_config row
+├── UsersModule
+│   ├── GET  /users              @Roles('admin')
+│   ├── GET  /users/me
+│   ├── GET  /users/:id          @Roles('admin')
+│   ├── POST /users/invite       @Roles('admin')
+│   └── PATCH /users/:id         @Roles('admin')
+│
+├── ProjectsModule
+│   ├── GET    /projects
+│   ├── GET    /projects/:id
+│   ├── POST   /projects         @Roles('admin')
+│   ├── PATCH  /projects/:id     @Roles('admin')
+│   └── DELETE /projects/:id     @Roles('admin')
+│
+├── TimeEntriesModule
+│   ├── POST   /time-entries/start
+│   ├── POST   /time-entries/:id/stop
+│   ├── GET    /time-entries      (paginated, filterable)
+│   ├── GET    /time-entries/active  @Roles('admin')
+│   └── DELETE /time-entries/:id
+│
+├── ScreenshotsModule
+│   ├── POST /screenshots/upload  (multipart)
+│   ├── GET  /screenshots         (list + signed URLs)
+│   └── GET  /screenshots/:id/url
+│
+├── ReportsModule                  @Roles('admin') on all
+│   ├── GET /reports/stats
+│   ├── GET /reports/weekly-chart
+│   ├── GET /reports/csv
+│   └── GET /reports/pdf
+│
+├── WebhooksModule
+│   ├── POST /webhooks/slack/test  @Roles('admin')
+│   └── @Cron('0 9 * * *')        dailySummary()
+│
+└── ConfigModule
+    ├── GET   /config
+    └── PATCH /config              @Roles('admin')
 ```
 
 ---
 
-## Environment Variables
+## Request Lifecycle
 
-Copy `.env.example` to `.env`:
-
-```bash
-SUPABASE_URL=https://<project>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>   # NEVER expose to clients
-PORT=3001
-ADMIN_URL=http://localhost:3000                # CORS allowed origin
+```
+Incoming HTTP Request
+        │
+        ▼
+┌───────────────────────────────────────────────────────┐
+│  SupabaseAuthGuard (global)                           │
+│                                                       │
+│  Is @Public()?  ──yes──► Skip guard                  │
+│       │ no                                            │
+│       ▼                                               │
+│  Authorization: Bearer <token>                        │
+│  supabase.auth.getUser(token)                        │
+│       │                                               │
+│  ┌────┴──────────┐                                    │
+│  │ token invalid │──► 401 UnauthorizedException       │
+│  └───────────────┘                                    │
+│       │ valid                                         │
+│  SELECT role, is_active FROM public.users             │
+│  ┌────────────────┐                                   │
+│  │ is_active=false│──► 401 Account deactivated        │
+│  └────────────────┘                                   │
+│       │                                               │
+│  req.user = { id, email, role, isActive }             │
+└───────────────────────┬───────────────────────────────┘
+                        │
+                        ▼
+┌───────────────────────────────────────────────────────┐
+│  RolesGuard (global)                                  │
+│                                                       │
+│  No @Roles() metadata? ──► Pass through               │
+│  Has @Roles('admin') and user.role !== 'admin'?       │
+│       └──► 403 Insufficient permissions               │
+└───────────────────────┬───────────────────────────────┘
+                        │
+                        ▼
+┌───────────────────────────────────────────────────────┐
+│  ValidationPipe                                       │
+│  whitelist: true, forbidNonWhitelisted: true          │
+│  transform: true                                      │
+└───────────────────────┬───────────────────────────────┘
+                        │
+                        ▼
+              Controller Handler
+                        │
+                        ▼
+┌───────────────────────────────────────────────────────┐
+│  HttpExceptionFilter (global)                         │
+│  Returns: { statusCode, error, path, timestamp }      │
+└───────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Running Locally
+## API Reference
 
-```bash
-# From repo root
-pnpm dev:api
+All endpoints share the `/api/v1` prefix. Full interactive docs at `http://localhost:3001/api/docs`.
 
-# Or from this directory
-pnpm dev        # nest start --watch
-pnpm build      # nest build → dist/
-pnpm start      # node dist/main.js
-```
+### Auth
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/login` | Public | `{ email, password }` → `{ accessToken, refreshToken, user }` |
+| POST | `/auth/logout` | Bearer | Revoke session server-side |
+| GET | `/auth/me` | Bearer | Current user profile |
 
-Swagger UI: [http://localhost:3001/api/docs](http://localhost:3001/api/docs)
+### Users
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/users` | Admin | All users + computed `weeklyHours` |
+| GET | `/users/me` | Bearer | Own profile + recent entries |
+| GET | `/users/:id` | Admin | User profile + weekly hours + last 10 entries |
+| POST | `/users/invite` | Admin | Create auth user + `public.users` row |
+| PATCH | `/users/:id` | Admin | Update name, role, timezone, isActive |
+
+### Projects
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/projects` | Bearer | All projects + `totalHours` |
+| GET | `/projects/:id` | Bearer | Project + total hours + member count |
+| POST | `/projects` | Admin | Create |
+| PATCH | `/projects/:id` | Admin | Edit / archive |
+| DELETE | `/projects/:id` | Admin | Delete |
+
+### Time Entries
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/time-entries/start` | Bearer | Start timer (DB constraint: one running per user) |
+| POST | `/time-entries/:id/stop` | Bearer | Stop + compute `duration_seconds` |
+| GET | `/time-entries` | Bearer | Paginated list — params: `page`, `limit`, `userId`, `projectId`, `from`, `to` |
+| GET | `/time-entries/active` | Admin | All running timers with elapsed seconds |
+| DELETE | `/time-entries/:id` | Bearer | Own entry only; admin can delete any |
+
+### Screenshots
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/screenshots/upload` | Bearer | Multipart: `file` + `activityPercent` + `timeEntryId?` |
+| GET | `/screenshots` | Bearer | Paginated list with 1-hour signed URLs — params: `userId`, `timeEntryId`, `from`, `to` |
+| GET | `/screenshots/:id/url` | Bearer | Single screenshot signed URL |
+
+### Reports (admin only)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/reports/stats` | `{ todayHours, activeNow, screenshotsToday, weeklyHours, weeklyChange }` |
+| GET | `/reports/weekly-chart` | `[{ day, date, hours }]` for last 7 days |
+| GET | `/reports/csv` | `text/csv` stream — params: `from`, `to`, `userId`, `projectId` |
+| GET | `/reports/pdf` | HTML report download |
+
+### Config & Webhooks
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/config` | Bearer | `{ screenshotIntervalMinutes, companyName, timezone, slackWebhookUrl }` |
+| PATCH | `/config` | Admin | Update configuration |
+| POST | `/webhooks/slack/test` | Admin | Send test Slack message |
 
 ---
 
-## Module Reference
+## Error Responses
 
-### Infrastructure
-
-#### `SupabaseService`
-
-A global singleton that creates the Supabase JS client using the **service role key**. This key bypasses RLS and is used only server-side. Injected automatically into every feature service because `SupabaseModule` is `@Global()`.
-
-```typescript
-constructor(private readonly supabase: SupabaseService) {}
-// Then anywhere:
-this.supabase.client.from('users').select('id, name').eq('id', userId)
-```
-
-#### `SupabaseAuthGuard`
-
-Registered globally via `APP_GUARD`. On every non-public request:
-1. Reads `Authorization: Bearer <token>` header.
-2. Calls `supabase.auth.getUser(token)` to validate the JWT with Supabase.
-3. Queries `public.users` for `role` and `is_active`.
-4. Rejects with `401` if the token is invalid, user not found, or account is deactivated.
-5. Attaches `{ id, email, role, isActive }` to `request.user`.
-
-#### `RolesGuard`
-
-Also registered globally. Reads `@Roles('admin')` metadata. If the annotation is present and the user's role doesn't match, throws `403 Forbidden`.
-
-#### `HttpExceptionFilter`
-
-Returns a consistent JSON shape for all errors:
+All errors return:
 
 ```json
 {
@@ -135,248 +217,34 @@ Returns a consistent JSON shape for all errors:
 }
 ```
 
----
-
-### AuthModule — `src/modules/auth/`
-
-Handles login, logout, and profile retrieval.
-
-#### `POST /auth/login` — Public
-
-```json
-// Request body
-{ "email": "user@example.com", "password": "secret123" }
-
-// Response 200
-{
-  "accessToken": "<supabase-jwt>",
-  "refreshToken": "<supabase-refresh-token>",
-  "user": { "id": "...", "name": "Alice", "email": "...", "role": "admin", "isActive": true, "timezone": "UTC" }
-}
-```
-
-Calls `supabase.auth.signInWithPassword()`. Verifies `is_active` before returning. Throws `401` if credentials are wrong or account is deactivated.
-
-#### `POST /auth/logout` — Bearer
-
-Calls `supabase.auth.admin.signOut(token)` to revoke the session server-side.
-
-#### `GET /auth/me` — Bearer
-
-Returns the calling user's profile row from `public.users`.
-
----
-
-### UsersModule — `src/modules/users/`
-
-Team member management. All write operations are admin-only.
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/users` | Admin | All users with computed `weeklyHours` |
-| GET | `/users/me` | Bearer | Own profile + recent entries + weekly hours |
-| GET | `/users/:id` | Admin | User profile + weekly hours + last 10 entries |
-| POST | `/users/invite` | Admin | Create auth user + `public.users` row |
-| PATCH | `/users/:id` | Admin | Update `name`, `role`, `timezone`, `isActive` |
-
-**Invite flow:** `POST /users/invite` calls `supabase.auth.admin.createUser({ email_confirm: true })` then inserts the `public.users` row. If the DB insert fails, the auth user is cleaned up.
-
-**DTOs:**
-```typescript
-InviteUserDto  { name: string; email: string; role: 'admin' | 'member'; password: string; timezone?: string }
-UpdateUserDto  { name?, role?, timezone?, isActive? }
-```
-
----
-
-### ProjectsModule — `src/modules/projects/`
-
-Project CRUD with aggregate hours.
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/projects` | Bearer | All projects with `totalHours` |
-| GET | `/projects/:id` | Bearer | Project + total hours + unique member count |
-| POST | `/projects` | Admin | Create project |
-| PATCH | `/projects/:id` | Admin | Edit name, description, color, or archive |
-| DELETE | `/projects/:id` | Admin | Hard delete |
-
-**DTOs:**
-```typescript
-CreateProjectDto { name: string; color: string; description?: string }
-UpdateProjectDto { name?, description?, color?, isArchived? }
-```
-
----
-
-### TimeEntriesModule — `src/modules/time-entries/`
-
-Core time tracking. The database enforces one running entry per user via a partial unique index.
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/time-entries/start` | Bearer | Open a new entry (`status='running'`) |
-| POST | `/time-entries/:id/stop` | Bearer | Close running entry, compute `duration_seconds` |
-| GET | `/time-entries` | Bearer | Paginated list with filters |
-| GET | `/time-entries/active` | Admin | All currently running timers with elapsed seconds |
-| DELETE | `/time-entries/:id` | Bearer | Own entry only (admin can delete any) |
-
-**List query params:** `userId`, `projectId`, `from` (ISO), `to` (ISO), `page` (default 1), `limit` (default 20)
-
-**Response shape:** `{ data: TimeEntry[], total, page, limit, totalPages }`
-
-**Start DTOs:**
-```typescript
-StartTimerDto { projectId?: string; description?: string }
-StopTimerDto  { endedAt?: string }  // defaults to now()
-```
-
----
-
-### ScreenshotsModule — `src/modules/screenshots/`
-
-Screenshot upload and retrieval. Screenshots are always stored blurred — the desktop app applies Gaussian blur before upload.
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/screenshots/upload` | Bearer | Multipart — `file` + `activityPercent` + optional `timeEntryId` |
-| GET | `/screenshots` | Bearer | Paginated list with 1-hour signed URLs |
-| GET | `/screenshots/:id/url` | Bearer | Signed URL for a single screenshot |
-
-**Upload fields:** `file` (PNG/JPEG), `activityPercent` (0–100), `timeEntryId?`, `capturedAt?`
-
-Files are stored at `{userId}/{timestamp}.png` in the `screenshots` Supabase Storage bucket (private).
-
----
-
-### ReportsModule — `src/modules/reports/`
-
-Admin-only data endpoints. All require `role = 'admin'`.
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/reports/stats` | `{ todayHours, activeNow, screenshotsToday, weeklyHours, weeklyChange }` |
-| GET | `/reports/weekly-chart` | Last 7 days: `[{ day, date, hours }]` |
-| GET | `/reports/csv` | `text/csv` stream — filterable by `from`, `to`, `userId`, `projectId` |
-| GET | `/reports/pdf` | HTML report as a download |
-
-**CSV columns:** Date, User, Email, Project, Description, Duration (hours)
-
----
-
-### WebhooksModule — `src/modules/webhooks/`
-
-Slack integration.
-
-#### `POST /webhooks/slack/test` — Admin
-
-Sends a test message to the `slack_webhook_url` stored in `app_config`. Returns `{ success: false }` if no URL is configured.
-
-#### Daily Cron — 09:00 UTC
-
-Reads `slack_webhook_url` from `app_config`. If set, posts yesterday's aggregated stats:
-
-```
-:clockwork: Daily Summary — Thursday, May 1
-• 5 members tracked time
-• 38.4h total logged
-```
-
----
-
-### ConfigModule — `src/modules/config/`
-
-Reads and writes the `app_config` table (single row, `id = 1`).
-
-#### `GET /config` — Bearer
-
-```json
-{
-  "screenshotIntervalMinutes": 10,
-  "companyName": "Clockwork",
-  "timezone": "UTC",
-  "slackWebhookUrl": "https://hooks.slack.com/..."
-}
-```
-
-#### `PATCH /config` — Admin
-
-```typescript
-UpdateConfigDto {
-  screenshotIntervalMinutes?: number;   // 1–60
-  companyName?: string;
-  timezone?: string;
-  slackWebhookUrl?: string;             // must be a valid URL
-}
-```
-
----
-
-## Request / Response Conventions
-
-- All bodies are JSON (`Content-Type: application/json`), except screenshot upload which is `multipart/form-data`.
-- Successful single-resource responses return the resource directly.
-- List endpoints return `{ data, total, page, limit, totalPages }`.
-- Error responses: `{ statusCode, error, path, timestamp }`.
-
-| Status | Meaning |
+| Status | Cause |
 |---|---|
-| `400` | Validation failure or business rule violation (e.g. timer already running) |
-| `401` | Missing, expired, or invalid token |
-| `403` | Valid token but insufficient role |
+| `400` | Validation failure or business rule (e.g. timer already running) |
+| `401` | Missing, expired, or invalid token; deactivated account |
+| `403` | Valid token but wrong role |
 | `404` | Resource not found |
 | `409` | Conflict (e.g. duplicate email on invite) |
-| `500` | Unexpected server error |
 
 ---
 
-## Authentication & Authorization
+## Environment Variables
 
-Every protected endpoint requires:
-
-```
-Authorization: Bearer <supabase-jwt>
-```
-
-The token is verified by Supabase Auth on every request — there is no local JWT decoding. Supabase is the authoritative token validator.
-
-To opt a handler out of authentication:
-
-```typescript
-@Public()
-@Post('login')
-login(@Body() dto: LoginDto) { ... }
-```
-
-To restrict to admins:
-
-```typescript
-@Roles('admin')
-@Get()
-list() { ... }
-```
-
-To access the current user in a handler:
-
-```typescript
-@Get('me')
-me(@CurrentUser() user: AuthUser) {
-  return this.usersService.findById(user.id);
-}
+```env
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key   # NEVER expose to clients
+PORT=3001
+ADMIN_URL=http://localhost:3000                    # CORS allowed origin
 ```
 
 ---
 
-## Building & Deploying
+## Running & Building
 
 ```bash
-# Build TypeScript → dist/
-pnpm build
+pnpm dev      # nest start --watch  →  :3001
+pnpm build    # nest build          →  dist/
+pnpm start    # node dist/main.js
 
-# Start compiled output
-pnpm start
-
-# Railway / Fly.io / any Node host
-# Start command: node dist/main.js
-# Set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ADMIN_URL, PORT
+# Swagger UI
+open http://localhost:3001/api/docs
 ```
