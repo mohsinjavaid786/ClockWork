@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build all apps
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared package
+        run: pnpm --filter @clockwork/shared build
+
+      - name: Build API
+        run: pnpm --filter api build
+
+      - name: Build admin portal
+        run: pnpm --filter admin build
+
+      # Build the desktop renderer (Vite) and type-check the main process.
+      # electron-builder is not run here — that happens in the release workflow.
+      - name: Build desktop renderer
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+        run: pnpm --filter desktop exec vite build
+
+      - name: Type-check desktop main process
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+        run: pnpm --filter desktop exec tsc -p tsconfig.electron.json --noEmit

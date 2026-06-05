@@ -500,6 +500,7 @@ cd apps/desktop && pnpm package        # create .dmg / .exe → release/
 |---|---|---|
 | [Employee Guide](docs/EMPLOYEE_GUIDE.md) | Employees using the desktop app | Install, login, start/stop timer, screenshots, tray icon, FAQ |
 | [Admin Guide](docs/ADMIN_GUIDE.md) | Managers using the web portal | Dashboard, Work Diary, Timesheets, Team, Projects, Reports, Settings, common tasks |
+| [Deployment Guide](docs/DEPLOYMENT.md) | Project owner / DevOps | API on Railway, portal on Vercel, desktop via GitHub Releases, CI/CD, code signing |
 
 ---
 
