@@ -4,6 +4,67 @@
 
 ---
 
+## Branch Strategy
+
+```
+feature/xyz ──► dev ──► production
+                 │            │
+                 │            └─ Vercel production URL
+                 │            └─ Railway production API
+                 │            └─ git tag v* → GitHub Releases (desktop)
+                 │
+                 └─ Vercel preview URL (per push)
+                 └─ Railway staging API (optional)
+```
+
+| Branch | Purpose | Auto-deploys to |
+|---|---|---|
+| `production` | Stable releases | Vercel production · Railway production · GitHub Releases (on tag) |
+| `dev` | Integration / staging | Vercel preview · Railway staging (optional) |
+| `main` | Historical / reference | Vercel preview |
+| `feature/*` | Work-in-progress | PR → `dev` |
+
+### Day-to-day workflow
+
+```bash
+# 1. Work on a feature branch
+git checkout dev
+git checkout -b feature/my-feature
+# ... make changes ...
+git push origin feature/my-feature
+# → open PR → dev (CI runs, must pass)
+
+# 2. When dev is stable, merge to production
+git checkout production
+git merge dev
+git push origin production
+# → Vercel re-deploys production portal
+# → Railway re-deploys production API
+
+# 3. Tag to release the desktop app
+git tag v1.2.0
+git push origin production --tags
+# → GitHub Actions builds .dmg + .exe + creates GitHub Release
+```
+
+### CI/CD at a glance
+
+```
+Push to dev / main / production
+    └─ .github/workflows/ci.yml
+       Builds API + admin portal + desktop renderer
+       Must pass before merging
+
+Push a v*.*.* tag (from production)
+    └─ .github/workflows/release.yml
+       macOS runner → Clockwork-*.dmg + .zip
+       Windows runner → Clockwork Setup *.exe
+       Creates GitHub Release → employees download here
+       electron-updater auto-updates existing installs
+```
+
+---
+
 ## Architecture
 
 ```
@@ -69,12 +130,13 @@ The API is a standard Node.js app. Railway is the simplest host.
 1. Go to [railway.app](https://railway.app) → New project → Deploy from GitHub repo
 2. Select the `clockwork` repo
 3. Set the **Root Directory** to `apps/api`
-4. Railway will auto-detect Node.js and build with:
+4. Under **Settings → Source → Branch**, set the deploy branch to **`production`**
+5. Railway will auto-detect Node.js and build with:
    ```
    Build:  pnpm install && pnpm build
    Start:  node dist/main.js
    ```
-5. Add environment variables under **Variables**:
+6. Add environment variables under **Variables**:
    ```
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
@@ -82,7 +144,7 @@ The API is a standard Node.js app. Railway is the simplest host.
    ADMIN_URL=https://your-admin-portal.vercel.app
    NODE_ENV=production
    ```
-6. Copy the generated Railway URL (e.g. `https://clockwork-api.up.railway.app`) — you'll need it for the next steps.
+7. Copy the generated Railway URL (e.g. `https://clockwork-api.up.railway.app`) — you'll need it for the next steps.
 
 ### Option B — Docker (any container host)
 
@@ -118,18 +180,26 @@ Works on Render, Fly.io, DigitalOcean, or any Docker host.
 2. In the **Configure Project** screen:
    - **Framework Preset**: Next.js (auto-detected)
    - **Root Directory**: leave as `.` (the repo root)
-   - Vercel will use `vercel.json` which sets the correct build command
-3. Add **Environment Variables**:
+   - `vercel.json` already sets the correct build/install commands
+3. After the project is created, go to **Settings → Git**:
+   - Set **Production Branch** to **`production`**
+   - The `dev` branch will auto-get preview deployments
+5. Add **Environment Variables** in the Vercel dashboard (Settings → Environment Variables):
    ```
    NEXT_PUBLIC_API_URL = https://your-railway-api-url.up.railway.app
    ```
-4. Click **Deploy**
+   Set this for **Production**, **Preview**, and **Development** environments.
+   > Do NOT put this in `vercel.json` — the `@secret` syntax in that file requires
+   > a Vercel secret to already exist, which causes deployments to fail.
 
-The admin portal will be live at `https://your-project.vercel.app`.
+6. Click **Deploy**
+
+The admin portal will be live at `https://your-project.vercel.app` (production from `production` branch).
+Preview URLs are auto-generated for every push to `dev` and other branches.
 
 > **Custom domain:** In Vercel → Project → Settings → Domains, add your domain (e.g. `admin.yourcompany.com`).
 
-> **After deploying**, update the API's `ADMIN_URL` variable on Railway to match your Vercel URL. This controls the CORS allowed-origin header.
+> **After deploying**, update the API's `ADMIN_URL` variable on Railway to your Vercel URL. This controls the CORS allowed-origin header.
 
 ---
 
