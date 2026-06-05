@@ -1,6 +1,6 @@
 # apps/desktop — Clockwork Desktop App
 
-> Cross-platform Electron 30 app for employees. Time tracking, screenshot capture with Gaussian blur, activity monitoring, OS keychain token storage. Supports macOS (Apple Silicon + Intel) and Windows (x64).
+> Cross-platform Electron 30 app for employees. Time tracking, screenshot capture with Gaussian blur, activity monitoring, OS keychain token storage. React 19 renderer. Supports macOS (Apple Silicon + Intel) and Windows (x64).
 
 ---
 
@@ -28,7 +28,7 @@
 │  ┌───────────────────────────────────────────────────────┐ │
 │  │  Renderer Process  (sandbox: true)                    │ │
 │  │                                                       │ │
-│  │  React 18 + Vite                                      │ │
+│  │  React 19 + Vite                                      │ │
 │  │  LoginScreen / TrackerScreen                          │ │
 │  │                                                       │ │
 │  │  window.clockwork.auth.login()    ◄── only surface    │ │

@@ -1,7 +1,6 @@
 # Clockwork
 
-> Self-hosted employee time tracking — screenshot capture, activity monitoring, admin dashboard, and native desktop app. Hubstaff/Clockify-style, fully under your control.
-
+> Self-hosted employee time tracking — screenshot capture, activity monitoring, admin dashboard, and native desktop app.
 ---
 
 ## Features
@@ -49,11 +48,11 @@
 │                         Employee Machine                             │
 │                                                                      │
 │  ┌────────────────────────────────────────────────────────────────┐  │
-│  │                  Electron Desktop App (Electron 30)            │  │
+│  │                  Electron Desktop App (Electron 30.x)          │  │
 │  │                                                                │  │
 │  │  ┌──────────────────┐  contextBridge  ┌────────────────────┐  │  │
 │  │  │  Renderer        │◄───────────────►│  Main Process      │  │  │
-│  │  │  React 18 + Vite │  window.clockwork│                    │  │  │
+│  │  │  React 19 + Vite │  window.clockwork│                    │  │  │
 │  │  │                  │                 │  TimerService      │  │  │
 │  │  │  LoginScreen     │                 │  ScreenshotService │  │  │
 │  │  │  TrackerScreen   │                 │  ActivityService   │  │  │
@@ -284,7 +283,7 @@ RLS: is_admin() helper → SELECT role = 'admin' FROM users WHERE id = auth.uid(
 ```
 clockwork/
 ├── apps/
-│   ├── api/                         # NestJS 10 REST API
+│   ├── api/                         # NestJS 11 REST API
 │   │   └── src/
 │   │       ├── main.ts              # Bootstrap, /api/v1 prefix, Swagger
 │   │       ├── app.module.ts        # APP_GUARD providers (auth + roles)
@@ -302,7 +301,7 @@ clockwork/
 │   │           ├── webhooks/        # Slack test + daily cron
 │   │           └── config/          # get/patch app_config row
 │   │
-│   ├── admin/                       # Next.js 14 App Router
+│   ├── admin/                       # Next.js 15 App Router
 │   │   └── src/
 │   │       ├── app/
 │   │       │   ├── (auth)/          # login, access-denied (AuthProvider)
@@ -334,7 +333,7 @@ clockwork/
 │   │           ├── mock-data.ts           # demo mode data + helpers
 │   │           └── utils.ts              # cn(), formatDuration(), etc.
 │   │
-│   └── desktop/                     # Electron 30 + React 18 + Vite
+│   └── desktop/                     # Electron 30 + React 19 + Vite
 │       └── src/
 │           ├── main/
 │           │   ├── index.ts         # BrowserWindow, IPC, tray, updater
@@ -377,13 +376,13 @@ clockwork/
 |---|---|---|
 | Monorepo | pnpm workspaces | Node ≥ 20 |
 | Language | TypeScript 5 strict | No `any`, no placeholder types |
-| API framework | NestJS 10 + Express | Global prefix `/api/v1` |
+| API framework | NestJS 11 + Express | Global prefix `/api/v1` |
 | Database | Supabase PostgreSQL | RLS on all tables |
 | Auth | Supabase Auth JWT | Validated server-side on every request |
 | Storage | Supabase Storage | Private bucket, signed URLs |
-| Admin portal | Next.js 14 App Router | Tailwind CSS, Geist font, Recharts |
+| Admin portal | Next.js 15 App Router | Tailwind CSS, Geist font, Recharts 3 |
 | Desktop shell | Electron 30 | `contextIsolation`, `sandbox`, no `nodeIntegration` |
-| Renderer build | Vite 5 + React 18 | HMR in dev mode |
+| Renderer build | Vite 5 + React 19 | HMR in dev mode |
 | Screenshot blur | sharp (native) | Gaussian σ=3 before upload |
 | Activity tracking | powerMonitor | OS idle detection |
 | Token encryption | electron.safeStorage | macOS Keychain / Windows Credential Store |
@@ -492,6 +491,15 @@ cd apps/desktop && pnpm package        # create .dmg / .exe → release/
 - Desktop JWT encrypted with OS keychain via `safeStorage`
 - Deactivated users (`is_active = false`) rejected at the auth guard even with valid JWT
 - One-running-timer constraint enforced at DB level via partial unique index
+
+---
+
+## User Guides
+
+| Guide | Audience | Contents |
+|---|---|---|
+| [Employee Guide](docs/EMPLOYEE_GUIDE.md) | Employees using the desktop app | Install, login, start/stop timer, screenshots, tray icon, FAQ |
+| [Admin Guide](docs/ADMIN_GUIDE.md) | Managers using the web portal | Dashboard, Work Diary, Timesheets, Team, Projects, Reports, Settings, common tasks |
 
 ---
 

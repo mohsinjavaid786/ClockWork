@@ -1,6 +1,6 @@
 # apps/admin — Clockwork Admin Portal
 
-> Next.js 14 App Router management dashboard. Black/white design system, Geist font, Recharts, demo mode with no backend required.
+> Next.js 15 App Router management dashboard. Black/white design system, Geist font, Recharts 3, React 19, demo mode with no backend required.
 
 ---
 

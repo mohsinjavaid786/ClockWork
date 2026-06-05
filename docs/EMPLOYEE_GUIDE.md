@@ -1,0 +1,279 @@
+# Clockwork — Employee Guide
+
+> This guide is for **employees** who track time using the Clockwork desktop app. No technical knowledge required.
+
+---
+
+## Table of Contents
+
+- [What Clockwork does](#what-clockwork-does)
+- [Installation](#installation)
+- [Logging in](#logging-in)
+- [Your first timer](#your-first-timer)
+- [Daily workflow](#daily-workflow)
+- [Screenshots and activity tracking](#screenshots-and-activity-tracking)
+- [The system tray](#the-system-tray)
+- [Signing out](#signing-out)
+- [Getting app updates](#getting-app-updates)
+- [FAQ](#faq)
+
+---
+
+## What Clockwork does
+
+Clockwork is a time tracking app that runs on your computer. While you work, it:
+
+- Records how long you spend on each task or project
+- Takes a screenshot every few minutes so your manager can see what you were working on
+- Measures your keyboard and mouse activity to calculate an **activity percentage** — how active you were during each screenshot window
+- Uploads everything securely to the team's server
+
+Your screenshots are **automatically blurred** before they leave your computer. No one can read your screen at full resolution.
+
+---
+
+## Installation
+
+Your admin will send you a link to download the installer for your operating system.
+
+| Platform | File to download |
+|---|---|
+| macOS | `Clockwork-x.x.x.dmg` |
+| Windows | `Clockwork Setup x.x.x.exe` |
+
+**macOS:**
+1. Open the `.dmg` file
+2. Drag **Clockwork** into your **Applications** folder
+3. Open Clockwork from Applications (right-click → Open the first time if macOS warns you)
+
+**Windows:**
+1. Run the `.exe` installer
+2. Follow the prompts — Clockwork installs to your user folder
+3. Launch from the Start menu or desktop shortcut
+
+---
+
+## Logging in
+
+When you open Clockwork for the first time you'll see the login screen:
+
+```
+┌────────────────────────────────┐
+│ CLOCKWORK                      │
+├────────────────────────────────┤
+│                                │
+│         Sign in                │
+│   Use your Clockwork account   │
+│                                │
+│  ┌──────────────────────────┐  │
+│  │  your@company.com        │  │
+│  └──────────────────────────┘  │
+│  ┌──────────────────────────┐  │
+│  │  ••••••••                │  │
+│  └──────────────────────────┘  │
+│                                │
+│  [ Sign in ]                   │
+│                                │
+└────────────────────────────────┘
+```
+
+1. Enter the **email address** your admin used to invite you
+2. Enter the **password** your admin gave you (you should change this in your profile after first login)
+3. Click **Sign in**
+
+Once logged in, Clockwork remembers your session. On future launches you'll go straight to the tracker without logging in again.
+
+> **If sign-in fails:** check that Caps Lock is off, and that you're using the exact email address your admin registered for you. Contact your admin if the problem persists.
+
+---
+
+## Your first timer
+
+After logging in you'll see the tracker screen:
+
+```
+┌────────────────────────────────┐
+│ CLOCKWORK            Sign out  │
+├────────────────────────────────┤
+│          Your Name             │
+│                                │
+│  ┌──────────────────────────┐  │
+│  │       00:00:00           │  │
+│  │                          │  │
+│  │        ○ Stopped         │  │
+│  └──────────────────────────┘  │
+│                                │
+│  Project:                      │
+│  ┌──────────────────────────┐  │
+│  │  Select a project...  ▾  │  │
+│  └──────────────────────────┘  │
+│                                │
+│  What are you working on?      │
+│  ┌──────────────────────────┐  │
+│  │                          │  │
+│  └──────────────────────────┘  │
+│                                │
+│  ┌──────────────────────────┐  │
+│  │     Start tracking       │  │
+│  └──────────────────────────┘  │
+└────────────────────────────────┘
+```
+
+**To start tracking:**
+1. (Optional) Pick a **project** from the dropdown — this helps your admin see where time is being spent
+2. (Optional) Type a short **description** of what you're working on, e.g. *"Homepage design review"*
+3. Click **Start tracking**
+
+The timer starts counting and a green dot confirms it's running.
+
+**To stop tracking:**
+1. Click **Stop tracking**
+2. The timer stops and your session is saved
+
+That's it. Your time entry — including any screenshots taken during the session — is automatically uploaded.
+
+---
+
+## Daily workflow
+
+A typical day looks like this:
+
+```
+Morning
+  └─ Open Clockwork (it may already be running in your tray)
+  └─ Select project + add a description
+  └─ Click Start tracking
+  └─ Work normally — Clockwork runs in the background
+
+Lunch / breaks
+  └─ Click Stop tracking before stepping away
+  └─ Restart when you return
+
+Context-switching
+  └─ Stop the current timer
+  └─ Select the new project / description
+  └─ Start a new timer
+
+End of day
+  └─ Click Stop tracking
+  └─ Clockwork minimizes to the system tray
+     (your session data is already uploaded)
+```
+
+> **Tip:** You don't need to stop the timer for short breaks (a few minutes). Clockwork calculates your activity percentage from keyboard and mouse events, so idle time is visible to your manager regardless.
+
+> **Important:** Only **one timer can run at a time.** If you try to start a second timer before stopping the first, you'll see a conflict error. Stop the running timer first.
+
+---
+
+## Screenshots and activity tracking
+
+Every few minutes (your admin configures the interval — typically 10 minutes), Clockwork automatically:
+
+1. **Captures your primary display**
+2. **Applies a Gaussian blur** to the image before it ever leaves your computer — the raw screenshot is never stored or uploaded
+3. **Calculates your activity percentage** — how active your keyboard and mouse were during that window
+4. **Uploads the blurred screenshot** to the team's secure server along with your activity data
+
+### What the activity percentage means
+
+| Level | What it signals |
+|---|---|
+| **70–100%** | Actively typing or using the mouse most of the minute |
+| **40–69%** | Moderate activity — pauses are normal |
+| **0–39%** | Low activity — possibly reading, thinking, or briefly stepped away |
+
+A low activity percentage for one screenshot doesn't mean you weren't working. It simply reflects keyboard/mouse input, not thinking or reading.
+
+### What your manager can see
+
+- The **blurred screenshot** (readable enough to confirm the type of work, not sharp enough to read screen content)
+- The **time** the screenshot was taken
+- Your **activity percentage** for that 10-minute window
+- Per-minute keyboard and mouse event counts for each window
+
+### What your manager cannot see
+
+- Anything outside your primary display
+- Specific keystrokes (Clockwork counts events, it does not log what you type)
+- Any activity when no timer is running
+
+---
+
+## The system tray
+
+Clockwork lives in your system tray (bottom-right on Windows, top-right on macOS) even when the window is closed.
+
+```
+macOS menu bar:   [🕐] ← Clockwork icon
+Windows tray:     [...] → [🕐]
+```
+
+**Tray icon states:**
+- **Grey / default** — no timer is running
+- **Highlighted / active** — a timer is currently running
+
+**Right-click the tray icon** to get the context menu:
+
+```
+  ● Tracking…          ← current status (read-only)
+  ─────────────────
+  Show Clockwork        ← bring the window back
+  ─────────────────
+  Quit
+```
+
+**Closing the window** does **not** stop your timer or quit the app — it just hides the window. Your timer keeps running. Use the tray menu to bring the window back.
+
+To fully quit Clockwork, use **Quit** from the tray menu. This will also stop any running timer.
+
+---
+
+## Signing out
+
+To sign out of the app:
+
+1. Click the **Sign out** button in the top-right corner of the tracker screen
+   — or —
+2. Open the window, then click **Sign out**
+
+Signing out clears your stored session. The next time you open Clockwork you'll need to log in again.
+
+> **Note:** Signing out does **not** delete any of your time data. All recorded time entries and screenshots remain on the server.
+
+---
+
+## Getting app updates
+
+Clockwork checks for updates automatically every time it launches. When a new version is available:
+
+1. The update downloads silently in the background
+2. A notification appears when it's ready
+3. The app installs the update on the next restart
+
+You don't need to do anything — updates are fully automatic. If you want the latest version immediately, quit and relaunch the app.
+
+---
+
+## FAQ
+
+**Q: Do I need to be connected to the internet?**
+A: Yes, for the timer to start and for screenshots to upload. If you lose internet mid-session, Clockwork will retry uploads automatically when the connection returns.
+
+**Q: Will the app slow down my computer?**
+A: Clockwork is lightweight — under 50 MB of RAM. Screenshot capture (every 10 minutes) briefly spikes CPU for less than a second while the image is blurred and uploaded.
+
+**Q: What happens if I forget to start the timer?**
+A: Ask your admin to log a manual time entry through the admin portal. Clockwork itself only records time while the timer is running.
+
+**Q: What happens if the app crashes mid-session?**
+A: When you relaunch, Clockwork attempts to restore the session state. If it can't, the in-progress entry will remain as "running" on the server — your admin can close it manually.
+
+**Q: Can I see my own time data?**
+A: Currently only admins can view the full dashboard. Ask your admin for a summary of your tracked time.
+
+**Q: My screenshots show very low activity even though I was working hard. Why?**
+A: Activity is measured by keyboard and mouse events only. Extended periods of reading, watching a presentation, or participating in a video call will show low input activity — that's expected and normal.
+
+**Q: How do I change my password?**
+A: Contact your admin. They can update your account credentials from the admin portal.

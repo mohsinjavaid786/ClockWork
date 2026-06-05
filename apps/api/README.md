@@ -1,6 +1,6 @@
 # apps/api — Clockwork NestJS Backend
 
-> REST API powering the admin portal and desktop app. NestJS 10, Supabase PostgreSQL, global `/api/v1` prefix, Swagger at `/api/docs`.
+> REST API powering the admin portal and desktop app. NestJS 11, Supabase PostgreSQL, global `/api/v1` prefix, Swagger at `/api/docs`.
 
 ---
 
