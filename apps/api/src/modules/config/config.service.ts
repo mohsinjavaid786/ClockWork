@@ -12,7 +12,16 @@ export class ConfigService {
       .select('screenshot_interval_minutes, company_name, timezone, slack_webhook_url')
       .single();
 
-    if (error || !data) throw new BadRequestException('Config not found');
+    if (error || !data)
+      throw new BadRequestException(
+        `Config not found [diag]: ${JSON.stringify({
+          message: error?.message ?? null,
+          code: error?.code ?? null,
+          details: error?.details ?? null,
+          hint: error?.hint ?? null,
+          hasData: !!data,
+        })}`,
+      );
 
     return {
       screenshotIntervalMinutes: data.screenshot_interval_minutes as number,
