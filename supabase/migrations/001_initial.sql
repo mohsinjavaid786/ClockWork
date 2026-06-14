@@ -58,18 +58,19 @@ create table public.screenshots (
   created_at timestamptz not null default now()
 );
 
--- App config (key-value store)
+-- App config (single-row settings table)
 create table public.app_config (
-  key text primary key,
-  value text not null,
-  updated_at timestamptz not null default now()
+  id boolean primary key default true,
+  screenshot_interval_minutes integer not null default 10,
+  company_name text not null default 'Clockwork',
+  timezone text not null default 'UTC',
+  slack_webhook_url text,
+  updated_at timestamptz not null default now(),
+  constraint app_config_singleton check (id)
 );
 
-insert into public.app_config (key, value) values
-  ('screenshot_interval_minutes', '10'),
-  ('company_name', 'Clockwork'),
-  ('timezone', 'UTC'),
-  ('slack_webhook_url', '');
+-- exactly one row of settings
+insert into public.app_config (id) values (true);
 
 -- Updated_at trigger function
 create or replace function public.handle_updated_at()
@@ -85,6 +86,8 @@ create trigger users_updated_at before update on public.users
 create trigger projects_updated_at before update on public.projects
   for each row execute function public.handle_updated_at();
 create trigger time_entries_updated_at before update on public.time_entries
+  for each row execute function public.handle_updated_at();
+create trigger app_config_updated_at before update on public.app_config
   for each row execute function public.handle_updated_at();
 
 -- Helper function for RLS
