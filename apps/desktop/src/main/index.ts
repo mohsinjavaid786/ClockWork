@@ -10,14 +10,11 @@ import {
 import { captureAndUpload } from './services/screenshot.service';
 import { startActivityTracking, stopActivityTracking, getActivityPercent, flushActivity, setActivityPaused } from './services/activity.service';
 import { createTray, updateTrayMenu } from './tray';
+import { API_BASE } from './config';
 
 // Pin the app name so userData lives under ".../Clockwork" (not the package
 // name "desktop") and the app presents consistently to the OS.
 app.setName('Clockwork');
-
-// Packaged builds have no env vars, so the fallback must be the production API.
-// Dev overrides this with API_URL=... (see DEPLOYMENT.md / desktop dev notes).
-const API_BASE = process.env['API_URL'] ?? 'https://api-production-50cc.up.railway.app';
 const IS_DEV = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;

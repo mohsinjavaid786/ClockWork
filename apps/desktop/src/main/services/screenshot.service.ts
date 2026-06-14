@@ -1,8 +1,7 @@
 import { desktopCapturer, screen } from 'electron';
 import { getToken } from './timer.service';
 import type { ActivitySnapshot } from './activity.service';
-
-const API_BASE = process.env['API_URL'] ?? 'http://localhost:3001';
+import { API_BASE } from '../config';
 
 export async function captureAndUpload(
   userId: string,
@@ -46,11 +45,16 @@ export async function captureAndUpload(
       formData.append('capturedAt', capturedAt);
       if (timeEntryId) formData.append('timeEntryId', timeEntryId);
 
-      await fetch(`${API_BASE}/api/v1/screenshots/upload`, {
+      const res = await fetch(`${API_BASE}/api/v1/screenshots/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
+      if (!res.ok) {
+        console.error(`Screenshot upload failed (screen ${idx + 1}): HTTP ${res.status}`);
+      } else {
+        console.log(`Screenshot uploaded (screen ${idx + 1}/${displayCount}, ${pngBuffer.length} bytes)`);
+      }
     }),
   );
 
