@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Keyboard, Mouse, Camera, Clock } from 'lucide-react';
+import { X, Camera, Clock } from 'lucide-react';
 import { api } from '@/lib/api';
-import { type MockScreenshot } from '@/lib/mock-data';
+import type { Screenshot } from '@/lib/types';
 import { Avatar } from '@/components/Avatar';
 import { StatusBadge } from '@/components/StatusBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -23,10 +23,6 @@ export interface TimeEntry {
 interface Props {
   entry: TimeEntry | null;
   onClose: () => void;
-}
-
-interface Screenshot extends MockScreenshot {
-  signedUrl?: string;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -145,17 +141,6 @@ function ScreenshotTile({ shot }: { shot: Screenshot }) {
       >
         {pct}% active
       </div>
-
-      {/* Input events — bottom right */}
-      <div
-        className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5 rounded px-1.5 py-0.5"
-        style={{ background: 'rgba(0,0,0,0.82)', fontSize: 9, color: '#555' }}
-      >
-        <Keyboard size={8} />
-        <span>{shot.keyEvents}</span>
-        <Mouse size={8} className="ml-0.5" />
-        <span>{shot.mouseEvents}</span>
-      </div>
     </div>
   );
 }
@@ -203,9 +188,15 @@ export function EntryDetailPanel({ entry, onClose }: Props) {
   useEffect(() => {
     if (!entry) { setScreenshots([]); return; }
     setLoading(true);
+    const params: Record<string, string> = {
+      from: entry.started_at,
+      to: entry.ended_at ?? new Date().toISOString(),
+      limit: '1000',
+    };
+    if (entry.user?.id) params['userId'] = entry.user.id;
     api.screenshots
-      .list({ timeEntryId: entry.id, limit: '50' })
-      .then((res) => setScreenshots((res.data as Screenshot[]) ?? []))
+      .list(params)
+      .then((res) => setScreenshots((res.data ?? []).filter((s) => s.timeEntryId === entry.id)))
       .catch(() => setScreenshots([]))
       .finally(() => setLoading(false));
   }, [entry?.id]);
@@ -214,9 +205,6 @@ export function EntryDetailPanel({ entry, onClose }: Props) {
     screenshots.length > 0
       ? Math.round(screenshots.reduce((s, x) => s + x.activityPercent, 0) / screenshots.length)
       : null;
-
-  const totalKeys = screenshots.reduce((s, x) => s + x.keyEvents, 0);
-  const totalMouse = screenshots.reduce((s, x) => s + x.mouseEvents, 0);
 
   const open = entry !== null;
 
@@ -320,33 +308,6 @@ export function EntryDetailPanel({ entry, onClose }: Props) {
                   </div>
                 ))}
               </div>
-
-              {/* Input summary */}
-              {screenshots.length > 0 && (
-                <div className="flex gap-3">
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-4 py-3">
-                    <Keyboard size={13} className="text-[#666666]" />
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-[#444]">Keystrokes</p>
-                      <p className="font-mono text-sm font-semibold text-white">{totalKeys.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-4 py-3">
-                    <Mouse size={13} className="text-[#666666]" />
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-[#444]">Mouse events</p>
-                      <p className="font-mono text-sm font-semibold text-white">{totalMouse.toLocaleString()}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-4 py-3">
-                    <Camera size={13} className="text-[#666666]" />
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-[#444]">Screenshots</p>
-                      <p className="font-mono text-sm font-semibold text-white">{screenshots.length}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Activity timeline */}
               {screenshots.length > 0 && <ActivityTimeline screenshots={screenshots} />}

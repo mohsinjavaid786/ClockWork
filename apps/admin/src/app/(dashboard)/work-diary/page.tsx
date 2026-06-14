@@ -3,10 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
-import {
-  getDaysWithEntries,
-  type DayMeta,
-} from '@/lib/mock-data';
+import type { DayMeta } from '@/lib/types';
 import { DayDetailPanel } from '@/components/DayDetailPanel';
 import { PageHeader } from '@/components/PageHeader';
 
@@ -51,6 +48,7 @@ function fmtWeekRange(mon: Date) {
 // ── Member picker ─────────────────────────────────────────────────────────────
 
 interface Member { id: string; name: string; email: string }
+interface DiaryEntry { started_at: string; duration_seconds: number | null; status: string }
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 
@@ -261,24 +259,62 @@ export default function WorkDiaryPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [stats, setStats] = useState<{ todayHours: number; weeklyHours: number; weeklyChange: number } | null>(null);
-
-  // dayMeta: computed from mock (or real) data
-  const dayMeta = useMemo<Map<string, DayMeta>>(() => {
-    return getDaysWithEntries(selectedUserId || undefined);
-  }, [selectedUserId]);
+  const [entries, setEntries] = useState<DiaryEntry[]>([]);
 
   useEffect(() => {
     api.users.list().then(d => setMembers((d as Member[]) ?? [])).catch(() => {});
-    api.reports.stats().then(setStats).catch(() => {});
   }, []);
 
-  // Since start: sum all entry hours across all time in mock
-  const sinceStart = useMemo(() => {
-    let total = 0;
-    dayMeta.forEach(m => { total += m.hours; });
-    return total;
-  }, [dayMeta]);
+  // Real time entries for the selected account (or all members).
+  useEffect(() => {
+    const params: Record<string, string> = { limit: '1000' };
+    if (selectedUserId) params['userId'] = selectedUserId;
+    api.timeEntries
+      .list(params)
+      .then(res => setEntries(((res as { data: DiaryEntry[] }).data) ?? []))
+      .catch(() => setEntries([]));
+  }, [selectedUserId]);
+
+  // dayMeta: aggregate real entries into per-day hours
+  const dayMeta = useMemo<Map<string, DayMeta>>(() => {
+    const map = new Map<string, DayMeta>();
+    for (const e of entries) {
+      const secs = e.duration_seconds ?? 0;
+      if (secs <= 0) continue;
+      const ds = toDateStr(new Date(e.started_at));
+      const prev = map.get(ds) ?? { hours: 0, hasOvertime: false, entryCount: 0 };
+      const hours = prev.hours + secs / 3600;
+      map.set(ds, { hours, hasOvertime: hours > 8, entryCount: prev.entryCount + 1 });
+    }
+    return map;
+  }, [entries]);
+
+  // Stat cards computed from real entries (scoped to the selected account)
+  const { last24h, thisWeek, lastWeek, sinceStart, weeklyChange } = useMemo(() => {
+    const now = Date.now();
+    const DAY_MS = 86_400_000;
+    const weekMon = mondayOf(new Date());
+    const thisWeekStart = weekMon.getTime();
+    const lastWeekStart = addDays(weekMon, -7).getTime();
+    let l24 = 0, tw = 0, lw = 0, total = 0;
+    for (const e of entries) {
+      const secs = e.duration_seconds ?? 0;
+      if (secs <= 0) continue;
+      const t = new Date(e.started_at).getTime();
+      const hrs = secs / 3600;
+      total += hrs;
+      if (t >= now - DAY_MS) l24 += hrs;
+      if (t >= thisWeekStart) tw += hrs;
+      else if (t >= lastWeekStart) lw += hrs;
+    }
+    return {
+      last24h: l24,
+      thisWeek: tw,
+      lastWeek: lw,
+      sinceStart: total,
+      weeklyChange: lw > 0 ? Math.round(((tw - lw) / lw) * 100) : 0,
+    };
+  }, [entries]);
 
   function handleSelectWeek(mon: Date) {
     setSelectedWeekMon(mon);
@@ -309,15 +345,15 @@ export default function WorkDiaryPage() {
         {/* Top stats */}
         <div className="grid grid-cols-4 gap-4">
           {[
-            { label: 'Last 24 hours',  value: fmtHHMM(stats?.todayHours ?? 0),   sub: undefined },
-            { label: 'This week',      value: fmtHHMM(stats?.weeklyHours ?? 0),  sub: stats?.weeklyChange !== undefined ? `${stats.weeklyChange > 0 ? '+' : ''}${stats.weeklyChange}% vs last week` : undefined },
-            { label: 'Last week',      value: fmtHHMM((stats?.weeklyHours ?? 0) * 0.89), sub: undefined },
-            { label: 'Since start',    value: fmtHHMM(sinceStart),                sub: undefined },
-          ].map(({ label, value, sub }) => (
+            { label: 'Last 24 hours',  value: fmtHHMM(last24h),   sub: undefined as string | undefined, subUp: true },
+            { label: 'This week',      value: fmtHHMM(thisWeek),  sub: (thisWeek > 0 || lastWeek > 0) ? `${weeklyChange > 0 ? '+' : ''}${weeklyChange}% vs last week` : undefined, subUp: weeklyChange >= 0 },
+            { label: 'Last week',      value: fmtHHMM(lastWeek),  sub: undefined as string | undefined, subUp: true },
+            { label: 'Since start',    value: fmtHHMM(sinceStart), sub: undefined as string | undefined, subUp: true },
+          ].map(({ label, value, sub, subUp }) => (
             <div key={label} className="rounded-xl border border-[#2A2A2A] bg-[#111111] px-5 py-4">
               <p className="text-xs text-[#666666]">{label}</p>
               <p className="mt-1.5 font-mono text-2xl font-semibold text-white">{value}</p>
-              {sub && <p className="mt-0.5 text-xs text-[#22c55e]">{sub}</p>}
+              {sub && <p className="mt-0.5 text-xs" style={{ color: subUp ? '#22c55e' : '#ef4444' }}>{sub}</p>}
             </div>
           ))}
         </div>

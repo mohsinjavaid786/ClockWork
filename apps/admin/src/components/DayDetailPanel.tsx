@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X, MoreHorizontal } from 'lucide-react';
 import { api } from '@/lib/api';
-import { getMockScreenshotsForEntry, type MockScreenshot } from '@/lib/mock-data';
+import type { Screenshot } from '@/lib/types';
 import { ScreenshotModal } from '@/components/ScreenshotModal';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -46,7 +46,7 @@ function actColor(pct: number) {
 }
 
 // Mini thumbnail used in the horizontal filmstrip per session
-function MiniShot({ shot, onClick }: { shot: MockScreenshot; onClick: () => void }) {
+function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) {
   const seed = shot.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const pct = shot.activityPercent;
   const color = actColor(pct);
@@ -88,21 +88,11 @@ function MiniShot({ shot, onClick }: { shot: MockScreenshot; onClick: () => void
 
 interface SessionBlockProps {
   entry: DayEntry;
-  onShotClick: (shots: MockScreenshot[], idx: number, label: string) => void;
+  shots: Screenshot[];
+  onShotClick: (shots: Screenshot[], idx: number, label: string) => void;
 }
 
-function SessionBlock({ entry, onShotClick }: SessionBlockProps) {
-  const [shots, setShots] = useState<MockScreenshot[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.screenshots
-      .list({ timeEntryId: entry.id, limit: '50' })
-      .then(res => setShots((res.data as MockScreenshot[]) ?? []))
-      .catch(() => setShots([]))
-      .finally(() => setLoading(false));
-  }, [entry.id]);
-
+function SessionBlock({ entry, shots, onShotClick }: SessionBlockProps) {
   const startLabel = fmtTime(entry.started_at);
   const endLabel = entry.ended_at ? fmtTime(entry.ended_at) : 'Running';
   const durSecs = entry.duration_seconds ?? 0;
@@ -143,11 +133,7 @@ function SessionBlock({ entry, onShotClick }: SessionBlockProps) {
 
       {/* Screenshot strip */}
       <div className="px-4 py-3">
-        {loading ? (
-          <div className="flex items-center justify-center py-4">
-            <LoadingSpinner size="sm" />
-          </div>
-        ) : shots.length === 0 ? (
+        {shots.length === 0 ? (
           <p className="py-2 text-xs text-[#333]">No screenshots for this session</p>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
@@ -167,24 +153,32 @@ function SessionBlock({ entry, onShotClick }: SessionBlockProps) {
 
 export function DayDetailPanel({ date, userId, onClose }: Props) {
   const [entries, setEntries] = useState<DayEntry[]>([]);
+  const [shots, setShots] = useState<Screenshot[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalState, setModalState] = useState<{
-    shots: MockScreenshot[];
+    shots: Screenshot[];
     idx: number;
     label: string;
   } | null>(null);
 
   useEffect(() => {
-    if (!date) { setEntries([]); return; }
+    if (!date) { setEntries([]); setShots([]); return; }
     setLoading(true);
-    const params: Record<string, string> = { from: `${date}T00:00:00.000Z`, to: `${date}T23:59:59.999Z`, limit: '50' };
-    if (userId) params['userId'] = userId;
-    api.timeEntries
-      .list(params)
-      .then(res => setEntries(((res as { data: DayEntry[] }).data) ?? []))
-      .catch(() => setEntries([]))
+    const range = { from: `${date}T00:00:00.000Z`, to: `${date}T23:59:59.999Z` };
+    const entryParams: Record<string, string> = { ...range, limit: '100' };
+    const shotParams: Record<string, string> = { ...range, limit: '1000' };
+    if (userId) { entryParams['userId'] = userId; shotParams['userId'] = userId; }
+    Promise.all([
+      api.timeEntries.list(entryParams).then(res => ((res as { data: DayEntry[] }).data) ?? []).catch(() => []),
+      api.screenshots.list(shotParams).then(res => res.data ?? []).catch(() => []),
+    ])
+      .then(([e, s]) => { setEntries(e); setShots(s); })
       .finally(() => setLoading(false));
   }, [date, userId]);
+
+  // Screenshots not tied to any of the day's sessions (e.g. captured outside a timer)
+  const entryIds = new Set(entries.map(e => e.id));
+  const orphanShots = shots.filter(s => !s.timeEntryId || !entryIds.has(s.timeEntryId));
 
   const totalSecs = entries.reduce((s, e) => s + (e.duration_seconds ?? 0), 0);
   const open = date !== null;
@@ -230,18 +224,39 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
             <div className="flex flex-col gap-4 p-5">
               {loading ? (
                 <div className="flex justify-center py-12"><LoadingSpinner /></div>
-              ) : entries.length === 0 ? (
+              ) : entries.length === 0 && orphanShots.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <p className="text-sm text-[#444]">No sessions recorded for this day</p>
                 </div>
               ) : (
-                entries.map(entry => (
-                  <SessionBlock
-                    key={entry.id}
-                    entry={entry}
-                    onShotClick={(shots, idx, label) => setModalState({ shots, idx, label })}
-                  />
-                ))
+                <>
+                  {entries.map(entry => (
+                    <SessionBlock
+                      key={entry.id}
+                      entry={entry}
+                      shots={shots.filter(s => s.timeEntryId === entry.id)}
+                      onShotClick={(s, idx, label) => setModalState({ shots: s, idx, label })}
+                    />
+                  ))}
+                  {orphanShots.length > 0 && (
+                    <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] overflow-hidden">
+                      <div className="px-4 py-3 border-b border-[#2A2A2A]">
+                        <span className="text-sm font-medium text-white">Other screenshots</span>
+                      </div>
+                      <div className="px-4 py-3">
+                        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+                          {orphanShots.map((shot, idx) => (
+                            <MiniShot
+                              key={shot.id}
+                              shot={shot}
+                              onClick={() => setModalState({ shots: orphanShots, idx, label: 'Screenshots' })}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
