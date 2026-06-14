@@ -1,5 +1,6 @@
 interface TimerStatus {
   running: boolean;
+  paused?: boolean;
   entryId?: string;
   startedAt?: string;
   projectId?: string;
@@ -30,6 +31,8 @@ interface Window {
     timer: {
       start: (projectId?: string, description?: string) => Promise<TimerStatus>;
       stop: () => Promise<TimerStatus>;
+      pause: () => Promise<TimerStatus>;
+      resume: () => Promise<TimerStatus>;
       getStatus: () => Promise<TimerStatus>;
     };
     activity: {

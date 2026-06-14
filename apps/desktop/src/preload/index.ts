@@ -3,6 +3,7 @@ import { IPC } from '@clockwork/shared';
 
 export type TimerStatus = {
   running: boolean;
+  paused?: boolean;
   entryId?: string;
   startedAt?: string;
   projectId?: string;
@@ -26,6 +27,8 @@ contextBridge.exposeInMainWorld('clockwork', {
     start: (projectId?: string, description?: string) =>
       ipcRenderer.invoke(IPC.TIMER_START, { projectId, description }),
     stop: () => ipcRenderer.invoke(IPC.TIMER_STOP),
+    pause: () => ipcRenderer.invoke(IPC.TIMER_PAUSE),
+    resume: () => ipcRenderer.invoke(IPC.TIMER_RESUME),
     getStatus: (): Promise<TimerStatus> => ipcRenderer.invoke(IPC.TIMER_GET_STATUS),
   },
   activity: {

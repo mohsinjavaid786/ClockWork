@@ -39,6 +39,20 @@ export function TrackerScreen({ user, onLogout }: Props) {
     setElapsed(0);
   }, []);
 
+  // Pause: stop counting but keep the elapsed value on screen.
+  const freezeTick = useCallback(() => {
+    if (tickRef.current) {
+      clearInterval(tickRef.current);
+      tickRef.current = null;
+    }
+  }, []);
+
+  // Resume: continue counting from where we froze.
+  const resumeTick = useCallback(() => {
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = setInterval(() => setElapsed((p) => p + 1), 1000);
+  }, []);
+
   useEffect(() => {
     Promise.all([
       window.clockwork.timer.getStatus(),
@@ -48,7 +62,7 @@ export function TrackerScreen({ user, onLogout }: Props) {
       setStatus(s);
       setProjects(p);
       setVersion(v);
-      if (s.running && s.startedAt) startTick(s.startedAt);
+      if (s.running && !s.paused && s.startedAt) startTick(s.startedAt);
     });
 
     return () => stopTick();
@@ -76,6 +90,32 @@ export function TrackerScreen({ user, onLogout }: Props) {
       const s = await window.clockwork.timer.stop();
       setStatus(s);
       stopTick();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePause() {
+    setLoading(true);
+    try {
+      const s = await window.clockwork.timer.pause();
+      setStatus(s);
+      freezeTick();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResume() {
+    setLoading(true);
+    try {
+      const s = await window.clockwork.timer.resume();
+      setStatus(s);
+      resumeTick();
     } catch (err) {
       console.error(err);
     } finally {
@@ -143,7 +183,7 @@ export function TrackerScreen({ user, onLogout }: Props) {
               fontFamily: 'monospace',
               fontWeight: 700,
               letterSpacing: 2,
-              color: status.running ? 'var(--green)' : 'var(--text-primary)',
+              color: status.paused ? '#eab308' : status.running ? 'var(--green)' : 'var(--text-primary)',
             }}
           >
             {formatElapsed(elapsed)}
@@ -165,8 +205,8 @@ export function TrackerScreen({ user, onLogout }: Props) {
               marginTop: 10,
               padding: '3px 10px',
               borderRadius: 20,
-              background: status.running ? '#052e16' : 'var(--bg-elevated)',
-              border: `1px solid ${status.running ? '#14532d' : 'var(--border)'}`,
+              background: status.paused ? '#2e2305' : status.running ? '#052e16' : 'var(--bg-elevated)',
+              border: `1px solid ${status.paused ? '#854d0e' : status.running ? '#14532d' : 'var(--border)'}`,
             }}
           >
             <span
@@ -174,17 +214,17 @@ export function TrackerScreen({ user, onLogout }: Props) {
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: status.running ? 'var(--green)' : 'var(--text-muted)',
+                background: status.paused ? '#eab308' : status.running ? 'var(--green)' : 'var(--text-muted)',
                 display: 'inline-block',
               }}
             />
             <span
               style={{
                 fontSize: 11,
-                color: status.running ? 'var(--green)' : 'var(--text-muted)',
+                color: status.paused ? '#eab308' : status.running ? 'var(--green)' : 'var(--text-muted)',
               }}
             >
-              {status.running ? 'Tracking' : 'Stopped'}
+              {status.paused ? 'Paused' : status.running ? 'Tracking' : 'Stopped'}
             </span>
           </div>
         </div>
@@ -213,22 +253,61 @@ export function TrackerScreen({ user, onLogout }: Props) {
           </div>
         )}
 
-        <button
-          onClick={status.running ? handleStop : handleStart}
-          disabled={loading}
-          style={{
-            padding: '11px 0',
-            background: status.running ? '#1c0a0a' : 'var(--accent)',
-            color: status.running ? 'var(--red)' : '#000',
-            border: status.running ? '1px solid #3f1515' : 'none',
-            fontWeight: 700,
-            fontSize: 13,
-            borderRadius: 10,
-            opacity: loading ? 0.6 : 1,
-          }}
-        >
-          {loading ? '…' : status.running ? 'Stop tracking' : 'Start tracking'}
-        </button>
+        {!status.running ? (
+          <button
+            onClick={handleStart}
+            disabled={loading}
+            style={{
+              padding: '11px 0',
+              background: 'var(--accent)',
+              color: '#000',
+              border: 'none',
+              fontWeight: 700,
+              fontSize: 13,
+              borderRadius: 10,
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            {loading ? '…' : 'Start tracking'}
+          </button>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={status.paused ? handleResume : handlePause}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: '11px 0',
+                background: status.paused ? '#052e16' : '#2e2305',
+                color: status.paused ? 'var(--green)' : '#eab308',
+                border: `1px solid ${status.paused ? '#14532d' : '#854d0e'}`,
+                fontWeight: 700,
+                fontSize: 13,
+                borderRadius: 10,
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              {loading ? '…' : status.paused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              onClick={handleStop}
+              disabled={loading}
+              style={{
+                flex: 1,
+                padding: '11px 0',
+                background: '#1c0a0a',
+                color: 'var(--red)',
+                border: '1px solid #3f1515',
+                fontWeight: 700,
+                fontSize: 13,
+                borderRadius: 10,
+                opacity: loading ? 0.6 : 1,
+              }}
+            >
+              Stop
+            </button>
+          </div>
+        )}
 
         <div
           style={{

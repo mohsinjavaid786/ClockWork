@@ -13,6 +13,7 @@ interface StoredUser {
 
 interface TimerState {
   running: boolean;
+  paused?: boolean;
   entryId?: string;
   startedAt?: string;
   projectId?: string;

@@ -32,6 +32,7 @@ let minutes: MinuteActivity[] = [];
 let currentWindow = '';
 let lastActivity = Date.now();
 let lastMoveTs = 0;
+let paused = false;
 
 let minuteTimer: ReturnType<typeof setInterval> | null = null;
 let windowTimer: ReturnType<typeof setInterval> | null = null;
@@ -82,15 +83,29 @@ function rollMinute(): void {
 }
 
 export function recordKeystroke(): void {
+  if (paused) return;
   curKeys++;
   totalKeys++;
   lastActivity = Date.now();
 }
 
 export function recordMouseMove(): void {
+  if (paused) return;
   curMouse++;
   totalMouse++;
   lastActivity = Date.now();
+}
+
+// Pause/resume input accounting so paused time isn't counted as activity.
+export function setActivityPaused(value: boolean): void {
+  paused = value;
+  if (!value) {
+    // Start a fresh minute on resume so the paused gap isn't one giant bucket.
+    curKeys = 0;
+    curMouse = 0;
+    curMinuteStart = startOfMinute(Date.now());
+    lastActivity = Date.now();
+  }
 }
 
 export function startActivityTracking(): void {

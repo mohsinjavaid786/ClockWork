@@ -8,7 +8,7 @@ import {
   saveTimerState, getTimerState, clearTimerState,
 } from './services/timer.service';
 import { captureAndUpload } from './services/screenshot.service';
-import { startActivityTracking, stopActivityTracking, getActivityPercent, flushActivity } from './services/activity.service';
+import { startActivityTracking, stopActivityTracking, getActivityPercent, flushActivity, setActivityPaused } from './services/activity.service';
 import { createTray, updateTrayMenu } from './tray';
 
 const API_BASE = process.env['API_URL'] ?? 'http://localhost:3001';
@@ -184,10 +184,45 @@ ipcMain.handle(IPC.TIMER_STOP, async () => {
 
   clearTimerState();
   stopScreenshotLoop();
+  setActivityPaused(false);
 
   if (mainWindow) updateTrayMenu(mainWindow, false);
 
   return { running: false };
+});
+
+ipcMain.handle(IPC.TIMER_PAUSE, async () => {
+  const state = getTimerState();
+  if (!state.running || !state.entryId || state.paused) return state;
+
+  await apiRequest(`/time-entries/${state.entryId}/pause`, { method: 'POST', body: '{}' });
+
+  // Capture what was tracked up to the pause, then halt capture + input counting.
+  const user = getUser();
+  if (user) {
+    const activity = flushActivity(screenshotIntervalMinutes * 60);
+    await captureAndUpload(user.id, activity, state.entryId).catch(console.error);
+  }
+  setActivityPaused(true);
+  stopScreenshotLoop();
+
+  const next = { ...state, paused: true };
+  saveTimerState(next);
+  return next;
+});
+
+ipcMain.handle(IPC.TIMER_RESUME, async () => {
+  const state = getTimerState();
+  if (!state.running || !state.entryId || !state.paused) return state;
+
+  await apiRequest(`/time-entries/${state.entryId}/resume`, { method: 'POST', body: '{}' });
+
+  setActivityPaused(false);
+  startScreenshotLoop();
+
+  const next = { ...state, paused: false };
+  saveTimerState(next);
+  return next;
 });
 
 ipcMain.handle(IPC.TIMER_GET_STATUS, () => getTimerState());
