@@ -129,22 +129,23 @@ The API is a standard Node.js app. Railway is the simplest host.
 
 1. Go to [railway.app](https://railway.app) → New project → Deploy from GitHub repo
 2. Select the `clockwork` repo
-3. Set the **Root Directory** to `apps/api`
+3. Leave the **Root Directory** at the repo root (`/` — **do not** set it to `apps/api`).
+   The API is a pnpm-workspace package: its `@clockwork/shared` dependency and the
+   lockfile live at the repo root, so the build context must be the whole repo.
+   The included [`railway.json`](../railway.json) tells Railway to build with
+   `apps/api/Dockerfile` (which compiles `@clockwork/shared` then the API) and to
+   health-check `/api/v1/config`. No Nixpacks / build-command setup is needed.
 4. Under **Settings → Source → Branch**, set the deploy branch to **`production`**
-5. Railway will auto-detect Node.js and build with:
-   ```
-   Build:  pnpm install && pnpm build
-   Start:  node dist/main.js
-   ```
-6. Add environment variables under **Variables**:
+5. Add environment variables under **Variables**:
    ```
    SUPABASE_URL=https://your-project.supabase.co
    SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-   PORT=3001
    ADMIN_URL=https://your-admin-portal.vercel.app
    NODE_ENV=production
    ```
-7. Copy the generated Railway URL (e.g. `https://clockwork-api.up.railway.app`) — you'll need it for the next steps.
+   > Do **not** set `PORT` — Railway injects it automatically and the API reads
+   > `process.env.PORT`. Hardcoding it can break Railway's port detection.
+6. Copy the generated Railway URL (e.g. `https://clockwork-api.up.railway.app`) — you'll need it for the next steps.
 
 ### Option B — Docker (any container host)
 
@@ -167,10 +168,9 @@ Works on Render, Fly.io, DigitalOcean, or any Docker host.
 ### Option C — Render
 
 1. New Web Service → connect GitHub repo
-2. Root Directory: `apps/api`
-3. Build Command: `pnpm install && pnpm build`
-4. Start Command: `node dist/main.js`
-5. Add environment variables same as Railway above
+2. Leave **Root Directory** at the repo root (not `apps/api` — same workspace reason as Railway)
+3. Runtime: **Docker**, Dockerfile path: `apps/api/Dockerfile`
+4. Add environment variables same as Railway above (no `PORT` — Render injects it)
 
 ---
 
@@ -179,8 +179,12 @@ Works on Render, Fly.io, DigitalOcean, or any Docker host.
 1. Go to [vercel.com](https://vercel.com) → New Project → Import `clockwork` from GitHub
 2. In the **Configure Project** screen:
    - **Framework Preset**: Next.js (auto-detected)
-   - **Root Directory**: leave as `.` (the repo root)
-   - `vercel.json` already sets the correct build/install commands
+   - **Root Directory**: set to **`apps/admin`** (Vercel usually auto-detects this).
+     `vercel.json` paths (`outputDirectory: .next`) are relative to this root, so
+     they must agree — if you instead leave the root at `.`, the build output won't
+     be found (`apps/admin/apps/admin/.next` doubling error).
+   - Leave **Build & Output Settings** overrides empty — `vercel.json` already sets
+     the correct build/install commands and output directory.
 3. After the project is created, go to **Settings → Git**:
    - Set **Production Branch** to **`production`**
    - The `dev` branch will auto-get preview deployments
