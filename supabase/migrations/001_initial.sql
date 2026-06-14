@@ -55,6 +55,10 @@ create table public.screenshots (
   activity_percent integer not null default 0 check (activity_percent between 0 and 100),
   screen_number integer not null default 1 check (screen_number >= 1),
   display_count integer not null default 1 check (display_count >= 1),
+  key_count integer not null default 0,
+  mouse_count integer not null default 0,
+  active_window text,
+  minute_activity jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
 
