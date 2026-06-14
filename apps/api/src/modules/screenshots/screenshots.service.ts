@@ -17,6 +17,16 @@ export class ScreenshotsService {
 
     if (uploadError) throw new BadRequestException(uploadError.message);
 
+    let minuteActivity: unknown = [];
+    if (dto.minuteActivity) {
+      try {
+        const parsed = JSON.parse(dto.minuteActivity);
+        if (Array.isArray(parsed)) minuteActivity = parsed;
+      } catch {
+        // ignore malformed per-minute payloads — store empty rather than fail the upload
+      }
+    }
+
     const { data, error } = await this.supabase.client
       .from('screenshots')
       .insert({
@@ -27,6 +37,10 @@ export class ScreenshotsService {
         captured_at: dto.capturedAt ?? new Date().toISOString(),
         screen_number: dto.screenNumber ?? 1,
         display_count: dto.displayCount ?? 1,
+        key_count: dto.keyCount ?? 0,
+        mouse_count: dto.mouseCount ?? 0,
+        active_window: dto.activeWindow ?? null,
+        minute_activity: minuteActivity,
       })
       .select()
       .single();
@@ -43,7 +57,7 @@ export class ScreenshotsService {
     let q = this.supabase.client
       .from('screenshots')
       .select(
-        'id, user_id, time_entry_id, storage_path, captured_at, activity_percent, screen_number, display_count, user:users(id, name, email)',
+        'id, user_id, time_entry_id, storage_path, captured_at, activity_percent, screen_number, display_count, key_count, mouse_count, active_window, minute_activity, user:users(id, name, email)',
         { count: 'exact' },
       )
       .order('captured_at', { ascending: false })

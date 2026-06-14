@@ -1,4 +1,4 @@
-import { IsISO8601, IsNumber, IsOptional, IsUUID, Max, Min } from 'class-validator';
+import { IsISO8601, IsNumber, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -33,6 +33,32 @@ export class UploadScreenshotDto {
   @IsNumber()
   @Min(1)
   displayCount?: number;
+
+  @ApiPropertyOptional({ minimum: 0, description: 'Keystrokes during this interval' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  keyCount?: number;
+
+  @ApiPropertyOptional({ minimum: 0, description: 'Mouse events during this interval' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  mouseCount?: number;
+
+  @ApiPropertyOptional({ description: 'Foreground window/app title at capture time' })
+  @IsOptional()
+  @IsString()
+  activeWindow?: string;
+
+  @ApiPropertyOptional({
+    description: 'Per-minute breakdown as a JSON string: [{ t, keys, mouse, window }]',
+  })
+  @IsOptional()
+  @IsString()
+  minuteActivity?: string;
 }
 
 export class ListScreenshotsQueryDto {
