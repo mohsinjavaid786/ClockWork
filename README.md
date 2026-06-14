@@ -23,7 +23,7 @@
 | Feature | Details |
 |---|---|
 | **Timer** | One-click start/stop; project + description selection; `HH:MM:SS` live counter |
-| **Screenshots** | `desktopCapturer` every N minutes (configurable); Gaussian blur σ=3 via `sharp` applied **before** upload — raw screen never leaves the machine |
+| **Screenshots** | `desktopCapturer` every N minutes (configurable); captures **every connected display** as raw PNG — no blur, no post-processing (Upwork-style). One upload per display per capture event, sharing `captured_at` |
 | **Activity tracking** | `powerMonitor` idle detection; activity % computed per screenshot window and uploaded with each capture |
 | **Secure storage** | JWT encrypted via `electron.safeStorage` (macOS Keychain / Windows Credential Store) |
 | **System tray** | Tray icon updates to show tracking state; context menu for show/hide and quit |
@@ -34,7 +34,7 @@
 |---|---|
 | **Auth** | Supabase JWT validation on every request; `is_active` check; role-based guards (`admin` / `member`) |
 | **One-timer constraint** | Partial unique index in PostgreSQL prevents two running entries per user — no race condition possible |
-| **Screenshot upload** | Multipart endpoint; stores to private Supabase Storage bucket; generates 1-hour signed URLs on read |
+| **Screenshot upload** | Multipart endpoint; accepts one file per display with `screenNumber` + `displayCount`; stores to private Supabase Storage bucket; generates 1-hour signed URLs on read |
 | **Dashboard stats** | Aggregated today/week/active-now counts computed server-side |
 | **Daily Slack cron** | `@nestjs/schedule` posts yesterday's team summary to Slack at 09:00 UTC |
 | **Swagger docs** | Interactive docs at `/api/docs` |
@@ -127,11 +127,15 @@ Employee                  Desktop App              API                   Databas
    │                          │                     │                       │
    │  [Every 10 min]          │                     │                       │
    │                          │  desktopCapturer    │                       │
-   │                          │  → sharp blur σ=3   │                       │
-   │                          │  POST /screenshots/upload                   │
+   │                          │  → ALL displays     │                       │
+   │                          │  (raw PNG, no blur) │                       │
+   │                          │  for each screen:   │                       │
+   │                          │    POST /screenshots/upload                 │
+   │                          │    { file, screenNumber, displayCount }     │
    │                          │────────────────────►│                       │
    │                          │                     │  → Supabase Storage   │
    │                          │                     │  INSERT screenshots   │
+   │                          │                     │  (one row per screen) │
    │                          │                     │──────────────────────►│
    │                          │                     │                       │
    │  Click "Stop"            │                     │                       │
@@ -259,8 +263,12 @@ Admin                 Work Diary Page           Day Panel          Screenshot Mo
                      │  storage_path     TEXT                 │
                      │  captured_at      TIMESTAMPTZ          │
                      │  activity_percent INTEGER (0–100)      │
+                     │  screen_number    INTEGER ≥ 1          │  ← 1-based display index
+                     │  display_count    INTEGER ≥ 1          │  ← total displays this capture
                      │  created_at       TIMESTAMPTZ          │
                      └─────────────────────────────────────────┘
+                     Multi-monitor: rows sharing (user_id, captured_at)
+                     belong to the same capture event.
 
 ┌──────────────────────────────────────┐
 │  app_config  (single row, id = 1)   │
@@ -340,7 +348,7 @@ clockwork/
 │           │   ├── tray.ts          # system tray
 │           │   └── services/
 │           │       ├── timer.service.ts      # safeStorage token/state
-│           │       ├── screenshot.service.ts # capture + blur + upload
+│           │       ├── screenshot.service.ts # capture every display + upload (no blur)
 │           │       └── activity.service.ts   # powerMonitor activity %
 │           ├── preload/
 │           │   └── index.ts         # contextBridge → window.clockwork
@@ -383,7 +391,7 @@ clockwork/
 | Admin portal | Next.js 15 App Router | Tailwind CSS, Geist font, Recharts 3 |
 | Desktop shell | Electron 30 | `contextIsolation`, `sandbox`, no `nodeIntegration` |
 | Renderer build | Vite 5 + React 19 | HMR in dev mode |
-| Screenshot blur | sharp (native) | Gaussian σ=3 before upload |
+| Screenshot capture | electron `desktopCapturer` + `screen.getAllDisplays()` | Raw PNG per display, no post-processing (Upwork-style) |
 | Activity tracking | powerMonitor | OS idle detection |
 | Token encryption | electron.safeStorage | macOS Keychain / Windows Credential Store |
 | Auto-updates | electron-updater | GitHub Releases |
@@ -487,7 +495,7 @@ cd apps/desktop && pnpm package        # create .dmg / .exe → release/
 
 - Service role key lives only in `apps/api/.env` — never sent to browser or renderer
 - Electron renderer: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
-- Screenshots stored in **private** bucket — admin portal receives 1-hour signed URLs
+- Screenshots stored in **private** bucket — admin portal receives 1-hour signed URLs; captures are raw (no blur) so managers can verify actual work, identical to Upwork's tracker
 - Desktop JWT encrypted with OS keychain via `safeStorage`
 - Deactivated users (`is_active = false`) rejected at the auth guard even with valid JWT
 - One-running-timer constraint enforced at DB level via partial unique index

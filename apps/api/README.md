@@ -11,7 +11,7 @@
 | **JWT auth** | Every protected request validated against Supabase Auth; no local JWT decoding |
 | **Role-based access** | `@Roles('admin')` decorator — admins get full access, members get own-data only |
 | **One-timer constraint** | PostgreSQL partial unique index prevents two `running` entries per user at the DB level |
-| **Screenshot upload** | Multipart endpoint; blurred file stored to private Supabase Storage; signed URLs generated on read (1-hour expiry) |
+| **Screenshot upload** | Multipart endpoint; raw PNG stored to private Supabase Storage (no blur — Upwork-style). One upload per display per capture event with `screenNumber` + `displayCount`; signed URLs generated on read (1-hour expiry) |
 | **Dashboard stats** | `GET /reports/stats` — today's hours, active-now count, weekly hours, week-over-week change |
 | **Weekly chart** | `GET /reports/weekly-chart` — last 7 days hourly data for bar chart rendering |
 | **CSV export** | `GET /reports/csv` — streams `text/csv` with all time entries |
@@ -183,8 +183,8 @@ All endpoints share the `/api/v1` prefix. Full interactive docs at `http://local
 ### Screenshots
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/screenshots/upload` | Bearer | Multipart: `file` + `activityPercent` + `timeEntryId?` |
-| GET | `/screenshots` | Bearer | Paginated list with 1-hour signed URLs — params: `userId`, `timeEntryId`, `from`, `to` |
+| POST | `/screenshots/upload` | Bearer | Multipart: `file` + `activityPercent` + `screenNumber?` + `displayCount?` + `capturedAt?` + `timeEntryId?`. Desktop sends one upload per connected display per capture event, sharing `capturedAt` |
+| GET | `/screenshots` | Bearer | Paginated list with 1-hour signed URLs — params: `userId`, `timeEntryId`, `from`, `to`. Rows sharing `(user_id, captured_at)` belong to the same multi-monitor capture event |
 | GET | `/screenshots/:id/url` | Bearer | Single screenshot signed URL |
 
 ### Reports (admin only)

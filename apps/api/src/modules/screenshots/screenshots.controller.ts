@@ -23,7 +23,9 @@ export class ScreenshotsController {
 
   @Post('upload')
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload a screenshot (blurred by client before upload)' })
+  @ApiOperation({
+    summary: 'Upload a raw screenshot. Desktop sends one upload per display per capture event.',
+  })
   @UseInterceptors(FileInterceptor('file'))
   upload(
     @CurrentUser() user: AuthUser,

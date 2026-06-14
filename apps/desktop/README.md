@@ -1,6 +1,6 @@
 # apps/desktop — Clockwork Desktop App
 
-> Cross-platform Electron 30 app for employees. Time tracking, screenshot capture with Gaussian blur, activity monitoring, OS keychain token storage. React 19 renderer. Supports macOS (Apple Silicon + Intel) and Windows (x64).
+> Cross-platform Electron 30 app for employees. Time tracking, multi-monitor screenshot capture (raw, no blur — Upwork-style), activity monitoring, OS keychain token storage. React 19 renderer. Supports macOS (Apple Silicon + Intel) and Windows (x64).
 
 ---
 
@@ -9,7 +9,7 @@
 | Feature | Details |
 |---|---|
 | **Timer** | Start/stop with project + description selection; `HH:MM:SS` counter ticks client-side from `startedAt` |
-| **Screenshot capture** | `desktopCapturer` every N minutes (configurable via `GET /config`); `sharp.blur(3)` applied before upload — raw screen never leaves the machine |
+| **Screenshot capture** | `desktopCapturer` every N minutes (configurable via `GET /config`); captures **every connected display** as raw PNG. No blur, no post-processing — managers see actual screen content, identical to Upwork's tracker. One upload per display per capture event |
 | **Activity tracking** | `powerMonitor` idle detection; activity % computed per 10-minute window and uploaded alongside each screenshot |
 | **Secure token storage** | `electron.safeStorage.encryptString()` stores JWT in OS keychain (macOS Keychain / Windows Credential Store); falls back to in-memory only on unsupported platforms |
 | **System tray** | App minimizes to tray on close; tray icon updates to show tracking state; context menu for Show / Quit |
@@ -49,7 +49,7 @@
 │  │  Main Process (Node.js, full access)                  │ │
 │  │                                                       │ │
 │  │  TimerService        ← safeStorage + API calls        │ │
-│  │  ScreenshotService   ← desktopCapturer + sharp        │ │
+│  │  ScreenshotService   ← desktopCapturer (all displays) │ │
 │  │  ActivityService     ← powerMonitor                   │ │
 │  │  Tray                ← menu + icon state              │ │
 │  │  autoUpdater         ← GitHub Releases                │ │
@@ -70,33 +70,43 @@
 
 ## Screenshot Capture Flow
 
+Clockwork mirrors the Upwork tracker model: every connected display is captured as a raw PNG every N minutes — no blur, no post-processing. Each display becomes its own row in the `screenshots` table, sharing a `captured_at` timestamp so the admin portal can group them as one capture event.
+
 ```
 ScreenshotService.captureAndUpload()
         │
         ▼
 desktopCapturer.getSources({ types: ['screen'] })
         │
+        │   returns N sources — one per connected monitor
         ▼
-source.thumbnail.toPNG()  →  Buffer
+capturedAt = new Date().toISOString()      ← shared across all displays
+displayCount = sources.length
         │
         ▼
-sharp(pngBuffer).blur(3).png().toBuffer()
-        │           ↑
-        │     Gaussian blur σ=3 applied HERE
-        │     Raw screenshot never stored or uploaded
-        ▼
-ActivityService.getActivityPercent()
-        │  resets counters after reading
-        ▼
-FormData { file, activityPercent, timeEntryId? }
+ActivityService.getActivityPercent()       ← reset counters after reading
         │
         ▼
-POST /api/v1/screenshots/upload
-  Authorization: Bearer <safeStorage token>
+for each source (1..N):
+   source.thumbnail.toPNG()  →  Buffer  (raw, unmodified)
         │
         ▼
-Supabase Storage → {userId}/{timestamp}.png
-Database → INSERT screenshots row
+   FormData {
+     file,
+     activityPercent,
+     screenNumber:  idx + 1,
+     displayCount,
+     capturedAt,
+     timeEntryId?,
+   }
+        │
+        ▼
+   POST /api/v1/screenshots/upload
+     Authorization: Bearer <safeStorage token>
+        │
+        ▼
+   Supabase Storage → {userId}/{timestamp}-screen-{n}.png
+   Database → INSERT screenshots row (one per display)
 ```
 
 ---
@@ -132,9 +142,10 @@ Renderer                    Preload                    Main
    │  (client-side setInterval)│                        │
    │                           │  [every N minutes]     │
    │                           │                        │  captureAndUpload()
-   │                           │                        │  → desktopCapturer
-   │                           │                        │  → sharp blur
-   │                           │                        │  → POST /screenshots/upload
+   │                           │                        │  → desktopCapturer (all displays)
+   │                           │                        │  → for each screen:
+   │                           │                        │      POST /screenshots/upload
+   │                           │                        │      { screenNumber, displayCount }
    │                           │                        │
    │  .timer.stop()            │                        │
    │──────────────────────────►│  'timer:stop'         │
@@ -177,7 +188,7 @@ src/
 │   ├── tray.ts                     # Tray icon + context menu
 │   └── services/
 │       ├── timer.service.ts        # safeStorage: token, user, timer state
-│       ├── screenshot.service.ts   # desktopCapturer + sharp blur + upload
+│       ├── screenshot.service.ts   # desktopCapturer (every display) + upload (raw, no blur)
 │       └── activity.service.ts     # powerMonitor idle detection
 │
 ├── preload/

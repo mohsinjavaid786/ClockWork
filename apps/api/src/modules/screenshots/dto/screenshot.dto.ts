@@ -19,6 +19,20 @@ export class UploadScreenshotDto {
   @IsOptional()
   @IsISO8601()
   capturedAt?: string;
+
+  @ApiPropertyOptional({ minimum: 1, description: '1-based index of the captured display' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  screenNumber?: number;
+
+  @ApiPropertyOptional({ minimum: 1, description: 'Total displays captured in this event' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  displayCount?: number;
 }
 
 export class ListScreenshotsQueryDto {

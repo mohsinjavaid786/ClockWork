@@ -54,7 +54,7 @@ Slides in from the right when a day row is clicked:
 └────────────────────────────────────────────────────┘
 ```
 
-Each screenshot tile shows a captured time badge and a colored activity bar at the bottom (green ≥70%, yellow ≥40%, red <40%).
+Each screenshot tile shows the captured raw image (no blur), a time badge, and a colored activity bar at the bottom (green ≥70%, yellow ≥40%, red <40%). When the employee has multiple monitors, each capture event produces one tile per display with a small `Screen N/M` badge in the top-right.
 
 ### Screenshot Modal
 Clicking any screenshot tile opens a full-screen modal:
@@ -64,7 +64,7 @@ Clicking any screenshot tile opens a full-screen modal:
 │  James Wilson · Mon Jun 2 · 9:00 AM – 11:30 AM          12 of 36  │
 ├───────────────────────────────────────┬────────────────────────────┤
 │                                       │  Activity Level            │
-│   [Simulated blurred screenshot]      │  ██████████  Active 9/10   │
+│   [Raw screenshot of the screen]      │  ██████████  Active 9/10   │
 │                                       │                            │
 │   Active window:                      │  Activity                  │
 │   Visual Studio Code — index.ts       │  ┌────────┬──────┬──────┐  │
@@ -119,7 +119,7 @@ Demo data includes:
 - **5 projects**: Website Redesign, Mobile App v2, Backend Infrastructure, Marketing Campaign, Legacy API (archived)
 - **35 time entries** spanning 10 days with realistic descriptions
 - **3 active members** currently tracking
-- **Mock screenshots**: up to 12 per session with deterministic activity %, keystroke counts, and per-minute breakdown
+- **Mock screenshots**: up to 12 capture events per session with deterministic activity %, keystroke counts, and per-minute breakdown. Two demo members (James, Marcus) are configured with **dual monitors** so each of their capture events produces 2 screenshots tagged `Screen 1/2` and `Screen 2/2`
 
 ---
 
@@ -158,7 +158,7 @@ WorkDiary page
 │   ├── SessionBlock[] (one per time entry)
 │   │   └── MiniShot[] (screenshot filmstrip)
 │   └── ScreenshotModal (full-screen overlay, z-60)
-│       ├── BigScreenshot (simulated blurred screen)
+│       ├── BigScreenshot (raw screenshot via signedUrl; UI skeleton in demo mode)
 │       ├── Activity level blocks (10 × colored square)
 │       ├── Per-minute breakdown table
 │       └── Filmstrip navigation

@@ -8,7 +8,8 @@ export class ScreenshotsService {
 
   async upload(userId: string, file: Express.Multer.File, dto: UploadScreenshotDto) {
     const ext = file.mimetype === 'image/png' ? 'png' : 'jpg';
-    const path = `${userId}/${Date.now()}.${ext}`;
+    const screenSuffix = dto.screenNumber ? `-screen-${dto.screenNumber}` : '';
+    const path = `${userId}/${Date.now()}${screenSuffix}.${ext}`;
 
     const { error: uploadError } = await this.supabase.client.storage
       .from('screenshots')
@@ -24,6 +25,8 @@ export class ScreenshotsService {
         storage_path: path,
         activity_percent: dto.activityPercent,
         captured_at: dto.capturedAt ?? new Date().toISOString(),
+        screen_number: dto.screenNumber ?? 1,
+        display_count: dto.displayCount ?? 1,
       })
       .select()
       .single();
@@ -40,10 +43,11 @@ export class ScreenshotsService {
     let q = this.supabase.client
       .from('screenshots')
       .select(
-        'id, user_id, time_entry_id, storage_path, captured_at, activity_percent, user:users(id, name, email)',
+        'id, user_id, time_entry_id, storage_path, captured_at, activity_percent, screen_number, display_count, user:users(id, name, email)',
         { count: 'exact' },
       )
       .order('captured_at', { ascending: false })
+      .order('screen_number', { ascending: true })
       .range(offset, offset + limit - 1);
 
     if (query.userId) q = q.eq('user_id', query.userId);

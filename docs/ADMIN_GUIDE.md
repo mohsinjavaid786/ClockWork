@@ -175,7 +175,9 @@ Each **session block** shows:
 - A colored dot matching the project colour
 - Start time – end time and total duration
 - Average activity % across all screenshots in the session
-- A horizontally scrollable **screenshot filmstrip** — each thumbnail shows the capture time and a coloured activity bar at the bottom (green ≥70%, yellow ≥40%, red <40%)
+- A horizontally scrollable **screenshot filmstrip** — each thumbnail shows the raw capture, the capture time, and a coloured activity bar at the bottom (green ≥70%, yellow ≥40%, red <40%)
+
+For employees with multiple monitors, each capture event produces one thumbnail per display. A small `S1/2`, `S2/2` badge in the top-right of each tile identifies which screen it came from.
 
 **Click any screenshot thumbnail** to open the full screenshot modal.
 
@@ -186,7 +188,7 @@ Each **session block** shows:
 │  James Wilson · Mon Jun 2 · 9:00 AM – 11:30 AM         12 of 14    │
 ├──────────────────────────────────────────────┬───────────────────────┤
 │                                              │  Activity Level       │
-│   [Blurred screenshot of the work session]   │  ██████████  9/10 min │
+│   [Raw screenshot of the work session]       │  ██████████  9/10 min │
 │                                              │                       │
 │   Active window:                             │  Activity             │
 │   Visual Studio Code — index.ts             │  ┌────────┬─────┬────┐│
@@ -202,7 +204,8 @@ Each **session block** shows:
 ```
 
 **Left side:**
-- The blurred screenshot (readable enough to confirm the type of work)
+- The captured screenshot at full resolution — **raw, no blur** (Upwork-style). Use this to verify the work being done
+- For employees with multiple monitors, the header shows `Screen N of M` and each display appears as its own tile in the filmstrip
 - Active window title — which application was in focus
 - Total keystroke and mouse event counts for this 10-minute window
 

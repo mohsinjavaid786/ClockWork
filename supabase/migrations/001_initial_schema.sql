@@ -98,6 +98,8 @@ CREATE TABLE public.screenshots (
   storage_path    TEXT        NOT NULL,
   captured_at     TIMESTAMPTZ NOT NULL,
   activity_percent INTEGER    CHECK (activity_percent BETWEEN 0 AND 100),
+  screen_number   INTEGER     NOT NULL DEFAULT 1 CHECK (screen_number >= 1),
+  display_count   INTEGER     NOT NULL DEFAULT 1 CHECK (display_count >= 1),
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 

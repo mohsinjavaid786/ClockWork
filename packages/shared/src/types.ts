@@ -43,6 +43,8 @@ export interface Screenshot {
   storagePath: string;
   capturedAt: string;
   activityPercent: number;
+  screenNumber: number;
+  displayCount: number;
   signedUrl?: string;
   user?: User;
 }

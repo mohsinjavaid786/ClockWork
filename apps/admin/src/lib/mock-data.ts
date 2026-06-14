@@ -136,36 +136,52 @@ export interface MockScreenshot {
   storagePath: string;
   capturedAt: string;
   activityPercent: number;
+  screenNumber: number;
+  displayCount: number;
   keyEvents: number;
   mouseEvents: number;
   user: { id: string; name: string; email: string };
 }
 
+// Demo dual-monitor setups — keeps mock data realistic without bloating every session.
+const USER_DISPLAY_COUNT: Record<string, number> = {
+  'usr-002': 2, // James — frontend dev, dual monitor
+  'usr-004': 2, // Marcus — infra, dual monitor
+};
+
 export function getMockScreenshotsForEntry(entryId: string): MockScreenshot[] {
   const entry = ENTRIES.find(e => e.id === entryId);
   if (!entry || !entry.duration_seconds || entry.duration_seconds < 600) return [];
 
-  const INTERVAL = 600; // 10-minute screenshots
+  const INTERVAL = 600; // 10-minute capture events
   const count = Math.min(12, Math.floor(entry.duration_seconds / INTERVAL));
   const startMs = new Date(entry.started_at).getTime();
   const seed = entryId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const displayCount = USER_DISPLAY_COUNT[entry.user_id] ?? 1;
 
-  return Array.from({ length: count }, (_, i) => {
+  const out: MockScreenshot[] = [];
+  for (let i = 0; i < count; i++) {
     const pct = seededInt(seed, i * 37, 52, 97);
     const keys = seededInt(seed, i * 53, Math.floor(pct * 2.5), Math.floor(pct * 4.5));
     const mouse = seededInt(seed, i * 71, Math.floor(pct * 1.2), Math.floor(pct * 2.8));
-    return {
-      id: `ss-${entryId}-${i}`,
-      userId: entry.user_id,
-      timeEntryId: entryId,
-      storagePath: `demo/${entryId}/${i}.png`,
-      capturedAt: new Date(startMs + (i + 1) * INTERVAL * 1000).toISOString(),
-      activityPercent: pct,
-      keyEvents: keys,
-      mouseEvents: mouse,
-      user: entry.user as MockScreenshot['user'],
-    };
-  });
+    const capturedAt = new Date(startMs + (i + 1) * INTERVAL * 1000).toISOString();
+    for (let s = 1; s <= displayCount; s++) {
+      out.push({
+        id: `ss-${entryId}-${i}-s${s}`,
+        userId: entry.user_id,
+        timeEntryId: entryId,
+        storagePath: `demo/${entryId}/${i}-screen-${s}.png`,
+        capturedAt,
+        activityPercent: pct,
+        screenNumber: s,
+        displayCount,
+        keyEvents: keys,
+        mouseEvents: mouse,
+        user: entry.user as MockScreenshot['user'],
+      });
+    }
+  }
+  return out;
 }
 
 // ─── Day / Week helpers ───────────────────────────────────────────────────────

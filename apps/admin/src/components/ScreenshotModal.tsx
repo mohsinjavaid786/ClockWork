@@ -20,8 +20,9 @@ function actColor(pct: number) {
   return pct >= 70 ? '#22c55e' : pct >= 40 ? '#eab308' : '#ef4444';
 }
 
-// Simulate blurred screenshot (same pattern as ScreenshotTile, but larger)
-function BigScreenshot({ shot }: { shot: MockScreenshot }) {
+// Renders the captured screenshot (raw, no blur — Upwork-style).
+// Falls back to a deterministic UI skeleton in demo mode where no signedUrl exists.
+function BigScreenshot({ shot }: { shot: MockScreenshot & { signedUrl?: string } }) {
   const seed = shot.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const rows = [
     [60, 85, 45, 90, 55],
@@ -29,16 +30,26 @@ function BigScreenshot({ shot }: { shot: MockScreenshot }) {
     [50, 90, 55, 75, 40],
   ][(seed % 3)]!;
 
+  if (shot.signedUrl) {
+    return (
+      <div className="relative w-full overflow-hidden rounded-lg border border-[#2A2A2A] bg-black" style={{ aspectRatio: '16/9' }}>
+        <img
+          src={shot.signedUrl}
+          alt={`Screen ${shot.screenNumber}`}
+          className="absolute inset-0 h-full w-full object-contain"
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       className="relative w-full overflow-hidden rounded-lg border border-[#2A2A2A]"
       style={{ aspectRatio: '16/9', background: `linear-gradient(135deg, #0d0d1f ${seed % 3 * 15}%, #080818 100%)` }}
     >
-      {/* Grid */}
       <div className="absolute inset-0 opacity-[0.04]" style={{
         backgroundImage: 'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 28px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 48px)',
       }} />
-      {/* UI skeleton */}
       <div className="absolute inset-0 p-[7%] flex flex-col gap-[3%] opacity-[0.22]">
         <div className="flex items-center gap-2">
           <div className="h-[6%] rounded-sm bg-white" style={{ width: `${rows[0]}%` }} />
@@ -57,7 +68,6 @@ function BigScreenshot({ shot }: { shot: MockScreenshot }) {
           </div>
         </div>
       </div>
-      {/* Subtle color glow */}
       {shot.activityPercent >= 70 && (
         <div className="absolute inset-0 opacity-[0.06]" style={{
           background: `radial-gradient(ellipse at ${25 + seed % 50}% ${20 + seed % 40}%, #6366f1, transparent 55%)`,
@@ -111,6 +121,14 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
               <>
                 <span className="text-[#444]">·</span>
                 <span className="text-xs text-[#666666]">{sessionLabel}</span>
+              </>
+            )}
+            {shot.displayCount > 1 && (
+              <>
+                <span className="text-[#444]">·</span>
+                <span className="text-xs font-medium text-[#A1A1A1]">
+                  Screen {shot.screenNumber} of {shot.displayCount}
+                </span>
               </>
             )}
           </div>

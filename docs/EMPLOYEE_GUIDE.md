@@ -24,11 +24,13 @@
 Clockwork is a time tracking app that runs on your computer. While you work, it:
 
 - Records how long you spend on each task or project
-- Takes a screenshot every few minutes so your manager can see what you were working on
+- Takes a screenshot of **every connected monitor** every few minutes so your manager can see what you were working on
 - Measures your keyboard and mouse activity to calculate an **activity percentage** — how active you were during each screenshot window
 - Uploads everything securely to the team's server
 
-Your screenshots are **automatically blurred** before they leave your computer. No one can read your screen at full resolution.
+Screenshots are captured **as-is** — no blur, no filter. This is the same model as Upwork's tracker: managers see exactly what was on screen so the time tracked can be verified. If you have two or three monitors, Clockwork captures all of them at the same moment, and each screen appears separately in the admin portal labelled `Screen 1 of 2`, `Screen 2 of 2`, etc.
+
+> **Privacy tip:** Stop the timer before opening anything personal (banking, private messages, email). The tracker only captures while a timer is running — outside of that, nothing is recorded.
 
 ---
 
@@ -170,10 +172,10 @@ End of day
 
 Every few minutes (your admin configures the interval — typically 10 minutes), Clockwork automatically:
 
-1. **Captures your primary display**
-2. **Applies a Gaussian blur** to the image before it ever leaves your computer — the raw screenshot is never stored or uploaded
+1. **Captures every monitor you have connected** — if you have one screen, you get one image; if you have two screens, you get two images for that moment, and so on
+2. **Saves each screen as a raw PNG** — no blur is applied. Managers see the actual screen content the same way Upwork's tracker does
 3. **Calculates your activity percentage** — how active your keyboard and mouse were during that window
-4. **Uploads the blurred screenshot** to the team's secure server along with your activity data
+4. **Uploads the screenshots** to the team's secure server along with your activity data. Each image is tagged with which screen it came from (`Screen 1 of 2`, `Screen 2 of 2`, etc.)
 
 ### What the activity percentage means
 
@@ -187,14 +189,15 @@ A low activity percentage for one screenshot doesn't mean you weren't working. I
 
 ### What your manager can see
 
-- The **blurred screenshot** (readable enough to confirm the type of work, not sharp enough to read screen content)
+- The **raw screenshot** from every monitor you had connected at the moment of capture
 - The **time** the screenshot was taken
 - Your **activity percentage** for that 10-minute window
 - Per-minute keyboard and mouse event counts for each window
+- Which screen each image came from (`Screen 1 of 2`, etc.)
 
 ### What your manager cannot see
 
-- Anything outside your primary display
+- Anything that was on your screens **before you started the timer** or **after you stopped it**
 - Specific keystrokes (Clockwork counts events, it does not log what you type)
 - Any activity when no timer is running
 
@@ -261,7 +264,7 @@ You don't need to do anything — updates are fully automatic. If you want the l
 A: Yes, for the timer to start and for screenshots to upload. If you lose internet mid-session, Clockwork will retry uploads automatically when the connection returns.
 
 **Q: Will the app slow down my computer?**
-A: Clockwork is lightweight — under 50 MB of RAM. Screenshot capture (every 10 minutes) briefly spikes CPU for less than a second while the image is blurred and uploaded.
+A: Clockwork is lightweight — under 50 MB of RAM. Screenshot capture (every 10 minutes) briefly spikes CPU for less than a second per connected display while images are encoded and uploaded.
 
 **Q: What happens if I forget to start the timer?**
 A: Ask your admin to log a manual time entry through the admin portal. Clockwork itself only records time while the timer is running.

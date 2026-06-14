@@ -25,7 +25,9 @@ interface Props {
   onClose: () => void;
 }
 
-interface Screenshot extends MockScreenshot {}
+interface Screenshot extends MockScreenshot {
+  signedUrl?: string;
+}
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -68,56 +70,54 @@ function ScreenshotTile({ shot }: { shot: Screenshot }) {
       className="group relative overflow-hidden rounded-lg border border-[#2A2A2A] bg-[#080810] hover:border-[#3A3A3A] transition-colors cursor-default"
       style={{ aspectRatio: '16/9' }}
     >
-      {/* Screen background gradient */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `linear-gradient(135deg, #0d0d1f ${seed % 3 * 20}%, #080818 100%)`,
-        }}
-      />
-
-      {/* Grid overlay — simulates desktop GUI */}
-      <div
-        className="absolute inset-0 opacity-[0.035]"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 28px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 48px)',
-        }}
-      />
-
-      {/* Simulated UI skeleton */}
-      <div className="absolute inset-0 p-[8%] flex flex-col gap-[5%] opacity-[0.18]">
-        {/* Top bar */}
-        <div className="flex items-center gap-[3%]">
-          <div className="h-[8%] rounded-sm bg-white" style={{ width: `${barWidths[0]}%` }} />
-          <div className="h-[6%] rounded-sm bg-white/50" style={{ width: `${barWidths[1] * 0.3}%` }} />
-        </div>
-        {/* Divider */}
-        <div className="h-px bg-white/20 w-full" />
-        {/* Content rows */}
-        <div className="flex-1 flex gap-[4%]">
-          {/* Sidebar */}
-          <div className="w-[18%] flex flex-col gap-[8%]">
-            {barWidths.map((w, i) => (
-              <div key={i} className="h-[10%] rounded-sm bg-white/40" style={{ width: `${w * 0.7}%` }} />
-            ))}
-          </div>
-          {/* Main area */}
-          <div className="flex-1 flex flex-col gap-[5%]">
-            <div className="h-[12%] rounded-sm bg-white/20" style={{ width: `${barWidths[2]}%` }} />
-            <div className="h-[30%] rounded-sm bg-white/10" />
-            <div className="h-[8%] rounded-sm bg-white/15" style={{ width: `${barWidths[3]}%` }} />
-            <div className="h-[8%] rounded-sm bg-white/10" style={{ width: `${barWidths[4]}%` }} />
-          </div>
-        </div>
-      </div>
-
-      {/* Subtle glow on active areas */}
-      {pct >= 70 && (
-        <div
-          className="absolute inset-0 opacity-5"
-          style={{ background: `radial-gradient(ellipse at ${30 + (seed % 40)}% ${20 + (seed % 50)}%, #6366f1, transparent 60%)` }}
+      {/* Real raw screenshot when available; demo mode falls through to skeleton */}
+      {shot.signedUrl ? (
+        <img
+          src={shot.signedUrl}
+          alt={`Screen ${shot.screenNumber} captured at ${fmtTime(shot.capturedAt)}`}
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
         />
+      ) : (
+        <>
+          <div
+            className="absolute inset-0"
+            style={{ background: `linear-gradient(135deg, #0d0d1f ${seed % 3 * 20}%, #080818 100%)` }}
+          />
+          <div
+            className="absolute inset-0 opacity-[0.035]"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 28px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 48px)',
+            }}
+          />
+          <div className="absolute inset-0 p-[8%] flex flex-col gap-[5%] opacity-[0.18]">
+            <div className="flex items-center gap-[3%]">
+              <div className="h-[8%] rounded-sm bg-white" style={{ width: `${barWidths[0]}%` }} />
+              <div className="h-[6%] rounded-sm bg-white/50" style={{ width: `${barWidths[1] * 0.3}%` }} />
+            </div>
+            <div className="h-px bg-white/20 w-full" />
+            <div className="flex-1 flex gap-[4%]">
+              <div className="w-[18%] flex flex-col gap-[8%]">
+                {barWidths.map((w, i) => (
+                  <div key={i} className="h-[10%] rounded-sm bg-white/40" style={{ width: `${w * 0.7}%` }} />
+                ))}
+              </div>
+              <div className="flex-1 flex flex-col gap-[5%]">
+                <div className="h-[12%] rounded-sm bg-white/20" style={{ width: `${barWidths[2]}%` }} />
+                <div className="h-[30%] rounded-sm bg-white/10" />
+                <div className="h-[8%] rounded-sm bg-white/15" style={{ width: `${barWidths[3]}%` }} />
+                <div className="h-[8%] rounded-sm bg-white/10" style={{ width: `${barWidths[4]}%` }} />
+              </div>
+            </div>
+          </div>
+          {pct >= 70 && (
+            <div
+              className="absolute inset-0 opacity-5"
+              style={{ background: `radial-gradient(ellipse at ${30 + (seed % 40)}% ${20 + (seed % 50)}%, #6366f1, transparent 60%)` }}
+            />
+          )}
+        </>
       )}
 
       {/* Time badge — top left */}
@@ -127,6 +127,16 @@ function ScreenshotTile({ shot }: { shot: Screenshot }) {
       >
         {fmtTime(shot.capturedAt)}
       </div>
+
+      {/* Screen badge — top right (only when multi-monitor) */}
+      {shot.displayCount > 1 && (
+        <div
+          className="absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 font-mono"
+          style={{ background: 'rgba(0,0,0,0.82)', fontSize: 9, color: '#A1A1A1' }}
+        >
+          Screen {shot.screenNumber}/{shot.displayCount}
+        </div>
+      )}
 
       {/* Activity badge — bottom left */}
       <div

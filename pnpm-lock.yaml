@@ -157,9 +157,6 @@ importers:
       electron-updater:
         specifier: ^6.1.8
         version: 6.8.3
-      sharp:
-        specifier: ^0.34.5
-        version: 0.34.5
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -5107,7 +5104,8 @@ snapshots:
 
   '@humanwhocodes/object-schema@2.0.3': {}
 
-  '@img/colour@1.1.0': {}
+  '@img/colour@1.1.0':
+    optional: true
 
   '@img/sharp-darwin-arm64@0.34.5':
     optionalDependencies:
@@ -7021,7 +7019,8 @@ snapshots:
 
   depd@2.0.0: {}
 
-  detect-libc@2.1.2: {}
+  detect-libc@2.1.2:
+    optional: true
 
   detect-newline@3.1.0: {}
 
@@ -9030,6 +9029,7 @@ snapshots:
       '@img/sharp-win32-arm64': 0.34.5
       '@img/sharp-win32-ia32': 0.34.5
       '@img/sharp-win32-x64': 0.34.5
+    optional: true
 
   shebang-command@2.0.0:
     dependencies:

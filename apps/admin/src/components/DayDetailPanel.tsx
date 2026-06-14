@@ -71,6 +71,12 @@ function MiniShot({ shot, onClick }: { shot: MockScreenshot; onClick: () => void
         <div className="absolute top-1 left-1 rounded px-1 py-0.5 font-mono" style={{ background: 'rgba(0,0,0,0.8)', fontSize: 8, color: '#777' }}>
           {fmtTime(shot.capturedAt)}
         </div>
+        {/* Screen badge — only when multi-monitor */}
+        {shot.displayCount > 1 && (
+          <div className="absolute top-1 right-1 rounded px-1 py-0.5 font-mono" style={{ background: 'rgba(0,0,0,0.8)', fontSize: 8, color: '#A1A1A1' }}>
+            S{shot.screenNumber}/{shot.displayCount}
+          </div>
+        )}
       </div>
       {/* Activity bar at bottom (Upwork-style) */}
       <div className="h-1.5 w-full" style={{ background: '#1A1A1A' }}>
