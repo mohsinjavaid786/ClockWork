@@ -33,6 +33,7 @@ export class ConfigService {
     const { data, error } = await this.supabase.client
       .from('app_config')
       .update(patch)
+      .eq('id', true) // singleton row; satisfies Postgres safe-update (WHERE required)
       .select()
       .single();
 
