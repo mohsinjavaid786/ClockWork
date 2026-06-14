@@ -41,7 +41,9 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../../dist-renderer/index.html'));
+    // In the packaged app the renderer lives at <app>/dist-renderer; resolve from
+    // the app root rather than a fragile relative path off the compiled main.
+    mainWindow.loadFile(path.join(app.getAppPath(), 'dist-renderer/index.html'));
   }
 
   mainWindow.on('close', (e) => {

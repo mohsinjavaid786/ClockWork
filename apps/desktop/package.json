@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build && tsc -p tsconfig.electron.json",
-    "package": "electron-builder",
+    "package": "electron-builder --config electron-builder.config.js",
     "test": "echo \"no tests\""
   },
   "dependencies": {

@@ -4,6 +4,13 @@ module.exports = {
   productName: 'Clockwork',
   copyright: 'Copyright © 2026 Clockwork',
 
+  // uiohook-napi and active-win ship prebuilt N-API binaries (ABI-stable across
+  // Node/Electron), so skip electron-builder's source rebuild — it otherwise runs
+  // `npm rebuild` and fails (active-win needs Xcode/CLT to compile from source).
+  npmRebuild: false,
+  // Native .node addons must live outside the asar so they can be loaded at runtime.
+  asarUnpack: ['**/*.node'],
+
   directories: {
     output: 'release',
     buildResources: 'resources',
@@ -13,6 +20,9 @@ module.exports = {
   files: [
     'dist-electron/**/*',
     'dist-renderer/**/*',
+    // Bundle the native trackers' prebuilt binaries explicitly (optionalDependencies).
+    'node_modules/uiohook-napi/**/*',
+    'node_modules/active-win/**/*',
   ],
 
   // Inject production API URL via env var at build time.

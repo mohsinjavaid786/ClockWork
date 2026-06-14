@@ -37,7 +37,7 @@ jobs:
 
       - name: Package macOS installer
         # --publish never: we upload via create-release job below
-        run: cd apps/desktop && pnpm exec electron-builder --mac --publish never
+        run: cd apps/desktop && pnpm exec electron-builder --mac --publish never --config electron-builder.config.js
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -76,7 +76,7 @@ jobs:
         run: pnpm --filter desktop build
 
       - name: Package Windows installer
-        run: cd apps/desktop && pnpm exec electron-builder --win --publish never
+        run: cd apps/desktop && pnpm exec electron-builder --win --publish never --config electron-builder.config.js
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
