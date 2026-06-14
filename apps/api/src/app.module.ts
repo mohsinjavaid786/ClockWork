@@ -10,6 +10,7 @@ import { ScreenshotsModule } from './modules/screenshots/screenshots.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { ConfigModule } from './modules/config/config.module';
+import { HealthModule } from './modules/health/health.module';
 import { SupabaseAuthGuard } from './guards/supabase-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 
@@ -25,6 +26,7 @@ import { RolesGuard } from './guards/roles.guard';
     ReportsModule,
     WebhooksModule,
     ConfigModule,
+    HealthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: SupabaseAuthGuard },
