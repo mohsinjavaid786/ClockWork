@@ -128,8 +128,15 @@ After logging in you'll see the tracker screen:
 
 The timer starts counting and a green dot confirms it's running.
 
+**To pause tracking (e.g. a short break):**
+1. Click **Pause** — the timer turns amber and shows **Paused**
+2. While paused, **no screenshots are taken and no activity is counted**, but your session stays open
+3. Click **Resume** to continue the same session
+
+Paused time is **not** counted toward your tracked hours, so you don't need to stop and start a new timer for breaks.
+
 **To stop tracking:**
-1. Click **Stop tracking**
+1. Click **Stop**
 2. The timer stops and your session is saved
 
 That's it. Your time entry — including any screenshots taken during the session — is automatically uploaded.
@@ -148,8 +155,8 @@ Morning
   └─ Work normally — Clockwork runs in the background
 
 Lunch / breaks
-  └─ Click Stop tracking before stepping away
-  └─ Restart when you return
+  └─ Click Pause before stepping away
+  └─ Click Resume when you return (same session continues)
 
 Context-switching
   └─ Stop the current timer
@@ -157,12 +164,12 @@ Context-switching
   └─ Start a new timer
 
 End of day
-  └─ Click Stop tracking
+  └─ Click Stop
   └─ Clockwork minimizes to the system tray
      (your session data is already uploaded)
 ```
 
-> **Tip:** You don't need to stop the timer for short breaks (a few minutes). Clockwork calculates your activity percentage from keyboard and mouse events, so idle time is visible to your manager regardless.
+> **Tip:** Use **Pause** for breaks instead of Stop — paused time is excluded from your tracked hours and you keep the same session. Stop is for when you're done with a task entirely.
 
 > **Important:** Only **one timer can run at a time.** If you try to start a second timer before stopping the first, you'll see a conflict error. Stop the running timer first.
 

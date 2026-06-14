@@ -11,20 +11,19 @@
 | **Dashboard** | Live stats (today's hours, active members, weekly total, screenshots), 7-day bar chart, real-time active members panel with elapsed timers |
 | **Work Diary** | Upwork-style monthly calendar with activity dots, horizontal weekly bar chart (green = regular, red = overtime), member picker, click any day to drill into sessions |
 | **Day Detail** | Slide-in panel showing every session for a day; each session has a scrollable screenshot filmstrip with per-screenshot activity bars |
-| **Timesheets** | Paginated table of all entries; click any row to open a detail panel showing duration stats, keystroke + mouse totals, activity timeline, and a 3-column screenshot grid |
+| **Timesheets** | Paginated table of all entries; click any row to open a detail panel showing duration stats, keystroke + mouse totals, paused time, activity timeline, and a screenshot grid — click any screenshot to open the full viewer |
 | **Screenshot Modal** | Full-screen screenshot viewer with active window name, 10-block activity level indicator, per-minute keyboard/mouse breakdown table, prev/next navigation (keyboard arrows supported) |
 | **Team** | Member list with weekly hours; invite new members with temporary passwords; per-member profile page with recent activity |
 | **Projects** | CRUD with hex color picker, total hours tracked per project, archive/unarchive |
 | **Reports** | Date-range CSV export, printable HTML report download |
 | **Settings** | Screenshot interval, company name, timezone, Slack webhook with test-send button |
-| **Demo mode** | Full working demo with `demo@clockwork.app / demo1234` — no backend required; 6 members, 5 projects, 35 time entries, mock screenshots |
 
 ### Desktop App
 | Feature | Details |
 |---|---|
-| **Timer** | One-click start/stop; project + description selection; `HH:MM:SS` live counter |
+| **Timer** | One-click start / **pause** / resume / stop; project + description selection; `HH:MM:SS` live counter. Paused time is excluded from tracked duration and recorded per entry |
 | **Screenshots** | `desktopCapturer` every N minutes (configurable); captures **every connected display** as raw PNG — no blur, no post-processing (Upwork-style). One upload per display per capture event, sharing `captured_at` |
-| **Activity tracking** | `powerMonitor` idle detection; activity % computed per screenshot window and uploaded with each capture |
+| **Activity tracking** | Global keystroke + mouse counting (`uiohook-napi`) and foreground-window capture (`active-win`); per-minute keyboard/mouse breakdown + activity % uploaded with each screenshot. Requires macOS Accessibility + Screen Recording permission (auto-prompted) |
 | **Secure storage** | JWT encrypted via `electron.safeStorage` (macOS Keychain / Windows Credential Store) |
 | **System tray** | Tray icon updates to show tracking state; context menu for show/hide and quit |
 | **Auto-update** | `electron-updater` checks GitHub Releases on launch and installs silently |
