@@ -8,7 +8,7 @@ import {
   saveTimerState, getTimerState, clearTimerState,
 } from './services/timer.service';
 import { captureAndUpload } from './services/screenshot.service';
-import { startActivityTracking, stopActivityTracking, getActivityPercent } from './services/activity.service';
+import { startActivityTracking, stopActivityTracking, getActivityPercent, flushActivity } from './services/activity.service';
 import { createTray, updateTrayMenu } from './tray';
 
 const API_BASE = process.env['API_URL'] ?? 'http://localhost:3001';
@@ -73,7 +73,7 @@ function startScreenshotLoop() {
       const user = getUser();
       if (!state.running || !user) return;
 
-      const activity = getActivityPercent(screenshotIntervalMinutes * 60);
+      const activity = flushActivity(screenshotIntervalMinutes * 60);
       await captureAndUpload(user.id, activity, state.entryId).catch(console.error);
     },
     screenshotIntervalMinutes * 60 * 1000,

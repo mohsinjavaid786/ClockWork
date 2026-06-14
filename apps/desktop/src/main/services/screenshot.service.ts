@@ -1,11 +1,12 @@
 import { desktopCapturer, screen } from 'electron';
 import { getToken } from './timer.service';
+import type { ActivitySnapshot } from './activity.service';
 
 const API_BASE = process.env['API_URL'] ?? 'http://localhost:3001';
 
 export async function captureAndUpload(
   userId: string,
-  activityPercent: number,
+  activity: ActivitySnapshot,
   timeEntryId?: string,
 ): Promise<void> {
   const primary = screen.getPrimaryDisplay();
@@ -35,7 +36,11 @@ export async function captureAndUpload(
         new Blob([new Uint8Array(pngBuffer)], { type: 'image/png' }),
         `screen-${idx + 1}.png`,
       );
-      formData.append('activityPercent', String(activityPercent));
+      formData.append('activityPercent', String(activity.activityPercent));
+      formData.append('keyCount', String(activity.keyCount));
+      formData.append('mouseCount', String(activity.mouseCount));
+      formData.append('minuteActivity', JSON.stringify(activity.minuteActivity));
+      if (activity.activeWindow) formData.append('activeWindow', activity.activeWindow);
       formData.append('screenNumber', String(idx + 1));
       formData.append('displayCount', String(displayCount));
       formData.append('capturedAt', capturedAt);

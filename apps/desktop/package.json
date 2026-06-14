@@ -12,6 +12,10 @@
     "@clockwork/shared": "workspace:*",
     "electron-updater": "^6.1.8"
   },
+  "optionalDependencies": {
+    "active-win": "^8.2.1",
+    "uiohook-napi": "^1.5.4"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.16",
