@@ -1,8 +1,6 @@
-import { safeStorage } from 'electron';
-
-const TOKEN_KEY = 'cw_token';
-const USER_KEY = 'cw_user';
-const TIMER_KEY = 'cw_timer';
+import { app } from 'electron';
+import fs from 'fs';
+import path from 'path';
 
 interface StoredUser {
   id: string;
@@ -20,72 +18,79 @@ interface TimerState {
   description?: string;
 }
 
-function encrypt(value: string): Buffer {
-  if (safeStorage.isEncryptionAvailable()) {
-    return safeStorage.encryptString(value);
-  }
-  return Buffer.from(value, 'utf8');
+interface Store {
+  token?: string;
+  user?: StoredUser;
+  timer?: TimerState;
 }
 
-function decrypt(buf: Buffer): string {
-  if (safeStorage.isEncryptionAvailable()) {
-    return safeStorage.decryptString(buf);
+// Session data is persisted as plain JSON in the app's private per-user data
+// directory. We deliberately do NOT use Electron safeStorage: on macOS it keeps
+// its key in the login keychain, and an ad-hoc-signed app (no Apple Developer
+// cert) can never get that access to persist — it just prompts for the keychain
+// password on every launch and never sticks. A JWT in the OS-protected userData
+// folder is the standard trade-off for an internal tool, and it lets the session
+// survive restarts (the old in-memory store lost it on quit).
+const storeFile = () => path.join(app.getPath('userData'), 'session.json');
+
+let cache: Store | null = null;
+
+function load(): Store {
+  if (cache) return cache;
+  try {
+    cache = JSON.parse(fs.readFileSync(storeFile(), 'utf8')) as Store;
+  } catch {
+    cache = {};
   }
-  return buf.toString('utf8');
+  return cache;
 }
 
-const store = new Map<string, Buffer>();
+function persist() {
+  try {
+    fs.writeFileSync(storeFile(), JSON.stringify(cache ?? {}), 'utf8');
+  } catch (err) {
+    console.error('Failed to persist session store:', err);
+  }
+}
 
 export function saveToken(token: string) {
-  store.set(TOKEN_KEY, encrypt(token));
+  load().token = token;
+  persist();
 }
 
 export function getToken(): string | null {
-  const buf = store.get(TOKEN_KEY);
-  if (!buf) return null;
-  try {
-    return decrypt(buf);
-  } catch {
-    return null;
-  }
+  return load().token ?? null;
 }
 
 export function clearToken() {
-  store.delete(TOKEN_KEY);
+  delete load().token;
+  persist();
 }
 
 export function saveUser(user: StoredUser) {
-  store.set(USER_KEY, encrypt(JSON.stringify(user)));
+  load().user = user;
+  persist();
 }
 
 export function getUser(): StoredUser | null {
-  const buf = store.get(USER_KEY);
-  if (!buf) return null;
-  try {
-    return JSON.parse(decrypt(buf)) as StoredUser;
-  } catch {
-    return null;
-  }
+  return load().user ?? null;
 }
 
 export function clearUser() {
-  store.delete(USER_KEY);
+  delete load().user;
+  persist();
 }
 
 export function saveTimerState(state: TimerState) {
-  store.set(TIMER_KEY, Buffer.from(JSON.stringify(state), 'utf8'));
+  load().timer = state;
+  persist();
 }
 
 export function getTimerState(): TimerState {
-  const buf = store.get(TIMER_KEY);
-  if (!buf) return { running: false };
-  try {
-    return JSON.parse(buf.toString('utf8')) as TimerState;
-  } catch {
-    return { running: false };
-  }
+  return load().timer ?? { running: false };
 }
 
 export function clearTimerState() {
-  store.delete(TIMER_KEY);
+  delete load().timer;
+  persist();
 }
