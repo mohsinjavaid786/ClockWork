@@ -129,7 +129,7 @@ export default function DashboardPage() {
                   fontSize: '12px',
                 }}
                 cursor={{ fill: '#1A1A1A' }}
-                formatter={(v: number) => [`${v}h`, 'Hours']}
+                formatter={(v) => [`${Number(v)}h`, 'Hours']}
               />
               <Bar dataKey="hours" fill="#ffffff" radius={[3, 3, 0, 0]} />
             </BarChart>
