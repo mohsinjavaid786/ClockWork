@@ -51,9 +51,7 @@ export async function captureAndUpload(
         body: formData,
       });
       if (!res.ok) {
-        console.error(`Screenshot upload failed (screen ${idx + 1}): HTTP ${res.status}`);
-      } else {
-        console.log(`Screenshot uploaded (screen ${idx + 1}/${displayCount}, ${pngBuffer.length} bytes)`);
+        throw new Error(`Screenshot upload failed (screen ${idx + 1}): HTTP ${res.status}`);
       }
     }),
   );
