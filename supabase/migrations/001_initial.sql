@@ -35,7 +35,9 @@ create table public.time_entries (
   started_at timestamptz not null,
   ended_at timestamptz,
   duration_seconds integer,
-  status text not null check (status in ('running', 'stopped')) default 'running',
+  status text not null check (status in ('running', 'paused', 'stopped')) default 'running',
+  paused_seconds integer not null default 0,
+  pauses jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
