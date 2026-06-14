@@ -13,7 +13,7 @@
 | **Day Detail** | Slide-in panel showing every session for a day; each session has a scrollable screenshot filmstrip with per-screenshot activity bars |
 | **Timesheets** | Paginated table of all entries; click any row to open a detail panel showing duration stats, keystroke + mouse totals, paused time, activity timeline, and a screenshot grid — click any screenshot to open the full viewer |
 | **Screenshot Modal** | Full-screen screenshot viewer with active window name, 10-block activity level indicator, per-minute keyboard/mouse breakdown table, prev/next navigation (keyboard arrows supported) |
-| **Team** | Member list with weekly hours; invite new members with temporary passwords; per-member profile page with recent activity |
+| **Team** | Member list with weekly hours; invite new members by email (Resend) — they get a secure set-your-password link + desktop download links; per-member profile page with recent activity |
 | **Projects** | CRUD with hex color picker, total hours tracked per project, archive/unarchive |
 | **Reports** | Date-range CSV export, printable HTML report download |
 | **Settings** | Screenshot interval, company name, timezone, Slack webhook with test-send button |
@@ -371,7 +371,8 @@ clockwork/
 │       ├── 002_storage.sql          # screenshots bucket policy
 │       ├── 003_multi_screen.sql     # screen_number + display_count
 │       ├── 004_activity_detail.sql  # key/mouse counts, active window, per-minute
-│       └── 005_pause_tracking.sql   # paused status + paused_seconds + pauses
+│       ├── 005_pause_tracking.sql   # paused status + paused_seconds + pauses
+│       └── 006_installers_bucket.sql # public bucket hosting the installers
 │
 ├── package.json                     # root workspace scripts
 ├── pnpm-workspace.yaml
@@ -427,7 +428,7 @@ cp apps/admin/.env.example  apps/admin/.env.local
 
 # 3. Run Supabase migrations (SQL Editor in Supabase dashboard), in order:
 #    001_initial.sql  002_storage.sql  003_multi_screen.sql
-#    004_activity_detail.sql  005_pause_tracking.sql
+#    004_activity_detail.sql  005_pause_tracking.sql  006_installers_bucket.sql
 
 # 4. Promote your first admin (Supabase SQL Editor)
 UPDATE public.users SET role = 'admin' WHERE email = 'you@example.com';

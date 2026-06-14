@@ -294,21 +294,32 @@ After all three services are deployed:
 | `SUPABASE_URL` | ✅ | Your Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Service role key (server-side only, never expose) |
 | `PORT` | — | Listen port (default: `3001`) |
-| `ADMIN_URL` | ✅ | Vercel URL for CORS (e.g. `https://your-app.vercel.app`) |
+| `ADMIN_URL` | ✅ | Vercel URL — CORS origin AND the base for password-reset links |
+| `RESEND_API_KEY` | ✅* | Resend API key; required to send invite + reset emails |
+| `RESEND_FROM` | — | Sender, e.g. `Clockwork <noreply@yourdomain>` (default `onboarding@resend.dev`) |
+| `COMPANY_NAME` | — | Shown in emails (default `your team`) |
+| `DOWNLOAD_URL_MACOS` / `DOWNLOAD_URL_WINDOWS` | — | Override installer links (default: derived from `SUPABASE_URL` + `installers` bucket) |
 | `NODE_ENV` | — | Set to `production` |
+
+> *Without `RESEND_API_KEY` the app still runs but emails are logged, not sent.
 
 ### Admin portal (Vercel)
 
 | Variable | Required | Description |
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | ✅ | Full API URL (e.g. `https://clockwork-api.up.railway.app`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL (for the password set/reset page) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon (public) key — safe to expose |
 
-### Desktop app (hardcoded in build)
+### Desktop app (dynamic, not hardcoded)
 
-The desktop app's API URL is compiled into the binary. Update `API_BASE` in `src/main/index.ts` before building:
-```typescript
-const API_BASE = process.env['API_URL'] ?? 'https://your-api-url.up.railway.app';
-```
+The desktop API URL is resolved at runtime by `src/main/config.ts` (env → build-time injection → localhost). For releases, set a GitHub **repository variable** `API_URL`; the release workflow bakes it in. See [apps/desktop/README.md](../apps/desktop/README.md#environment-variables).
+
+### Email + installer hosting setup (one-time)
+
+1. **Resend:** create an API key at [resend.com](https://resend.com); set `RESEND_API_KEY` on Railway. To email real employees you must **verify a sending domain** in Resend and set `RESEND_FROM` to an address at that domain — `onboarding@resend.dev` only delivers to your own Resend account email.
+2. **Supabase redirect URLs:** in Supabase → Authentication → URL Configuration, add `<your-vercel-url>/reset-password` to the allowed redirect URLs (invite + reset links redirect there).
+3. **Installer bucket:** run migration `006_installers_bucket.sql`, and add GitHub repo **secrets** `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` so the release workflow uploads installers to the public `installers` bucket.
 
 ---
 
