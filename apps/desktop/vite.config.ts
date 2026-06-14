@@ -4,6 +4,9 @@ import { resolve } from 'path';
 
 export default defineConfig({
   root: 'src/renderer',
+  // Relative asset paths: the packaged app loads index.html over file://, where an
+  // absolute "/assets/..." path resolves to the filesystem root and 404s (black screen).
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {
