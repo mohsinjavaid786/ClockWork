@@ -107,6 +107,36 @@ jobs:
       - name: List release files
         run: find artifacts -type f | sort
 
+      # Publish installers to the public Supabase bucket under stable "latest"
+      # names so invite emails can link to them directly (repo stays private).
+      # Requires repo secrets SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY; skipped
+      # if they're not set.
+      - name: Publish installers to Supabase Storage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "Supabase secrets not set — skipping installer upload."
+            exit 0
+          fi
+          upload() {
+            local file="$1" dest="$2"
+            echo "Uploading $file → installers/latest/$dest"
+            curl -fsSL -X POST \
+              "$SUPABASE_URL/storage/v1/object/installers/latest/$dest" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+              -H "x-upsert: true" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@$file"
+            echo
+          }
+          dmg=$(ls artifacts/macos/*.dmg | head -1)
+          exe=$(ls artifacts/windows/*.exe | head -1)
+          upload "$dmg" "Clockwork.dmg"
+          upload "$exe" "Clockwork.exe"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
