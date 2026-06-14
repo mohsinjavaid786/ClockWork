@@ -107,8 +107,10 @@ alter table public.screenshots enable row level security;
 alter table public.app_config enable row level security;
 
 create policy "users_select" on public.users for select using (auth.uid() is not null);
+create policy "users_insert_admin" on public.users for insert with check (public.is_admin());
 create policy "users_update_self" on public.users for update using (auth.uid() = id);
 create policy "users_update_admin" on public.users for update using (public.is_admin());
+create policy "users_delete_admin" on public.users for delete using (public.is_admin());
 
 create policy "projects_select" on public.projects for select using (auth.uid() is not null);
 create policy "projects_insert" on public.projects for insert with check (auth.uid() is not null);
