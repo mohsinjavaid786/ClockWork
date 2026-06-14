@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Keyboard, Mouse } from 'lucide-react';
 import type { Screenshot } from '@/lib/types';
 
 interface Props {
@@ -142,24 +142,40 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
 
         {/* Body */}
         <div className="grid grid-cols-[1fr_300px]">
-          {/* Left — screenshot */}
+          {/* Left — screenshot + active window + input totals */}
           <div className="border-r border-[#2A2A2A] p-6 flex flex-col gap-4">
             <BigScreenshot shot={shot} />
-            <div className="flex items-start justify-between gap-3">
-              <div>
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-[#666666]">Active window</p>
+                <p className="mt-0.5 truncate text-sm text-white">{shot.activeWindow ?? '—'}</p>
+              </div>
+              <div className="text-right">
                 <p className="text-xs font-medium text-[#666666]">Captured</p>
                 <p className="mt-0.5 font-mono text-sm text-white">{fmtTime(shot.capturedAt)}</p>
               </div>
-              {shot.displayCount > 1 && (
-                <div className="text-right">
-                  <p className="text-xs font-medium text-[#666666]">Display</p>
-                  <p className="mt-0.5 font-mono text-sm text-white">{shot.screenNumber} of {shot.displayCount}</p>
+            </div>
+
+            {/* Input totals for this interval */}
+            <div className="flex gap-3">
+              <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-3 py-2.5">
+                <Keyboard size={12} className="text-[#555]" />
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-[#444]">Keystrokes</p>
+                  <p className="font-mono text-sm font-semibold text-white">{shot.keyCount.toLocaleString()}</p>
                 </div>
-              )}
+              </div>
+              <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-3 py-2.5">
+                <Mouse size={12} className="text-[#555]" />
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-[#444]">Mouse events</p>
+                  <p className="font-mono text-sm font-semibold text-white">{shot.mouseCount.toLocaleString()}</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Right — activity level */}
+          {/* Right — activity level + per-minute table */}
           <div className="flex flex-col gap-5 p-5">
             <div>
               <p className="mb-2 text-xs font-medium text-[#666666]">Activity Level</p>
@@ -175,6 +191,39 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
               <p className="mt-1.5 text-xs" style={{ color }}>
                 {shot.activityPercent}% active
               </p>
+            </div>
+
+            {/* Per-minute breakdown */}
+            <div className="flex-1">
+              <p className="mb-2 text-xs font-medium text-[#666666]">Per-minute activity</p>
+              {shot.minuteActivity.length === 0 ? (
+                <p className="text-xs text-[#444]">No per-minute data</p>
+              ) : (
+                <div className="overflow-hidden rounded-lg border border-[#2A2A2A]">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-[#2A2A2A] bg-[#111111]">
+                        <th className="px-3 py-2 text-left font-medium text-[#555]">Time</th>
+                        <th className="px-3 py-2 text-right font-medium text-[#555]">
+                          <Keyboard size={10} className="inline mr-1" />Keys
+                        </th>
+                        <th className="px-3 py-2 text-right font-medium text-[#555]">
+                          <Mouse size={10} className="inline mr-1" />Mouse
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {shot.minuteActivity.map((row, i) => (
+                        <tr key={i} className="border-b border-[#1A1A1A] last:border-0">
+                          <td className="px-3 py-1.5 font-mono text-[#666666]">{fmtTime(row.t)}</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-white">{row.keys}</td>
+                          <td className="px-3 py-1.5 text-right font-mono text-white">{row.mouse}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         </div>

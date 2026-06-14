@@ -1,4 +1,4 @@
-import type { Screenshot } from './types';
+import type { MinuteActivity, Screenshot } from './types';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -37,6 +37,10 @@ interface RawScreenshot {
   activity_percent: number;
   screen_number: number;
   display_count: number;
+  key_count?: number;
+  mouse_count?: number;
+  active_window?: string | null;
+  minute_activity?: MinuteActivity[];
   user: { id: string; name: string; email: string } | null;
   signedUrl?: string;
 }
@@ -51,6 +55,10 @@ function toScreenshot(s: RawScreenshot): Screenshot {
     activityPercent: s.activity_percent,
     screenNumber: s.screen_number,
     displayCount: s.display_count,
+    keyCount: s.key_count ?? 0,
+    mouseCount: s.mouse_count ?? 0,
+    activeWindow: s.active_window ?? null,
+    minuteActivity: Array.isArray(s.minute_activity) ? s.minute_activity : [],
     user: s.user,
     signedUrl: s.signedUrl,
   };

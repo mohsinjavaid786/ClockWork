@@ -1,5 +1,12 @@
 // Shared client-side types mirroring the API responses.
 
+export interface MinuteActivity {
+  t: string; // ISO8601 start of the minute
+  keys: number;
+  mouse: number;
+  window?: string;
+}
+
 export interface Screenshot {
   id: string;
   userId: string;
@@ -9,6 +16,10 @@ export interface Screenshot {
   activityPercent: number;
   screenNumber: number;
   displayCount: number;
+  keyCount: number;
+  mouseCount: number;
+  activeWindow: string | null;
+  minuteActivity: MinuteActivity[];
   user: { id: string; name: string; email: string } | null;
   signedUrl?: string;
 }
