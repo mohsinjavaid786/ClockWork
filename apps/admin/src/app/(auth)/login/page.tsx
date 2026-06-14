@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { DEMO_EMAIL, DEMO_PASSWORD } from '@/lib/mock-data';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -28,35 +27,12 @@ export default function LoginPage() {
     }
   }
 
-  function fillDemo() {
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="font-mono text-xl font-semibold tracking-widest text-white">CLOCKWORK</h1>
           <p className="mt-2 text-sm text-[#666666]">Sign in to your account</p>
-        </div>
-
-        {/* Demo mode banner */}
-        <div className="mb-4 rounded-lg border border-[#2A2A2A] bg-[#111111] px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium text-[#A1A1A1]">Demo mode — no backend needed</p>
-              <p className="mt-0.5 font-mono text-[11px] text-[#666666]">{DEMO_EMAIL}</p>
-              <p className="font-mono text-[11px] text-[#666666]">{DEMO_PASSWORD}</p>
-            </div>
-            <button
-              type="button"
-              onClick={fillDemo}
-              className="flex-shrink-0 rounded border border-[#2A2A2A] px-3 py-1.5 text-xs text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white transition-colors"
-            >
-              Use demo
-            </button>
-          </div>
         </div>
 
         <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] p-6">

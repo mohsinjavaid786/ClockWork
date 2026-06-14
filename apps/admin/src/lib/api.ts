@@ -1,4 +1,4 @@
-import { getMockResponse, DEMO_EMAIL, DEMO_PASSWORD } from './mock-data';
+import type { Screenshot } from './types';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
@@ -7,30 +7,7 @@ function getToken(): string | null {
   return localStorage.getItem('cw_token');
 }
 
-export function isDemoMode(): boolean {
-  if (typeof window === 'undefined') return false;
-  return localStorage.getItem('cw_token') === 'demo';
-}
-
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  // Demo login: intercept before any network call
-  if (path === '/auth/login' && init.body) {
-    const body = JSON.parse(init.body as string) as Record<string, string>;
-    if (body['email'] === DEMO_EMAIL && body['password'] === DEMO_PASSWORD) {
-      localStorage.setItem('cw_token', 'demo');
-      return {
-        accessToken: 'demo',
-        refreshToken: 'demo',
-        user: getMockResponse('/auth/me'),
-      } as unknown as T;
-    }
-  }
-
-  // All subsequent calls while in demo mode
-  if (getToken() === 'demo') {
-    return getMockResponse(path) as T;
-  }
-
   const token = getToken();
   const res = await fetch(`${BASE}/api/v1${path}`, {
     ...init,
@@ -50,6 +27,35 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return text ? (JSON.parse(text) as T) : ({} as T);
 }
 
+// Raw screenshot row as returned by the API (snake_case), mapped to camelCase Screenshot.
+interface RawScreenshot {
+  id: string;
+  user_id: string;
+  time_entry_id: string | null;
+  storage_path: string;
+  captured_at: string;
+  activity_percent: number;
+  screen_number: number;
+  display_count: number;
+  user: { id: string; name: string; email: string } | null;
+  signedUrl?: string;
+}
+
+function toScreenshot(s: RawScreenshot): Screenshot {
+  return {
+    id: s.id,
+    userId: s.user_id,
+    timeEntryId: s.time_entry_id,
+    storagePath: s.storage_path,
+    capturedAt: s.captured_at,
+    activityPercent: s.activity_percent,
+    screenNumber: s.screen_number,
+    displayCount: s.display_count,
+    user: s.user,
+    signedUrl: s.signedUrl,
+  };
+}
+
 export const api = {
   auth: {
     login: (email: string, password: string) =>
@@ -58,12 +64,14 @@ export const api = {
         { method: 'POST', body: JSON.stringify({ email, password }) },
       ),
     me: () => request<{ id: string; name: string; email: string; role: string }>('/auth/me'),
-    logout: () => {
-      if (isDemoMode()) {
-        localStorage.removeItem('cw_token');
-        return Promise.resolve({});
+    logout: async () => {
+      try {
+        await request('/auth/logout', { method: 'POST' });
+      } catch {
+        // ignore network/token errors on logout — we clear locally regardless
       }
-      return request('/auth/logout', { method: 'POST' });
+      if (typeof window !== 'undefined') localStorage.removeItem('cw_token');
+      return {};
     },
   },
 
@@ -99,11 +107,16 @@ export const api = {
   },
 
   screenshots: {
-    list: (params?: Record<string, string>) => {
+    list: async (params?: Record<string, string>) => {
       const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-      return request<{ data: unknown[]; total: number; page: number; limit: number; totalPages: number }>(
-        `/screenshots${qs}`,
-      );
+      const res = await request<{
+        data: RawScreenshot[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }>(`/screenshots${qs}`);
+      return { ...res, data: (res.data ?? []).map(toScreenshot) };
     },
   },
 

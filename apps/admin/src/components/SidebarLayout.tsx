@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
-import { isDemoMode } from '@/lib/api';
 
 const nav = [
   { href: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
@@ -37,11 +36,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           <span className="font-mono text-sm font-semibold tracking-widest text-white">
             CLOCKWORK
           </span>
-          {isDemoMode() && (
-            <span className="mt-1 block rounded px-1.5 py-0.5 text-center font-mono text-[10px] font-medium tracking-widest bg-[#1A1A1A] text-[#666666] border border-[#2A2A2A]">
-              DEMO
-            </span>
-          )}
         </div>
 
         <nav className="flex-1 space-y-0.5 px-2 py-3">
