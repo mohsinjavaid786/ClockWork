@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from './config.service';
 import { UpdateConfigDto } from './dto/config.dto';
 import { Roles } from '../../decorators/roles.decorator';
+import { Public } from '../../decorators/public.decorator';
 
 @ApiTags('config')
 @ApiBearerAuth()
@@ -11,6 +12,7 @@ export class ConfigController {
   constructor(private readonly configService: ConfigService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: 'Get application configuration' })
   get() {
     return this.configService.get();
