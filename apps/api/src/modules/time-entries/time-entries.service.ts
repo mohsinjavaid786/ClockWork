@@ -12,14 +12,14 @@ export class TimeEntriesService {
   constructor(private readonly supabase: SupabaseService) {}
 
   async start(userId: string, dto: StartTimerDto) {
-    const { data: running } = await this.supabase.client
+    const { data: open } = await this.supabase.client
       .from('time_entries')
       .select('id')
       .eq('user_id', userId)
-      .eq('status', 'running')
-      .single();
+      .in('status', ['running', 'paused'])
+      .maybeSingle();
 
-    if (running) throw new ConflictException('A timer is already running');
+    if (open) throw new ConflictException('A timer is already running');
 
     const { data, error } = await this.supabase.client
       .from('time_entries')
@@ -37,10 +37,10 @@ export class TimeEntriesService {
     return data;
   }
 
-  async stop(userId: string, entryId: string, dto: StopTimerDto) {
+  async pause(userId: string, entryId: string) {
     const { data: entry, error: fetchError } = await this.supabase.client
       .from('time_entries')
-      .select('id, started_at, status')
+      .select('id, status, pauses')
       .eq('id', entryId)
       .eq('user_id', userId)
       .single();
@@ -48,10 +48,83 @@ export class TimeEntriesService {
     if (fetchError || !entry) throw new NotFoundException('Time entry not found');
     if (entry.status !== 'running') throw new BadRequestException('Timer is not running');
 
+    const pauses = ((entry.pauses as Array<Record<string, unknown>>) ?? []).slice();
+    pauses.push({ pausedAt: new Date().toISOString(), resumedAt: null });
+
+    const { data, error } = await this.supabase.client
+      .from('time_entries')
+      .update({ status: 'paused', pauses })
+      .eq('id', entryId)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
+
+  async resume(userId: string, entryId: string) {
+    const { data: entry, error: fetchError } = await this.supabase.client
+      .from('time_entries')
+      .select('id, status, pauses, paused_seconds')
+      .eq('id', entryId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !entry) throw new NotFoundException('Time entry not found');
+    if (entry.status !== 'paused') throw new BadRequestException('Timer is not paused');
+
+    const pauses = ((entry.pauses as Array<Record<string, unknown>>) ?? []).slice();
+    const last = pauses[pauses.length - 1];
+    let pausedSeconds = (entry.paused_seconds as number) ?? 0;
+    const resumedAt = new Date().toISOString();
+    if (last && !last['resumedAt']) {
+      last['resumedAt'] = resumedAt;
+      pausedSeconds += Math.floor(
+        (new Date(resumedAt).getTime() - new Date(last['pausedAt'] as string).getTime()) / 1000,
+      );
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('time_entries')
+      .update({ status: 'running', pauses, paused_seconds: pausedSeconds })
+      .eq('id', entryId)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
+
+  async stop(userId: string, entryId: string, dto: StopTimerDto) {
+    const { data: entry, error: fetchError } = await this.supabase.client
+      .from('time_entries')
+      .select('id, started_at, status, pauses, paused_seconds')
+      .eq('id', entryId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError || !entry) throw new NotFoundException('Time entry not found');
+    if (entry.status === 'stopped') throw new BadRequestException('Timer is not running');
+
     const endedAt = dto.endedAt ?? new Date().toISOString();
     const startedAt = new Date(entry.started_at as string);
-    const durationSeconds = Math.floor(
-      (new Date(endedAt).getTime() - startedAt.getTime()) / 1000,
+
+    // If stopped while paused, close the open pause interval.
+    const pauses = ((entry.pauses as Array<Record<string, unknown>>) ?? []).slice();
+    let pausedSeconds = (entry.paused_seconds as number) ?? 0;
+    if (entry.status === 'paused') {
+      const last = pauses[pauses.length - 1];
+      if (last && !last['resumedAt']) {
+        last['resumedAt'] = endedAt;
+        pausedSeconds += Math.floor(
+          (new Date(endedAt).getTime() - new Date(last['pausedAt'] as string).getTime()) / 1000,
+        );
+      }
+    }
+
+    const durationSeconds = Math.max(
+      0,
+      Math.floor((new Date(endedAt).getTime() - startedAt.getTime()) / 1000) - pausedSeconds,
     );
 
     const { data, error } = await this.supabase.client
@@ -59,6 +132,8 @@ export class TimeEntriesService {
       .update({
         ended_at: endedAt,
         duration_seconds: durationSeconds,
+        paused_seconds: pausedSeconds,
+        pauses,
         status: 'stopped',
       })
       .eq('id', entryId)
@@ -77,7 +152,7 @@ export class TimeEntriesService {
     let q = this.supabase.client
       .from('time_entries')
       .select(
-        'id, user_id, project_id, description, started_at, ended_at, duration_seconds, status, user:users(id, name, email), project:projects(id, name, color)',
+        'id, user_id, project_id, description, started_at, ended_at, duration_seconds, paused_seconds, status, user:users(id, name, email), project:projects(id, name, color)',
         { count: 'exact' },
       )
       .order('started_at', { ascending: false })

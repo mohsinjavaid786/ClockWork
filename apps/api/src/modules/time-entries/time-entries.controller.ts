@@ -28,6 +28,18 @@ export class TimeEntriesController {
     return this.timeEntriesService.stop(user.id, id, dto);
   }
 
+  @Post(':id/pause')
+  @ApiOperation({ summary: 'Pause a running timer (entry stays open)' })
+  pause(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.timeEntriesService.pause(user.id, id);
+  }
+
+  @Post(':id/resume')
+  @ApiOperation({ summary: 'Resume a paused timer' })
+  resume(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.timeEntriesService.resume(user.id, id);
+  }
+
   @Get()
   @ApiOperation({ summary: 'List time entries with pagination and filters' })
   list(@Query() query: ListEntriesQueryDto) {
