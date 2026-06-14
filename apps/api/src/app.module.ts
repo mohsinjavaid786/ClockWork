@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SupabaseModule } from './supabase/supabase.module';
+import { EmailModule } from './modules/email/email.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ProjectsModule } from './modules/projects/projects.module';
@@ -18,6 +19,7 @@ import { RolesGuard } from './guards/roles.guard';
   imports: [
     ScheduleModule.forRoot(),
     SupabaseModule,
+    EmailModule,
     AuthModule,
     UsersModule,
     ProjectsModule,

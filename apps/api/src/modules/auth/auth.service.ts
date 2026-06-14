@@ -1,10 +1,16 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { EmailService } from '../email/email.service';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly supabase: SupabaseService) {}
+  private readonly logger = new Logger(AuthService.name);
+
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly email: EmailService,
+  ) {}
 
   async login(dto: LoginDto) {
     const { data, error } = await this.supabase.authClient.auth.signInWithPassword({
@@ -48,6 +54,36 @@ export class AuthService {
 
   async logout(token: string) {
     await this.supabase.client.auth.admin.signOut(token);
+    return { success: true };
+  }
+
+  /**
+   * Generate a Supabase password-recovery link and email it via Resend.
+   * Always resolves with { success: true } regardless of whether the email
+   * exists, so the endpoint can't be used to enumerate registered accounts.
+   */
+  async forgotPassword(email: string) {
+    const adminUrl = (process.env['ADMIN_URL'] ?? '').replace(/\/$/, '');
+    const redirectTo = `${adminUrl}/reset-password`;
+
+    try {
+      const { data, error } = await this.supabase.client.auth.admin.generateLink({
+        type: 'recovery',
+        email,
+        options: { redirectTo },
+      });
+
+      const actionLink = data?.properties?.action_link;
+      if (error || !actionLink) {
+        // No such user (or generation failed) — swallow to avoid enumeration.
+        this.logger.warn(`Password reset requested for ${email}: ${error?.message ?? 'no link'}`);
+      } else {
+        await this.email.sendPasswordReset(email, actionLink);
+      }
+    } catch (err) {
+      this.logger.error(`forgotPassword failed for ${email}: ${(err as Error).message}`);
+    }
+
     return { success: true };
   }
 

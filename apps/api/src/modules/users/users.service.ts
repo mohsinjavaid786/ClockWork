@@ -5,12 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { EmailService } from '../email/email.service';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly email: EmailService,
+  ) {}
 
   async list() {
     const { data, error } = await this.supabase.client
@@ -112,20 +116,25 @@ export class UsersService {
 
     if (existing) throw new ConflictException('Email already registered');
 
-    const { data: authData, error: authError } = await this.supabase.client.auth.admin.createUser({
-      email: dto.email,
-      password: dto.password,
-      email_confirm: true,
-    });
+    // Generate a Supabase invite link (creates the auth user with no password)
+    // and email it so the employee sets their own password — no plaintext
+    // password is ever stored or sent.
+    const adminUrl = (process.env['ADMIN_URL'] ?? '').replace(/\/$/, '');
+    const { data: linkData, error: linkError } =
+      await this.supabase.client.auth.admin.generateLink({
+        type: 'invite',
+        email: dto.email,
+        options: { redirectTo: `${adminUrl}/reset-password` },
+      });
 
-    if (authError || !authData.user) {
-      throw new BadRequestException(authError?.message ?? 'Failed to create auth user');
+    if (linkError || !linkData.user) {
+      throw new BadRequestException(linkError?.message ?? 'Failed to create invite');
     }
 
     const { data, error } = await this.supabase.client
       .from('users')
       .insert({
-        id: authData.user.id,
+        id: linkData.user.id,
         name: dto.name,
         email: dto.email,
         role: dto.role,
@@ -136,8 +145,22 @@ export class UsersService {
       .single();
 
     if (error) {
-      await this.supabase.client.auth.admin.deleteUser(authData.user.id);
+      await this.supabase.client.auth.admin.deleteUser(linkData.user.id);
       throw new BadRequestException(error.message);
+    }
+
+    // Send the invite email. If delivery fails, the account still exists — surface
+    // the error so the admin knows to re-send rather than silently leaving the
+    // employee without a way in.
+    const actionLink = linkData.properties?.action_link;
+    if (actionLink) {
+      try {
+        await this.email.sendInvite(dto.email, dto.name, actionLink);
+      } catch (err) {
+        throw new BadRequestException(
+          `User created but invite email failed to send: ${(err as Error).message}`,
+        );
+      }
     }
 
     return data;
