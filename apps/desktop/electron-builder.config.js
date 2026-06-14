@@ -1,8 +1,28 @@
+const { execSync } = require('node:child_process');
+const path = require('node:path');
+
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   appId: 'com.clockwork.app',
   productName: 'Clockwork',
   copyright: 'Copyright © 2026 Clockwork',
+
+  // No paid Apple Developer cert, so electron-builder skips signing (identity:null).
+  // An unsigned app is rejected by Gatekeeper as "damaged" on Apple Silicon, so
+  // ad-hoc sign the bundle (incl. unpacked native .node files) after packaging.
+  // Users still see an "unidentified developer" prompt (right-click → Open) but the
+  // app is no longer reported as damaged.
+  afterPack: async (context) => {
+    if (context.electronPlatformName !== 'darwin') return;
+    const appName = context.packager.appInfo.productFilename;
+    const appPath = path.join(context.appOutDir, `${appName}.app`);
+    // Sign nested native addons first, then the app bundle (deep, ad-hoc).
+    execSync(
+      `find "${appPath}" -name '*.node' -exec codesign --force --sign - {} \\; ; ` +
+        `codesign --force --deep --sign - "${appPath}"`,
+      { stdio: 'inherit', shell: '/bin/bash' },
+    );
+  },
 
   // uiohook-napi and active-win ship prebuilt N-API binaries (ABI-stable across
   // Node/Electron), so skip electron-builder's source rebuild — it otherwise runs
@@ -61,8 +81,7 @@ module.exports = {
   nsis: {
     oneClick: false,
     allowToChangeInstallationDirectory: true,
-    installerIcon: 'resources/tray-icon.ico',
-    uninstallerIcon: 'resources/tray-icon.ico',
+    // No custom installer icon shipped — electron-builder uses its default.
   },
 
   linux: {
