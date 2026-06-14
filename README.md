@@ -23,8 +23,8 @@
 |---|---|
 | **Timer** | One-click start / **pause** / resume / stop; project + description selection; `HH:MM:SS` live counter. Paused time is excluded from tracked duration and recorded per entry |
 | **Screenshots** | `desktopCapturer` every N minutes (configurable); captures **every connected display** as raw PNG — no blur, no post-processing (Upwork-style). One upload per display per capture event, sharing `captured_at` |
-| **Activity tracking** | Global keystroke + mouse counting (`uiohook-napi`) and foreground-window capture (`active-win`); per-minute keyboard/mouse breakdown + activity % uploaded with each screenshot. Requires macOS Accessibility + Screen Recording permission (auto-prompted) |
-| **Secure storage** | JWT encrypted via `electron.safeStorage` (macOS Keychain / Windows Credential Store) |
+| **Activity tracking** | Global keystroke + mouse counting (`uiohook-napi`) and foreground-window capture (`active-win`); per-minute keyboard/mouse breakdown + activity % uploaded with each screenshot. Requires macOS Accessibility + Screen Recording permission (auto-prompted; persists reliably only on a notarized build) |
+| **Session storage** | Auth token + user + timer state persisted as JSON in the per-user app-data directory (`app.getPath('userData')/session.json`), so the session survives restarts. (No OS keychain — an ad-hoc-signed app can't hold keychain access, so it would prompt endlessly) |
 | **System tray** | Tray icon updates to show tracking state; context menu for show/hide and quit |
 | **Auto-update** | `electron-updater` checks GitHub Releases on launch and installs silently |
 
@@ -58,8 +58,8 @@
 │  │  │  (HH:MM:SS)      │                 │  System Tray       │  │  │
 │  │  └──────────────────┘                 │  electron-updater  │  │  │
 │  │    preload/index.ts                   └────────────────────┘  │  │
-│  │    (sandbox: true,                        │ safeStorage         │  │
-│  │     contextIsolation: true)               │ (OS keychain)       │  │
+│  │    (sandbox: false,                       │ session.json        │  │
+│  │     contextIsolation: true)               │ (userData dir)      │  │
 │  └───────────────────────────────────────────┼─────────────────────┘  │
 └─────────────────────────────────────────────│────────────────────────┘
                               HTTPS REST       │
@@ -336,19 +336,20 @@ clockwork/
 │   │       ├── context/
 │   │       │   └── auth-context.tsx       # AuthProvider + useAuth()
 │   │       └── lib/
-│   │           ├── api.ts                 # fetch wrapper + demo intercept
-│   │           ├── mock-data.ts           # demo mode data + helpers
+│   │           ├── api.ts                 # typed fetch wrapper (raw→camelCase mappers)
+│   │           ├── types.ts               # Screenshot / MinuteActivity / DayMeta types
 │   │           └── utils.ts              # cn(), formatDuration(), etc.
 │   │
 │   └── desktop/                     # Electron 30 + React 19 + Vite
 │       └── src/
 │           ├── main/
 │           │   ├── index.ts         # BrowserWindow, IPC, tray, updater
+│           │   ├── config.ts        # single source of truth for API_BASE
 │           │   ├── tray.ts          # system tray
 │           │   └── services/
-│           │       ├── timer.service.ts      # safeStorage token/state
+│           │       ├── timer.service.ts      # session.json persistence (token/user/timer)
 │           │       ├── screenshot.service.ts # capture every display + upload (no blur)
-│           │       └── activity.service.ts   # powerMonitor activity %
+│           │       └── activity.service.ts   # uiohook-napi keys/mouse + active-win window
 │           ├── preload/
 │           │   └── index.ts         # contextBridge → window.clockwork
 │           └── renderer/
@@ -367,7 +368,10 @@ clockwork/
 ├── supabase/
 │   └── migrations/
 │       ├── 001_initial.sql          # tables, RLS, helpers, seed
-│       └── 002_storage.sql          # screenshots bucket policy
+│       ├── 002_storage.sql          # screenshots bucket policy
+│       ├── 003_multi_screen.sql     # screen_number + display_count
+│       ├── 004_activity_detail.sql  # key/mouse counts, active window, per-minute
+│       └── 005_pause_tracking.sql   # paused status + paused_seconds + pauses
 │
 ├── package.json                     # root workspace scripts
 ├── pnpm-workspace.yaml
@@ -388,11 +392,11 @@ clockwork/
 | Auth | Supabase Auth JWT | Validated server-side on every request |
 | Storage | Supabase Storage | Private bucket, signed URLs |
 | Admin portal | Next.js 15 App Router | Tailwind CSS, Geist font, Recharts 3 |
-| Desktop shell | Electron 30 | `contextIsolation`, `sandbox`, no `nodeIntegration` |
-| Renderer build | Vite 5 + React 19 | HMR in dev mode |
+| Desktop shell | Electron 30 | `contextIsolation`, `nodeIntegration: false`; `sandbox: false` so the preload can require `@clockwork/shared` |
+| Renderer build | Vite 5 + React 19 | HMR in dev mode; `base: './'` for relative asset paths under `file://` |
 | Screenshot capture | electron `desktopCapturer` + `screen.getAllDisplays()` | Raw PNG per display, no post-processing (Upwork-style) |
-| Activity tracking | powerMonitor | OS idle detection |
-| Token encryption | electron.safeStorage | macOS Keychain / Windows Credential Store |
+| Activity tracking | `uiohook-napi` + `active-win` + powerMonitor | Global key/mouse counts, foreground window, suspend reset |
+| Session storage | plain JSON in `userData` | `session.json` (token/user/timer); no OS keychain — keeps ad-hoc builds prompt-free |
 | Auto-updates | electron-updater | GitHub Releases |
 | Cron | @nestjs/schedule | Daily Slack summary at 09:00 UTC |
 | Design tokens | CSS variables | `#0A0A0A` base · `#2A2A2A` border · `#FFFFFF` accent |
@@ -421,9 +425,9 @@ cp apps/api/.env.example    apps/api/.env
 cp apps/admin/.env.example  apps/admin/.env.local
 # Fill in SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in apps/api/.env
 
-# 3. Run Supabase migrations (SQL Editor in Supabase dashboard)
-#    supabase/migrations/001_initial.sql
-#    supabase/migrations/002_storage.sql
+# 3. Run Supabase migrations (SQL Editor in Supabase dashboard), in order:
+#    001_initial.sql  002_storage.sql  003_multi_screen.sql
+#    004_activity_detail.sql  005_pause_tracking.sql
 
 # 4. Promote your first admin (Supabase SQL Editor)
 UPDATE public.users SET role = 'admin' WHERE email = 'you@example.com';
@@ -433,16 +437,6 @@ pnpm dev:api      # → http://localhost:3001  (Swagger: /api/docs)
 pnpm dev:admin    # → http://localhost:3000
 pnpm dev:desktop  # → Electron window
 ```
-
-### Try without a backend (demo mode)
-
-```
-URL:      http://localhost:3000
-Email:    demo@clockwork.app
-Password: demo1234
-```
-
-Click **"Use demo"** on the login page to auto-fill. All API calls return rich mock data — no Supabase account needed.
 
 ---
 
@@ -465,6 +459,11 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 ```env
 API_URL=http://localhost:3001
 ```
+> The desktop API URL is resolved dynamically (`apps/desktop/src/main/config.ts`),
+> never hardcoded: `API_URL` env var in dev → value injected into the packaged
+> `package.json` at build time via electron-builder `extraMetadata` → localhost
+> default. For releases, set a GitHub **repository variable** `API_URL` (Settings
+> → Secrets and variables → Actions → Variables); the release workflow bakes it in.
 
 ---
 
@@ -492,10 +491,11 @@ cd apps/desktop && pnpm package        # create .dmg / .exe → release/
 
 ## Security Notes
 
-- Service role key lives only in `apps/api/.env` — never sent to browser or renderer
-- Electron renderer: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
+- Service role key lives only in `apps/api/.env` — never sent to browser or renderer; no secrets are committed (`.env` is git-ignored, only `.env.example` placeholders are tracked)
+- API URLs are configured dynamically (env var / build-time injection / Vercel env), never hardcoded in source
+- Electron renderer: `contextIsolation: true`, `nodeIntegration: false`. `sandbox: false` is required so the preload can require `@clockwork/shared`; the renderer still has no Node access and reaches main only through the contextBridge
 - Screenshots stored in **private** bucket — admin portal receives 1-hour signed URLs; captures are raw (no blur) so managers can verify actual work, identical to Upwork's tracker
-- Desktop JWT encrypted with OS keychain via `safeStorage`
+- Desktop session (`session.json`) is stored in the OS-protected per-user app-data directory — no OS keychain dependency
 - Deactivated users (`is_active = false`) rejected at the auth guard even with valid JWT
 - One-running-timer constraint enforced at DB level via partial unique index
 

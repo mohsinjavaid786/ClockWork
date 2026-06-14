@@ -218,11 +218,16 @@ Employees need a `.dmg` (macOS) or `.exe` (Windows) to install. These are built 
    { "version": "1.0.0" }
    ```
 
-2. **Configure the API URL** — edit `apps/desktop/src/main/index.ts`:
-   ```typescript
-   // Change this line to your production API
-   const API_BASE = process.env['API_URL'] ?? 'https://your-railway-api-url.up.railway.app';
+2. **Configure the API URL** — it is NOT hardcoded in the app. In GitHub →
+   **Settings → Secrets and variables → Actions → Variables**, add a repository
+   variable:
    ```
+   Name:  API_URL
+   Value: https://your-railway-api-url.up.railway.app
+   ```
+   The release workflow passes this to electron-builder, which bakes it into the
+   packaged app (`extraMetadata.apiUrl`); `src/main/config.ts` reads it at runtime.
+   Update the variable (no code change) whenever your API moves.
 
 3. Commit and tag:
    ```bash

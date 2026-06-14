@@ -69,7 +69,7 @@ function ScreenshotTile({ shot, onClick }: { shot: Screenshot; onClick: () => vo
       className="group relative block w-full overflow-hidden rounded-lg border border-[#2A2A2A] bg-[#080810] hover:border-[#3A3A3A] transition-colors cursor-pointer text-left"
       style={{ aspectRatio: '16/9' }}
     >
-      {/* Real raw screenshot when available; demo mode falls through to skeleton */}
+      {/* Real raw screenshot when available; falls through to skeleton otherwise */}
       {shot.signedUrl ? (
         <img
           src={shot.signedUrl}

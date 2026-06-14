@@ -21,7 +21,7 @@ function actColor(pct: number) {
 }
 
 // Renders the captured screenshot (raw, no blur — Upwork-style).
-// Falls back to a deterministic UI skeleton in demo mode where no signedUrl exists.
+// Falls back to a deterministic UI skeleton when no signedUrl is available.
 function BigScreenshot({ shot }: { shot: Screenshot }) {
   const seed = shot.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const rows = [

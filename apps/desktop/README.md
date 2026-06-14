@@ -1,6 +1,6 @@
 # apps/desktop — Clockwork Desktop App
 
-> Cross-platform Electron 30 app for employees. Time tracking, multi-monitor screenshot capture (raw, no blur — Upwork-style), activity monitoring, OS keychain token storage. React 19 renderer. Supports macOS (Apple Silicon + Intel) and Windows (x64).
+> Cross-platform Electron 30 app for employees. Time tracking with pause/resume, multi-monitor screenshot capture (raw, no blur — Upwork-style), global keyboard/mouse + active-window activity monitoring, on-disk session persistence. React 19 renderer. Supports macOS (Apple Silicon + Intel) and Windows (x64).
 
 ---
 
@@ -8,12 +8,12 @@
 
 | Feature | Details |
 |---|---|
-| **Timer** | Start/stop with project + description selection; `HH:MM:SS` counter ticks client-side from `startedAt` |
-| **Screenshot capture** | `desktopCapturer` every N minutes (configurable via `GET /config`); captures **every connected display** as raw PNG. No blur, no post-processing — managers see actual screen content, identical to Upwork's tracker. One upload per display per capture event |
-| **Activity tracking** | `powerMonitor` idle detection; activity % computed per 10-minute window and uploaded alongside each screenshot |
-| **Secure token storage** | `electron.safeStorage.encryptString()` stores JWT in OS keychain (macOS Keychain / Windows Credential Store); falls back to in-memory only on unsupported platforms |
+| **Timer** | Start / **pause** / resume / stop with project + description selection; `HH:MM:SS` counter ticks client-side from `startedAt`. Paused time is excluded from the tracked duration |
+| **Screenshot capture** | `desktopCapturer` every N minutes (interval re-fetched from `GET /config` on each timer start); captures **every connected display** as raw PNG. No blur, no post-processing — managers see actual screen content, identical to Upwork's tracker. One upload per display per capture event |
+| **Activity tracking** | Global keystroke + mouse counting (`uiohook-napi`) and foreground-window capture (`active-win`); per-minute breakdown + activity % uploaded with each screenshot. Paused while the timer is paused. Needs macOS Accessibility + Screen Recording |
+| **Session storage** | Token + user + timer state persisted as plain JSON in `app.getPath('userData')/session.json` — survives restarts. No OS keychain (an ad-hoc-signed app can't hold keychain access) |
 | **System tray** | App minimizes to tray on close; tray icon updates to show tracking state; context menu for Show / Quit |
-| **Auto-login** | On launch, reads stored token → restores user session without re-entering credentials |
+| **Auto-login** | On launch, reads the persisted session → restores the user without re-entering credentials |
 | **Auto-update** | `electron-updater` checks GitHub Releases on every launch; downloads and installs updates silently |
 | **Frame-free window** | 360×580 frameless window with draggable title bar (`-webkit-app-region: drag`) |
 
@@ -26,7 +26,7 @@
 │                  Electron Process Model                    │
 │                                                            │
 │  ┌───────────────────────────────────────────────────────┐ │
-│  │  Renderer Process  (sandbox: true)                    │ │
+│  │  Renderer Process  (sandbox: false, isolated)         │ │
 │  │                                                       │ │
 │  │  React 19 + Vite                                      │ │
 │  │  LoginScreen / TrackerScreen                          │ │
@@ -48,15 +48,15 @@
 │  ┌──────────────────▼────────────────────────────────────┐ │
 │  │  Main Process (Node.js, full access)                  │ │
 │  │                                                       │ │
-│  │  TimerService        ← safeStorage + API calls        │ │
+│  │  TimerService        ← session.json + API calls       │ │
 │  │  ScreenshotService   ← desktopCapturer (all displays) │ │
-│  │  ActivityService     ← powerMonitor                   │ │
+│  │  ActivityService     ← uiohook-napi + active-win      │ │
 │  │  Tray                ← menu + icon state              │ │
 │  │  autoUpdater         ← GitHub Releases                │ │
 │  └───────────────────────────────────────────────────────┘ │
 │                                                            │
 │  contextIsolation: true  ·  nodeIntegration: false        │
-│  sandbox: true                                             │
+│  sandbox: false (preload requires @clockwork/shared)       │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -64,7 +64,7 @@
 |---|---|---|
 | `contextIsolation` | `true` | Renderer JS cannot access Node globals |
 | `nodeIntegration` | `false` | No `require()` in renderer |
-| `sandbox` | `true` | OS-level process sandboxing |
+| `sandbox` | `false` | Required so the preload can `require('@clockwork/shared')`; the renderer is still isolated and Node-free, reaching main only via the contextBridge |
 
 ---
 
@@ -102,7 +102,7 @@ for each source (1..N):
         │
         ▼
    POST /api/v1/screenshots/upload
-     Authorization: Bearer <safeStorage token>
+     Authorization: Bearer <session token>
         │
         ▼
    Supabase Storage → {userId}/{timestamp}-screen-{n}.png
@@ -123,8 +123,8 @@ Renderer                    Preload                    Main
    │                           │    'auth:login',{e,p}) │
    │                           │───────────────────────►│
    │                           │                        │  POST /auth/login
-   │                           │                        │  safeStorage.encrypt(token)
-   │                           │                        │  safeStorage.encrypt(user)
+   │                           │                        │  saveToken(token) → session.json
+   │                           │                        │  saveUser(user)  → session.json
    │                           │  { id, name, role }   │
    │                           │◄───────────────────────│
    │  { id, name, role }       │                        │
@@ -169,7 +169,9 @@ Defined in `@clockwork/shared` as the `IPC` constant object.
 | `IPC.AUTH_LOGOUT` | `auth:logout` | Logout, clear all stored state |
 | `IPC.AUTH_GET_TOKEN` | `auth:get-token` | Return decrypted token |
 | `IPC.AUTH_GET_USER` | `auth:get-user` | Return stored user object |
-| `IPC.TIMER_START` | `timer:start` | Start a time entry |
+| `IPC.TIMER_START` | `timer:start` | Start a time entry (re-fetches the screenshot interval) |
+| `IPC.TIMER_PAUSE` | `timer:pause` | Pause the current entry (stops captures + activity) |
+| `IPC.TIMER_RESUME` | `timer:resume` | Resume a paused entry |
 | `IPC.TIMER_STOP` | `timer:stop` | Stop current entry |
 | `IPC.TIMER_GET_STATUS` | `timer:get-status` | Current timer state |
 | `IPC.ACTIVITY_GET` | `activity:get` | Activity % + reset counters |
@@ -185,11 +187,12 @@ Defined in `@clockwork/shared` as the `IPC` constant object.
 src/
 ├── main/
 │   ├── index.ts                    # BrowserWindow, IPC handlers, lifecycle
+│   ├── config.ts                   # dynamic API_BASE resolver (env → injected → localhost)
 │   ├── tray.ts                     # Tray icon + context menu
 │   └── services/
-│       ├── timer.service.ts        # safeStorage: token, user, timer state
+│       ├── timer.service.ts        # session.json: token, user, timer state
 │       ├── screenshot.service.ts   # desktopCapturer (every display) + upload (raw, no blur)
-│       └── activity.service.ts     # powerMonitor idle detection
+│       └── activity.service.ts     # uiohook-napi keys/mouse + active-win window
 │
 ├── preload/
 │   └── index.ts                    # contextBridge → window.clockwork
@@ -260,8 +263,18 @@ src/
 
 ## Environment Variables
 
+The API URL is resolved dynamically by `src/main/config.ts` — never hardcoded:
+
+1. **`API_URL`** env var — used in dev (`API_URL=… pnpm dev`)
+2. **build-time injection** — when packaging, electron-builder reads `API_URL` and
+   writes it into the packaged `package.json` (`extraMetadata.apiUrl`), which the
+   app reads at runtime. The release workflow supplies it from a GitHub
+   **repository variable** named `API_URL` (Settings → Secrets and variables →
+   Actions → Variables)
+3. **`http://localhost:3001`** — dev fallback when neither is set
+
 ```env
-API_URL=http://localhost:3001   # defaults to localhost:3001 if unset
+API_URL=http://localhost:3001   # dev only
 ```
 
 ---
@@ -274,9 +287,19 @@ pnpm build     # vite build + tsc -p tsconfig.electron.json
 pnpm package   # electron-builder → release/ (.dmg, .exe)
 ```
 
+> **Local packaging caveat:** `electron-builder`'s `extraMetadata` rewrites this
+> package's `package.json` in place during a local `pnpm package` and may leave it
+> stripped. Restore it with `git checkout -- package.json` afterwards. CI is
+> unaffected (it builds on a throwaway checkout), so prefer releasing via the tag
+> → GitHub Actions flow rather than packaging locally.
+
 ### Publishing an update
 1. Bump version in `package.json`
-2. `git tag v1.x.x && git push --tags`
-3. `pnpm build && pnpm package`
-4. Upload `release/*.dmg`, `release/*.exe`, `release/latest*.yml` to the GitHub Release
-5. `electron-updater` on next client launch downloads + installs silently
+2. `git tag v1.x.x && git push origin main --tags`
+3. The **Release** GitHub Action builds the macOS `.dmg` + Windows `.exe`, bakes in the `API_URL` repo variable, and publishes a GitHub Release automatically
+4. `electron-updater` on the next client launch downloads + installs silently
+
+> macOS note: builds are **ad-hoc signed** (no Apple Developer cert), so macOS
+> shows an "unverified developer" prompt and won't durably persist Accessibility /
+> Screen Recording grants. Proper notarization (Developer ID + `CSC_LINK` /
+> `CSC_KEY_PASSWORD`) removes this — electron-builder is already wired for it.
