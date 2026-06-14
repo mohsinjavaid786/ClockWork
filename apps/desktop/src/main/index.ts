@@ -11,12 +11,17 @@ import { captureAndUpload } from './services/screenshot.service';
 import { startActivityTracking, stopActivityTracking, getActivityPercent, flushActivity, setActivityPaused } from './services/activity.service';
 import { createTray, updateTrayMenu } from './tray';
 
-const API_BASE = process.env['API_URL'] ?? 'http://localhost:3001';
+// Packaged builds have no env vars, so the fallback must be the production API.
+// Dev overrides this with API_URL=... (see DEPLOYMENT.md / desktop dev notes).
+const API_BASE = process.env['API_URL'] ?? 'https://api-production-50cc.up.railway.app';
 const IS_DEV = !app.isPackaged;
 
 let mainWindow: BrowserWindow | null = null;
 let screenshotInterval: ReturnType<typeof setInterval> | null = null;
 let screenshotIntervalMinutes = 10;
+// Closing the window normally just hides it (tray app). When the user picks Quit,
+// before-quit sets this so the close handler lets the window actually close.
+let isQuitting = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -47,6 +52,7 @@ function createWindow() {
   }
 
   mainWindow.on('close', (e) => {
+    if (isQuitting) return; // let the window close so the app can exit
     e.preventDefault();
     mainWindow?.hide();
   });
@@ -107,7 +113,11 @@ app.whenReady().then(async () => {
   startActivityTracking();
 
   if (!IS_DEV) {
-    autoUpdater.checkForUpdatesAndNotify();
+    // Never let a failed update check (offline, no published release, missing
+    // app-update.yml) surface as an unhandled rejection and disrupt the app.
+    autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+      console.error('Update check failed:', err);
+    });
   }
 });
 
@@ -116,6 +126,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  isQuitting = true;
   stopScreenshotLoop();
   stopActivityTracking();
 });
