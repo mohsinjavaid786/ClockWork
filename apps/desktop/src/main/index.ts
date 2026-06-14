@@ -30,7 +30,10 @@ function createWindow() {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true,
+      // sandbox must be off so the preload can require the @clockwork/shared
+      // workspace package; contextIsolation + nodeIntegration:false keep the
+      // renderer isolated (it only talks to main via the contextBridge).
+      sandbox: false,
     },
   });
 

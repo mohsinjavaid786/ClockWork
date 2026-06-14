@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:; connect-src 'self' http://localhost:3001" />
+    <!-- 'unsafe-eval' is required by the Vite dev server (HMR/react-refresh); the renderer loads
+         only local bundled content and reaches the API via the contextBridge, never direct fetch.
+         localhost connect-src covers the dev server + HMR websocket. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data:; connect-src 'self' ws://localhost:* http://localhost:*" />
     <title>Clockwork</title>
   </head>
   <body>
