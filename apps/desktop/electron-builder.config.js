@@ -44,10 +44,12 @@ module.exports = {
     'resources/tray-icon.png',
   ],
 
-  // Inject production API URL via env var at build time.
-  // Set API_URL in CI secrets or locally before running `pnpm package`.
+  // Bake the API URL into the packaged app.json at build time (read back at
+  // runtime by src/main/config.ts). Set API_URL in CI (a repo variable) or
+  // locally before running `pnpm package`; it is NOT hardcoded in source.
   extraMetadata: {
     main: 'dist-electron/apps/desktop/src/main/index.js',
+    ...(process.env.API_URL ? { apiUrl: process.env.API_URL } : {}),
   },
 
   mac: {

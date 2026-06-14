@@ -36,6 +36,9 @@ jobs:
 
       - name: Package macOS installer
         # --publish never: we upload via create-release job below
+        # API_URL (repo variable) is baked into the build via extraMetadata.
+        env:
+          API_URL: ${{ vars.API_URL }}
         run: cd apps/desktop && pnpm exec electron-builder --mac --publish never --config electron-builder.config.js
 
       - name: Upload macOS artifacts
@@ -74,6 +77,9 @@ jobs:
         run: pnpm --filter desktop build
 
       - name: Package Windows installer
+        # API_URL (repo variable) is baked into the build via extraMetadata.
+        env:
+          API_URL: ${{ vars.API_URL }}
         run: cd apps/desktop && pnpm exec electron-builder --win --publish never --config electron-builder.config.js
 
       - name: Upload Windows artifacts
