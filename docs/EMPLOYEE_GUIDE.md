@@ -46,7 +46,11 @@ Your admin will send you a link to download the installer for your operating sys
 **macOS:**
 1. Open the `.dmg` file
 2. Drag **Clockwork** into your **Applications** folder
-3. Open Clockwork from Applications (right-click → Open the first time if macOS warns you)
+3. The first time you open it, macOS shows: *"Apple could not verify Clockwork is free of malware."* This is expected — Clockwork isn't distributed through the App Store. To open it:
+   - Open  → **System Settings → Privacy & Security**
+   - Scroll to the bottom — next to *"Clockwork was blocked…"* click **Open Anyway**, then authenticate
+   - (One-time only. After that it opens normally.)
+   - **Alternative:** open **Terminal** and run `xattr -dr com.apple.quarantine /Applications/Clockwork.app`, then open Clockwork.
 
 **Windows:**
 1. Run the `.exe` installer

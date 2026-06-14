@@ -126,8 +126,10 @@ jobs:
             ### macOS — first-time installation
             1. Download `Clockwork-*.dmg`
             2. Open the `.dmg` and drag **Clockwork** to Applications
-            3. **First launch only:** right-click → **Open** → confirm
-               *(Gatekeeper warning for unsigned apps — safe to proceed)*
+            3. macOS will say *"Apple could not verify Clockwork is free of malware"* (the app isn't notarized). **First launch only:**
+               - **System Settings → Privacy & Security** → scroll down → **Open Anyway** → authenticate, **or**
+               - Terminal: `xattr -dr com.apple.quarantine /Applications/Clockwork.app`
+               *(Safe to proceed — the app is ad-hoc signed but not notarized through a paid Apple Developer account.)*
 
             ### Windows — installation
             1. Download `Clockwork Setup *.exe`
