@@ -7,6 +7,7 @@ import type { Screenshot } from '@/lib/types';
 import { Avatar } from '@/components/Avatar';
 import { StatusBadge } from '@/components/StatusBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { ScreenshotModal } from '@/components/ScreenshotModal';
 import { formatDuration } from '@/lib/utils';
 
 export interface TimeEntry {
@@ -14,6 +15,7 @@ export interface TimeEntry {
   started_at: string;
   ended_at: string | null;
   duration_seconds: number | null;
+  paused_seconds?: number | null;
   description: string | null;
   status: string;
   user: { id: string; name: string; email: string } | null;
@@ -47,7 +49,7 @@ function activityColor(pct: number): string {
 
 // ── Screenshot tile ───────────────────────────────────────────────────────────
 
-function ScreenshotTile({ shot }: { shot: Screenshot }) {
+function ScreenshotTile({ shot, onClick }: { shot: Screenshot; onClick: () => void }) {
   const pct = shot.activityPercent;
   const color = activityColor(pct);
   const seed = shot.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -62,8 +64,9 @@ function ScreenshotTile({ shot }: { shot: Screenshot }) {
   ][seed % 5]!;
 
   return (
-    <div
-      className="group relative overflow-hidden rounded-lg border border-[#2A2A2A] bg-[#080810] hover:border-[#3A3A3A] transition-colors cursor-default"
+    <button
+      onClick={onClick}
+      className="group relative block w-full overflow-hidden rounded-lg border border-[#2A2A2A] bg-[#080810] hover:border-[#3A3A3A] transition-colors cursor-pointer text-left"
       style={{ aspectRatio: '16/9' }}
     >
       {/* Real raw screenshot when available; demo mode falls through to skeleton */}
@@ -152,7 +155,7 @@ function ScreenshotTile({ shot }: { shot: Screenshot }) {
         <Mouse size={8} className="ml-0.5" />
         <span>{shot.mouseCount}</span>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -195,9 +198,10 @@ function ActivityTimeline({ screenshots }: { screenshots: Screenshot[] }) {
 export function EntryDetailPanel({ entry, onClose }: Props) {
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [loading, setLoading] = useState(false);
+  const [modalIdx, setModalIdx] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!entry) { setScreenshots([]); return; }
+    if (!entry) { setScreenshots([]); setModalIdx(null); return; }
     setLoading(true);
     const params: Record<string, string> = {
       from: entry.started_at,
@@ -323,6 +327,17 @@ export function EntryDetailPanel({ entry, onClose }: Props) {
                 ))}
               </div>
 
+              {/* Paused time (excluded from duration) */}
+              {(entry.paused_seconds ?? 0) > 0 && (
+                <p className="text-xs text-[#666666]">
+                  Paused for{' '}
+                  <span className="font-mono font-semibold text-[#eab308]">
+                    {formatDuration(entry.paused_seconds as number)}
+                  </span>{' '}
+                  (excluded from tracked duration)
+                </p>
+              )}
+
               {/* Input summary */}
               {screenshots.length > 0 && (
                 <div className="flex gap-3">
@@ -370,8 +385,8 @@ export function EntryDetailPanel({ entry, onClose }: Props) {
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
-                    {screenshots.map((shot) => (
-                      <ScreenshotTile key={shot.id} shot={shot} />
+                    {screenshots.map((shot, idx) => (
+                      <ScreenshotTile key={shot.id} shot={shot} onClick={() => setModalIdx(idx)} />
                     ))}
                   </div>
                 )}
@@ -380,6 +395,16 @@ export function EntryDetailPanel({ entry, onClose }: Props) {
           </div>
         )}
       </div>
+
+      {/* Screenshot modal (above the panel) */}
+      {modalIdx !== null && screenshots[modalIdx] && (
+        <ScreenshotModal
+          screenshots={screenshots}
+          index={modalIdx}
+          onClose={() => setModalIdx(null)}
+          onNav={(idx) => setModalIdx(idx)}
+        />
+      )}
     </>
   );
 }
