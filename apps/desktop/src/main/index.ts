@@ -99,6 +99,21 @@ function stopScreenshotLoop() {
   }
 }
 
+// Pull the current screenshot interval from the server. Called at login AND at
+// every timer start, so an admin changing the interval takes effect on the next
+// Start without needing the employee to sign out — and a restored session (which
+// skips login) still gets the right value.
+async function refreshConfig() {
+  try {
+    const config = await apiRequest<{ screenshotIntervalMinutes: number }>('/config');
+    if (config.screenshotIntervalMinutes && config.screenshotIntervalMinutes > 0) {
+      screenshotIntervalMinutes = config.screenshotIntervalMinutes;
+    }
+  } catch {
+    // network error — keep the last known interval
+  }
+}
+
 app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
     const allowed = ['media', 'display-capture'];
@@ -144,12 +159,7 @@ ipcMain.handle(IPC.AUTH_LOGIN, async (_e, { email, password }: { email: string; 
   saveToken(data.accessToken);
   saveUser(data.user);
 
-  try {
-    const config = await apiRequest<{ screenshotIntervalMinutes: number }>('/config');
-    screenshotIntervalMinutes = config.screenshotIntervalMinutes;
-  } catch {
-    screenshotIntervalMinutes = 10;
-  }
+  await refreshConfig();
 
   return data.user;
 });
@@ -185,6 +195,7 @@ ipcMain.handle(IPC.TIMER_START, async (_e, { projectId, description }: { project
   saveTimerState(state);
 
   if (mainWindow) updateTrayMenu(mainWindow, true);
+  await refreshConfig(); // honour the latest admin interval for this session
   startScreenshotLoop();
 
   return state;
