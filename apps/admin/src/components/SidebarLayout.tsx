@@ -33,9 +33,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen bg-[#0A0A0A]">
       <aside className="flex w-56 flex-col border-r border-[#2A2A2A] bg-[#0A0A0A]">
         <div className="border-b border-[#2A2A2A] px-5 py-4">
-          <span className="font-mono text-sm font-semibold tracking-widest text-white">
-            CLOCKWORK
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="ClockWork" className="h-7 w-auto" />
         </div>
 
         <nav className="flex-1 space-y-0.5 px-2 py-3">

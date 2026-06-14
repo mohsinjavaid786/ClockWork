@@ -31,8 +31,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <h1 className="font-mono text-xl font-semibold tracking-widest text-white">CLOCKWORK</h1>
-          <p className="mt-2 text-sm text-[#666666]">Sign in to your account</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="ClockWork" className="mx-auto h-14 w-auto" />
+          <p className="mt-3 text-sm text-[#666666]">Sign in to your account</p>
         </div>
 
         <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] p-6">
