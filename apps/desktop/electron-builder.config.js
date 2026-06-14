@@ -42,9 +42,6 @@ module.exports = {
     'dist-renderer/**/*',
     // Tray icon (loaded at runtime via app.getAppPath()).
     'resources/tray-icon.png',
-    // Bundle the native trackers' prebuilt binaries explicitly (optionalDependencies).
-    'node_modules/uiohook-napi/**/*',
-    'node_modules/active-win/**/*',
   ],
 
   // Inject production API URL via env var at build time.
