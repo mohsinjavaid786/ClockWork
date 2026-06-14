@@ -1,10 +1,10 @@
-import { Tray, Menu, nativeImage, BrowserWindow } from 'electron';
+import { app, Tray, Menu, nativeImage, BrowserWindow } from 'electron';
 import path from 'path';
 
 let tray: Tray | null = null;
 
 export function createTray(win: BrowserWindow): Tray {
-  const iconPath = path.join(__dirname, '../../resources/tray-icon.png');
+  const iconPath = path.join(app.getAppPath(), 'resources/tray-icon.png');
   const icon = nativeImage.createFromPath(iconPath);
   const resized = icon.isEmpty()
     ? nativeImage.createEmpty()

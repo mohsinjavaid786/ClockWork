@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import logo from '../logo.png';
 
 interface Props {
   user: CwUser;
@@ -143,9 +144,7 @@ export function TrackerScreen({ user, onLogout }: Props) {
           paddingRight: 8,
         } as React.CSSProperties}
       >
-        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--text-muted)' }}>
-          CLOCKWORK
-        </span>
+        <img src={logo} alt="ClockWork" style={{ height: 16, width: 'auto', WebkitAppRegion: 'drag' } as React.CSSProperties} />
         <button
           onClick={handleLogout}
           style={{

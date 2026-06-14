@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logo from '../logo.png';
 
 interface Props {
   onLogin: (user: CwUser) => void;
@@ -37,9 +38,7 @@ export function LoginScreen({ onLogin }: Props) {
           paddingLeft: 12,
         } as React.CSSProperties}
       >
-        <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', color: 'var(--text-muted)' }}>
-          CLOCKWORK
-        </span>
+        <img src={logo} alt="ClockWork" style={{ height: 16, width: 'auto' }} />
       </div>
 
       <div
@@ -53,10 +52,8 @@ export function LoginScreen({ onLogin }: Props) {
         }}
       >
         <div style={{ marginBottom: 24, textAlign: 'center' }}>
-          <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace' }}>
-            Sign in
-          </p>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+          <img src={logo} alt="ClockWork" style={{ height: 48, width: 'auto', marginBottom: 16 }} />
+          <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             Use your Clockwork account
           </p>
         </div>

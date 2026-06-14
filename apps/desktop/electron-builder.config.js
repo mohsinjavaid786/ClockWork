@@ -40,6 +40,8 @@ module.exports = {
   files: [
     'dist-electron/**/*',
     'dist-renderer/**/*',
+    // Tray icon (loaded at runtime via app.getAppPath()).
+    'resources/tray-icon.png',
     // Bundle the native trackers' prebuilt binaries explicitly (optionalDependencies).
     'node_modules/uiohook-napi/**/*',
     'node_modules/active-win/**/*',
