@@ -72,6 +72,11 @@ export const api = {
         { method: 'POST', body: JSON.stringify({ email, password }) },
       ),
     me: () => request<{ id: string; name: string; email: string; role: string }>('/auth/me'),
+    forgotPassword: (email: string) =>
+      request<{ success: boolean }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
     logout: async () => {
       try {
         await request('/auth/logout', { method: 'POST' });

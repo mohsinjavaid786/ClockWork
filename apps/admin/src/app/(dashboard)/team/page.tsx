@@ -31,7 +31,6 @@ export default function TeamPage() {
     name: '',
     email: '',
     role: 'member' as 'admin' | 'member',
-    password: '',
   });
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
@@ -53,7 +52,7 @@ export default function TeamPage() {
     try {
       await api.users.invite(inviteForm);
       setInviteOpen(false);
-      setInviteForm({ name: '', email: '', role: 'member', password: '' });
+      setInviteForm({ name: '', email: '', role: 'member' });
       load();
     } catch (err) {
       setInviteError(err instanceof Error ? err.message : 'Failed to invite user');
@@ -169,20 +168,10 @@ export default function TeamPage() {
               <option value="admin">Admin</option>
             </select>
           </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">
-              Temporary password
-            </label>
-            <input
-              type="password"
-              value={inviteForm.password}
-              onChange={(e) => setInviteForm((p) => ({ ...p, password: e.target.value }))}
-              required
-              minLength={8}
-              placeholder="Min 8 characters"
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none focus:border-[#444]"
-            />
-          </div>
+          <p className="rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-xs text-[#666666]">
+            We&apos;ll email an invitation with a secure link to set their own password and download
+            the desktop app for macOS and Windows.
+          </p>
 
           {inviteError && (
             <p className="rounded border border-[#3f1515] bg-[#1c0a0a] px-3 py-2 text-xs text-[#ef4444]">

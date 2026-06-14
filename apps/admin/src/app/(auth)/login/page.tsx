@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/context/auth-context';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -52,9 +53,17 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">
-                Password
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label className="block text-xs font-medium text-[#A1A1A1]">
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-[#666666] underline-offset-4 hover:text-[#A1A1A1] hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 type="password"
                 value={password}
