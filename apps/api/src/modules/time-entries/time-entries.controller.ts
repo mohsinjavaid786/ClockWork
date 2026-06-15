@@ -41,7 +41,8 @@ export class TimeEntriesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List time entries with pagination and filters' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'List time entries with pagination and filters (admin)' })
   list(@Query() query: ListEntriesQueryDto) {
     return this.timeEntriesService.list(query);
   }
@@ -54,7 +55,8 @@ export class TimeEntriesController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a time entry' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'Delete a time entry (admin)' })
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.timeEntriesService.remove(id, user.id, user.role === 'admin');
   }

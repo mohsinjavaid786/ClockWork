@@ -19,7 +19,8 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get project by ID with stats' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'Get project by ID with stats (admin)' })
   findById(@Param('id') id: string) {
     return this.projectsService.findById(id);
   }

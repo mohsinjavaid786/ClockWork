@@ -3,7 +3,8 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ConfigService } from './config.service';
 import { UpdateConfigDto } from './dto/config.dto';
 import { Roles } from '../../decorators/roles.decorator';
-import { Public } from '../../decorators/public.decorator';
+import { CurrentUser } from '../../decorators/current-user.decorator';
+import { AuthUser } from '../../guards/supabase-auth.guard';
 
 @ApiTags('config')
 @ApiBearerAuth()
@@ -11,11 +12,13 @@ import { Public } from '../../decorators/public.decorator';
 export class ConfigController {
   constructor(private readonly configService: ConfigService) {}
 
+  // Any authenticated user (desktop app included) can read config, but the
+  // Slack webhook URL is only returned to admins. No longer @Public — leaving
+  // it public exposed the webhook to anyone.
   @Get()
-  @Public()
   @ApiOperation({ summary: 'Get application configuration' })
-  get() {
-    return this.configService.get();
+  get(@CurrentUser() user: AuthUser) {
+    return this.configService.get(user.role === 'admin');
   }
 
   @Patch()

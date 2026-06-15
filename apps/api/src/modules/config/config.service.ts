@@ -6,7 +6,7 @@ import { UpdateConfigDto } from './dto/config.dto';
 export class ConfigService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async get() {
+  async get(includeSecrets = false) {
     const { data, error } = await this.supabase.client
       .from('app_config')
       .select('screenshot_interval_minutes, company_name, timezone, slack_webhook_url')
@@ -18,7 +18,10 @@ export class ConfigService {
       screenshotIntervalMinutes: data.screenshot_interval_minutes as number,
       companyName: data.company_name as string,
       timezone: data.timezone as string,
-      slackWebhookUrl: data.slack_webhook_url as string | undefined,
+      // Slack webhook is a secret — only expose it to admins (settings page).
+      ...(includeSecrets
+        ? { slackWebhookUrl: data.slack_webhook_url as string | undefined }
+        : {}),
     };
   }
 

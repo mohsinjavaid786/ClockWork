@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagg
 import { ScreenshotsService } from './screenshots.service';
 import { UploadScreenshotDto, ListScreenshotsQueryDto } from './dto/screenshot.dto';
 import { CurrentUser } from '../../decorators/current-user.decorator';
+import { Roles } from '../../decorators/roles.decorator';
 import { AuthUser } from '../../guards/supabase-auth.guard';
 
 @ApiTags('screenshots')
@@ -36,13 +37,15 @@ export class ScreenshotsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List screenshots with signed URLs' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'List screenshots with signed URLs (admin)' })
   list(@Query() query: ListScreenshotsQueryDto) {
     return this.screenshotsService.list(query);
   }
 
   @Get(':id/url')
-  @ApiOperation({ summary: 'Get signed URL for a specific screenshot' })
+  @Roles('admin')
+  @ApiOperation({ summary: 'Get signed URL for a specific screenshot (admin)' })
   getSignedUrl(@Param('id') id: string) {
     return this.screenshotsService.getSignedUrl(id);
   }
