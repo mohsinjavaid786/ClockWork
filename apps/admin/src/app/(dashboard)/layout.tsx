@@ -11,8 +11,12 @@ function GuardedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+    if (!user) {
       router.push('/login');
+    } else if (user.role !== 'admin') {
+      // The portal is admin-only; members (desktop app users) can't use it.
+      router.push('/access-denied');
     }
   }, [user, loading, router]);
 
@@ -24,7 +28,7 @@ function GuardedLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!user) return null;
+  if (!user || user.role !== 'admin') return null;
 
   return <SidebarLayout>{children}</SidebarLayout>;
 }
