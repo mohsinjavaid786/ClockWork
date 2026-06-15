@@ -1,5 +1,8 @@
-nodeLinker: hoisted
-shamefullyHoist: true
+# NOTE: node_modules use pnpm's default isolated layout so Vercel can find
+# `next` in apps/admin/node_modules. The desktop electron-builder packaging
+# needs a HOISTED layout instead — that is enabled only in the release workflow
+# (it appends nodeLinker/shamefullyHoist before installing), not here, so it
+# doesn't break the Vercel/admin and Railway/api builds.
 packages:
   - 'apps/*'
   - 'packages/*'

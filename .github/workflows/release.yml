@@ -25,6 +25,15 @@ jobs:
           node-version: 22
           cache: pnpm
 
+      # electron-builder can't collect pnpm's nested transitive deps, so the
+      # desktop must be packaged from a hoisted (flat) node_modules. Enable it
+      # only for this CI run — the committed pnpm-workspace.yaml stays isolated
+      # so the Vercel (admin) and Railway (api) builds keep working.
+      - name: Enable hoisted node_modules (desktop packaging only)
+        shell: bash
+        run: |
+          printf '\nnodeLinker: hoisted\nshamefullyHoist: true\n' >> pnpm-workspace.yaml
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -66,6 +75,15 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+
+      # electron-builder can't collect pnpm's nested transitive deps, so the
+      # desktop must be packaged from a hoisted (flat) node_modules. Enable it
+      # only for this CI run — the committed pnpm-workspace.yaml stays isolated
+      # so the Vercel (admin) and Railway (api) builds keep working.
+      - name: Enable hoisted node_modules (desktop packaging only)
+        shell: bash
+        run: |
+          printf '\nnodeLinker: hoisted\nshamefullyHoist: true\n' >> pnpm-workspace.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
