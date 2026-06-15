@@ -47,7 +47,7 @@ function fmtWeekRange(mon: Date) {
 
 // ── Member picker ─────────────────────────────────────────────────────────────
 
-interface Member { id: string; name: string; email: string }
+interface Member { id: string; name: string; email: string; role: string }
 interface DiaryEntry { started_at: string; duration_seconds: number | null; status: string }
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
@@ -262,7 +262,11 @@ export default function WorkDiaryPage() {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
 
   useEffect(() => {
-    api.users.list().then(d => setMembers((d as Member[]) ?? [])).catch(() => {});
+    // Only employees track time — exclude admins from the picker.
+    api.users
+      .list()
+      .then((d) => setMembers(((d as Member[]) ?? []).filter((m) => m.role !== 'admin')))
+      .catch(() => {});
   }, []);
 
   // Real time entries for the selected account (or all members).
