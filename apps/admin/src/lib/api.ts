@@ -96,6 +96,7 @@ export const api = {
       request('/users/invite', { method: 'POST', body: JSON.stringify(body) }),
     update: (id: string, body: unknown) =>
       request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    remove: (id: string) => request(`/users/${id}`, { method: 'DELETE' }),
   },
 
   projects: {

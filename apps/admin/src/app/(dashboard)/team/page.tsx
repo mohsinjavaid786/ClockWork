@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, Trash2, Apple, Monitor, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useAuth } from '@/context/auth-context';
 import { PageHeader } from '@/components/PageHeader';
 import { DataTable } from '@/components/DataTable';
 import { Avatar } from '@/components/Avatar';
@@ -21,9 +22,19 @@ interface Member {
   timezone: string;
   weeklyHours: number;
   createdAt: string;
+  inviteStatus?: 'pending' | 'accepted';
 }
 
+// Public installer links (uploaded to the Supabase 'installers' bucket by the
+// release workflow). Derived from the public Supabase URL — no secret.
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const installerUrl = (file: string) =>
+  SUPABASE_URL ? `${SUPABASE_URL}/storage/v1/object/public/installers/latest/${file}` : null;
+const MAC_URL = installerUrl('Clockwork.dmg');
+const WIN_URL = installerUrl('Clockwork.exe');
+
 export default function TeamPage() {
+  const { user: currentUser } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'employees' | 'admins'>('employees');
@@ -35,6 +46,9 @@ export default function TeamPage() {
   });
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
+  const [toDelete, setToDelete] = useState<Member | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   function load() {
     api.users
@@ -59,6 +73,21 @@ export default function TeamPage() {
       setInviteError(err instanceof Error ? err.message : 'Failed to invite user');
     } finally {
       setInviting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!toDelete) return;
+    setDeleteError('');
+    setDeleting(true);
+    try {
+      await api.users.remove(toDelete.id);
+      setToDelete(null);
+      load();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete user');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -94,6 +123,16 @@ export default function TeamPage() {
       ),
     },
     {
+      key: 'invite',
+      header: 'Signup',
+      cell: (row: Member) => (
+        <StatusBadge
+          status={row.inviteStatus ?? 'pending'}
+          label={row.inviteStatus === 'accepted' ? 'Accepted' : 'Pending'}
+        />
+      ),
+    },
+    {
       key: 'weeklyHours',
       header: 'This week',
       cell: (row: Member) => (
@@ -104,6 +143,27 @@ export default function TeamPage() {
       key: 'timezone',
       header: 'Timezone',
       cell: (row: Member) => <span className="text-xs text-[#666666]">{row.timezone}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      className: 'text-right',
+      cell: (row: Member) =>
+        row.id === currentUser?.id ? (
+          <span className="text-xs text-[#444]">You</span>
+        ) : (
+          <button
+            onClick={() => {
+              setDeleteError('');
+              setToDelete(row);
+            }}
+            title="Delete"
+            aria-label={`Delete ${row.name}`}
+            className="inline-flex items-center rounded p-1.5 text-[#666666] transition-colors hover:bg-[#1c0a0a] hover:text-[#ef4444]"
+          >
+            <Trash2 size={15} />
+          </button>
+        ),
     },
   ];
 
@@ -122,13 +182,35 @@ export default function TeamPage() {
         title="Team"
         description={`${members.length} member${members.length !== 1 ? 's' : ''}`}
         action={
-          <button
-            onClick={() => setInviteOpen(true)}
-            className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs font-medium text-black hover:bg-[#e5e5e5] transition-colors"
-          >
-            <UserPlus size={13} />
-            Invite member
-          </button>
+          <div className="flex items-center gap-2">
+            {MAC_URL && (
+              <a
+                href={MAC_URL}
+                className="flex items-center gap-2 rounded-md border border-[#2A2A2A] px-3 py-2 text-xs font-medium text-[#A1A1A1] transition-colors hover:bg-[#1A1A1A] hover:text-white"
+                title="Download the macOS installer to share with an employee"
+              >
+                <Apple size={13} />
+                macOS
+              </a>
+            )}
+            {WIN_URL && (
+              <a
+                href={WIN_URL}
+                className="flex items-center gap-2 rounded-md border border-[#2A2A2A] px-3 py-2 text-xs font-medium text-[#A1A1A1] transition-colors hover:bg-[#1A1A1A] hover:text-white"
+                title="Download the Windows installer to share with an employee"
+              >
+                <Monitor size={13} />
+                Windows
+              </a>
+            )}
+            <button
+              onClick={() => setInviteOpen(true)}
+              className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs font-medium text-black hover:bg-[#e5e5e5] transition-colors"
+            >
+              <UserPlus size={13} />
+              Invite member
+            </button>
+          </div>
         }
       />
 
@@ -229,6 +311,47 @@ export default function TeamPage() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={!!toDelete} onClose={() => setToDelete(null)} title="Delete employee">
+        <div className="space-y-4">
+          <div className="flex gap-3 rounded-md border border-[#3f1515] bg-[#1c0a0a] p-3">
+            <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-[#ef4444]" />
+            <div className="text-xs leading-relaxed text-[#f5a3a3]">
+              <p className="font-medium text-[#ef4444]">This permanently deletes everything.</p>
+              <p className="mt-1">
+                Deleting <span className="font-medium text-white">{toDelete?.name}</span> also
+                deletes <span className="font-medium">all their time entries and screenshots</span>.
+                This cannot be undone — proceed with caution.
+              </p>
+            </div>
+          </div>
+
+          {deleteError && (
+            <p className="rounded border border-[#3f1515] bg-[#1c0a0a] px-3 py-2 text-xs text-[#ef4444]">
+              {deleteError}
+            </p>
+          )}
+
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setToDelete(null)}
+              className="flex-1 rounded-md border border-[#2A2A2A] px-4 py-2 text-sm text-[#A1A1A1] transition-colors hover:bg-[#1A1A1A]"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex flex-1 items-center justify-center gap-2 rounded-md bg-[#dc2626] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#b91c1c] disabled:opacity-50"
+            >
+              {deleting && <LoadingSpinner size="sm" />}
+              Delete permanently
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
