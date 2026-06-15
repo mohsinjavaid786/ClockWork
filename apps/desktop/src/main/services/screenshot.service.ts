@@ -28,12 +28,21 @@ export async function captureAndUpload(
   await Promise.all(
     sources.map(async (source, idx) => {
       const pngBuffer = source.thumbnail.toPNG();
+      // A small JPEG thumbnail (generated locally via nativeImage — no native
+      // deps) so the portal can render grids fast and only load the full PNG on
+      // open.
+      const thumbBuffer = source.thumbnail.resize({ width: 480 }).toJPEG(70);
 
       const formData = new FormData();
       formData.append(
         'file',
         new Blob([new Uint8Array(pngBuffer)], { type: 'image/png' }),
         `screen-${idx + 1}.png`,
+      );
+      formData.append(
+        'thumbnail',
+        new Blob([new Uint8Array(thumbBuffer)], { type: 'image/jpeg' }),
+        `screen-${idx + 1}-thumb.jpg`,
       );
       formData.append('activityPercent', String(activity.activityPercent));
       formData.append('keyCount', String(activity.keyCount));

@@ -58,16 +58,27 @@ function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) 
       className="group flex-shrink-0 overflow-hidden rounded border border-[#2A2A2A] hover:border-[#444] transition-colors"
       style={{ width: 120, background: `linear-gradient(135deg, #0d0d1f ${seed % 3 * 15}%, #08081a 100%)` }}
     >
-      {/* Simulated UI content */}
+      {/* Real thumbnail when available, otherwise a skeleton */}
       <div style={{ aspectRatio: '16/9', position: 'relative' }}>
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: 'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 32px)',
-        }} />
-        <div className="absolute inset-[8%] flex flex-col gap-[6%] opacity-[0.2]">
-          <div className="h-[10%] w-3/4 rounded-sm bg-white" />
-          <div className="flex-1 rounded-sm bg-white/15" />
-          <div className="h-[8%] w-1/2 rounded-sm bg-white/25" />
-        </div>
+        {shot.thumbnailUrl ?? shot.signedUrl ? (
+          <img
+            src={shot.thumbnailUrl ?? shot.signedUrl}
+            alt={`Screen ${shot.screenNumber}`}
+            className="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 opacity-[0.04]" style={{
+              backgroundImage: 'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 32px)',
+            }} />
+            <div className="absolute inset-[8%] flex flex-col gap-[6%] opacity-[0.2]">
+              <div className="h-[10%] w-3/4 rounded-sm bg-white" />
+              <div className="flex-1 rounded-sm bg-white/15" />
+              <div className="h-[8%] w-1/2 rounded-sm bg-white/25" />
+            </div>
+          </>
+        )}
         {/* Time */}
         <div className="absolute top-1 left-1 rounded px-1 py-0.5 font-mono" style={{ background: 'rgba(0,0,0,0.8)', fontSize: 8, color: '#777' }}>
           {fmtTime(shot.capturedAt)}

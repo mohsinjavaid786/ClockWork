@@ -43,6 +43,7 @@ interface RawScreenshot {
   minute_activity?: MinuteActivity[];
   user: { id: string; name: string; email: string } | null;
   signedUrl?: string;
+  thumbnailUrl?: string;
 }
 
 function toScreenshot(s: RawScreenshot): Screenshot {
@@ -61,6 +62,7 @@ function toScreenshot(s: RawScreenshot): Screenshot {
     minuteActivity: Array.isArray(s.minute_activity) ? s.minute_activity : [],
     user: s.user,
     signedUrl: s.signedUrl,
+    thumbnailUrl: s.thumbnailUrl ?? s.signedUrl,
   };
 }
 

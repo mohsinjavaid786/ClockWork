@@ -6,16 +6,35 @@ import { UploadScreenshotDto, ListScreenshotsQueryDto } from './dto/screenshot.d
 export class ScreenshotsService {
   constructor(private readonly supabase: SupabaseService) {}
 
-  async upload(userId: string, file: Express.Multer.File, dto: UploadScreenshotDto) {
+  async upload(
+    userId: string,
+    file: Express.Multer.File | undefined,
+    thumbnail: Express.Multer.File | undefined,
+    dto: UploadScreenshotDto,
+  ) {
+    if (!file) throw new BadRequestException('No screenshot file uploaded');
+
     const ext = file.mimetype === 'image/png' ? 'png' : 'jpg';
     const screenSuffix = dto.screenNumber ? `-screen-${dto.screenNumber}` : '';
-    const path = `${userId}/${Date.now()}${screenSuffix}.${ext}`;
+    const stamp = Date.now();
+    const path = `${userId}/${stamp}${screenSuffix}.${ext}`;
 
     const { error: uploadError } = await this.supabase.client.storage
       .from('screenshots')
       .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
 
     if (uploadError) throw new BadRequestException(uploadError.message);
+
+    // Upload the small thumbnail (best-effort; a failure just means the grid
+    // falls back to the full image).
+    let thumbnailPath: string | null = null;
+    if (thumbnail) {
+      const tPath = `${userId}/thumbs/${stamp}${screenSuffix}.jpg`;
+      const { error: tErr } = await this.supabase.client.storage
+        .from('screenshots')
+        .upload(tPath, thumbnail.buffer, { contentType: 'image/jpeg', upsert: false });
+      if (!tErr) thumbnailPath = tPath;
+    }
 
     let minuteActivity: unknown = [];
     if (dto.minuteActivity) {
@@ -33,6 +52,7 @@ export class ScreenshotsService {
         user_id: userId,
         time_entry_id: dto.timeEntryId ?? null,
         storage_path: path,
+        thumbnail_path: thumbnailPath,
         activity_percent: dto.activityPercent,
         captured_at: dto.capturedAt ?? new Date().toISOString(),
         screen_number: dto.screenNumber ?? 1,
@@ -57,7 +77,7 @@ export class ScreenshotsService {
     let q = this.supabase.client
       .from('screenshots')
       .select(
-        'id, user_id, time_entry_id, storage_path, captured_at, activity_percent, screen_number, display_count, key_count, mouse_count, active_window, minute_activity, user:users(id, name, email)',
+        'id, user_id, time_entry_id, storage_path, thumbnail_path, captured_at, activity_percent, screen_number, display_count, key_count, mouse_count, active_window, minute_activity, user:users(id, name, email)',
         { count: 'exact' },
       )
       .order('captured_at', { ascending: false })
@@ -71,14 +91,31 @@ export class ScreenshotsService {
     const { data, error, count } = await q;
     if (error) throw new BadRequestException(error.message);
 
-    const withUrls = await Promise.all(
-      (data ?? []).map(async (s) => {
-        const { data: urlData } = await this.supabase.client.storage
-          .from('screenshots')
-          .createSignedUrl(s.storage_path as string, 3600);
-        return { ...s, signedUrl: urlData?.signedUrl };
-      }),
-    );
+    // Batch-sign full images + thumbnails in one round-trip each.
+    const fullPaths = (data ?? []).map((s) => s.storage_path as string);
+    const thumbPaths = (data ?? [])
+      .map((s) => s.thumbnail_path as string | null)
+      .filter((p): p is string => !!p);
+
+    const [{ data: fullSigned }, { data: thumbSigned }] = await Promise.all([
+      fullPaths.length
+        ? this.supabase.client.storage.from('screenshots').createSignedUrls(fullPaths, 3600)
+        : Promise.resolve({ data: [] as { path?: string | null; signedUrl: string }[] }),
+      thumbPaths.length
+        ? this.supabase.client.storage.from('screenshots').createSignedUrls(thumbPaths, 3600)
+        : Promise.resolve({ data: [] as { path?: string | null; signedUrl: string }[] }),
+    ]);
+
+    const fullMap = new Map((fullSigned ?? []).map((u) => [u.path, u.signedUrl]));
+    const thumbMap = new Map((thumbSigned ?? []).map((u) => [u.path, u.signedUrl]));
+
+    const withUrls = (data ?? []).map((s) => {
+      const signedUrl = fullMap.get(s.storage_path as string);
+      const thumbnailUrl = s.thumbnail_path
+        ? thumbMap.get(s.thumbnail_path as string)
+        : signedUrl; // fall back to full image for pre-thumbnail screenshots
+      return { ...s, signedUrl, thumbnailUrl };
+    });
 
     const total = count ?? 0;
     return {

@@ -4,11 +4,11 @@ import {
   Param,
   Post,
   Query,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
   Body,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ScreenshotsService } from './screenshots.service';
 import { UploadScreenshotDto, ListScreenshotsQueryDto } from './dto/screenshot.dto';
@@ -25,15 +25,26 @@ export class ScreenshotsController {
   @Post('upload')
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: 'Upload a raw screenshot. Desktop sends one upload per display per capture event.',
+    summary: 'Upload a raw screenshot (+ thumbnail). Desktop sends one upload per display.',
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'file', maxCount: 1 },
+      { name: 'thumbnail', maxCount: 1 },
+    ]),
+  )
   upload(
     @CurrentUser() user: AuthUser,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles()
+    files: { file?: Express.Multer.File[]; thumbnail?: Express.Multer.File[] },
     @Body() dto: UploadScreenshotDto,
   ) {
-    return this.screenshotsService.upload(user.id, file, dto);
+    return this.screenshotsService.upload(
+      user.id,
+      files.file?.[0],
+      files.thumbnail?.[0],
+      dto,
+    );
   }
 
   @Get()

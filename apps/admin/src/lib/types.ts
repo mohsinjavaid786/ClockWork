@@ -22,6 +22,7 @@ export interface Screenshot {
   minuteActivity: MinuteActivity[];
   user: { id: string; name: string; email: string } | null;
   signedUrl?: string;
+  thumbnailUrl?: string;
 }
 
 // Per-day aggregate used by the Work Diary calendar + week bars.
