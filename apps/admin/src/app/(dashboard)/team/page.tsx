@@ -26,6 +26,7 @@ interface Member {
 export default function TeamPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<'employees' | 'admins'>('employees');
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteForm, setInviteForm] = useState({
     name: '',
@@ -106,6 +107,15 @@ export default function TeamPage() {
     },
   ];
 
+  const employees = members.filter((m) => m.role !== 'admin');
+  const admins = members.filter((m) => m.role === 'admin');
+  const shown = tab === 'admins' ? admins : employees;
+
+  const tabs: { key: 'employees' | 'admins'; label: string; count: number }[] = [
+    { key: 'employees', label: 'Employees', count: employees.length },
+    { key: 'admins', label: 'Admins', count: admins.length },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -122,14 +132,36 @@ export default function TeamPage() {
         }
       />
 
+      <div className="flex items-center gap-1 border-b border-[#2A2A2A]">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+              tab === t.key
+                ? 'border-white text-white'
+                : 'border-transparent text-[#666666] hover:text-[#A1A1A1]'
+            }`}
+          >
+            {t.label}
+            <span className="ml-2 rounded-full bg-[#1A1A1A] px-2 py-0.5 font-mono text-xs text-[#A1A1A1]">
+              {t.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-12">
           <LoadingSpinner />
         </div>
-      ) : members.length === 0 ? (
-        <EmptyState title="No team members yet" description="Invite someone to get started" />
+      ) : shown.length === 0 ? (
+        <EmptyState
+          title={tab === 'admins' ? 'No admins yet' : 'No employees yet'}
+          description={tab === 'admins' ? undefined : 'Invite someone to get started'}
+        />
       ) : (
-        <DataTable columns={columns} data={members} keyFn={(r) => r.id} />
+        <DataTable columns={columns} data={shown} keyFn={(r) => r.id} />
       )}
 
       <Modal open={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite team member">
