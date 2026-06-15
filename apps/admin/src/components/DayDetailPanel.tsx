@@ -6,6 +6,9 @@ import { api } from '@/lib/api';
 import type { Screenshot } from '@/lib/types';
 import { ScreenshotModal } from '@/components/ScreenshotModal';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { useTimezone } from '@/context/timezone-context';
+
+const TIME_OPTS: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
 
 export interface DayEntry {
   id: string;
@@ -23,10 +26,6 @@ interface Props {
   date: string | null; // 'YYYY-MM-DD'
   userId?: string;
   onClose: () => void;
-}
-
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 function fmtHHMM(secs: number) {
@@ -47,6 +46,8 @@ function actColor(pct: number) {
 
 // Mini thumbnail used in the horizontal filmstrip per session
 function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) {
+  const { format } = useTimezone();
+  const fmtTime = (iso: string) => format(iso, TIME_OPTS);
   const seed = shot.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const pct = shot.activityPercent;
   const color = actColor(pct);
@@ -93,6 +94,8 @@ interface SessionBlockProps {
 }
 
 function SessionBlock({ entry, shots, onShotClick }: SessionBlockProps) {
+  const { format } = useTimezone();
+  const fmtTime = (iso: string) => format(iso, TIME_OPTS);
   const startLabel = fmtTime(entry.started_at);
   const endLabel = entry.ended_at ? fmtTime(entry.ended_at) : 'Running';
   const durSecs = entry.duration_seconds ?? 0;

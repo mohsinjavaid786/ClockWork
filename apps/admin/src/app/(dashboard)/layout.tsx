@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/context/auth-context';
+import { TimezoneProvider } from '@/context/timezone-context';
 import { SidebarLayout } from '@/components/SidebarLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -30,7 +31,11 @@ function GuardedLayout({ children }: { children: React.ReactNode }) {
 
   if (!user || user.role !== 'admin') return null;
 
-  return <SidebarLayout>{children}</SidebarLayout>;
+  return (
+    <TimezoneProvider>
+      <SidebarLayout>{children}</SidebarLayout>
+    </TimezoneProvider>
+  );
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

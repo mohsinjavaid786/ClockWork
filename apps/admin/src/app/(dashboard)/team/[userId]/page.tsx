@@ -11,7 +11,8 @@ import { DataTable } from '@/components/DataTable';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { EntryDetailPanel, type TimeEntry } from '@/components/EntryDetailPanel';
-import { formatDateTime, formatDuration } from '@/lib/utils';
+import { useTimezone } from '@/context/timezone-context';
+import { formatDuration } from '@/lib/utils';
 
 interface Entry {
   id: string;
@@ -37,6 +38,7 @@ interface UserProfile {
 
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
+  const { format, setEmployeeTz } = useTimezone();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<TimeEntry | null>(null);
@@ -48,6 +50,13 @@ export default function UserDetailPage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [userId]);
+
+  // Expose this employee's timezone so the "Employee's time" option works, and
+  // clear it when leaving the page.
+  useEffect(() => {
+    if (profile?.timezone) setEmployeeTz(profile.timezone);
+    return () => setEmployeeTz(null);
+  }, [profile?.timezone, setEmployeeTz]);
 
   if (loading) {
     return (
@@ -66,7 +75,14 @@ export default function UserDetailPage() {
       key: 'date',
       header: 'Date',
       cell: (row: Entry) => (
-        <span className="text-xs text-[#A1A1A1]">{formatDateTime(row.started_at)}</span>
+        <span className="text-xs text-[#A1A1A1]">
+          {format(row.started_at, {
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </span>
       ),
     },
     {

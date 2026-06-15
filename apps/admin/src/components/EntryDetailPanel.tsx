@@ -8,6 +8,7 @@ import { Avatar } from '@/components/Avatar';
 import { StatusBadge } from '@/components/StatusBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ScreenshotModal } from '@/components/ScreenshotModal';
+import { useTimezone } from '@/context/timezone-context';
 import { formatDuration } from '@/lib/utils';
 
 export interface TimeEntry {
@@ -28,18 +29,11 @@ interface Props {
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
+// Time formatting is timezone-aware via useTimezone(); each component below
+// derives fmtTime/fmtDate from the selected zone.
 
-function fmt(iso: string, opts: Intl.DateTimeFormatOptions) {
-  return new Date(iso).toLocaleString('en-US', opts);
-}
-
-function fmtTime(iso: string) {
-  return fmt(iso, { hour: '2-digit', minute: '2-digit' });
-}
-
-function fmtDate(iso: string) {
-  return fmt(iso, { weekday: 'short', month: 'short', day: 'numeric' });
-}
+const TIME_OPTS: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
+const DATE_OPTS: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
 
 function activityColor(pct: number): string {
   if (pct >= 70) return '#22c55e';
@@ -50,6 +44,8 @@ function activityColor(pct: number): string {
 // ── Screenshot tile ───────────────────────────────────────────────────────────
 
 function ScreenshotTile({ shot, onClick }: { shot: Screenshot; onClick: () => void }) {
+  const { format } = useTimezone();
+  const fmtTime = (iso: string) => format(iso, TIME_OPTS);
   const pct = shot.activityPercent;
   const color = activityColor(pct);
   const seed = shot.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
@@ -162,6 +158,8 @@ function ScreenshotTile({ shot, onClick }: { shot: Screenshot; onClick: () => vo
 // ── Activity timeline bar ─────────────────────────────────────────────────────
 
 function ActivityTimeline({ screenshots }: { screenshots: Screenshot[] }) {
+  const { format } = useTimezone();
+  const fmtTime = (iso: string) => format(iso, TIME_OPTS);
   if (screenshots.length === 0) return null;
 
   return (
@@ -196,6 +194,9 @@ function ActivityTimeline({ screenshots }: { screenshots: Screenshot[] }) {
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function EntryDetailPanel({ entry, onClose }: Props) {
+  const { format } = useTimezone();
+  const fmtTime = (iso: string) => format(iso, TIME_OPTS);
+  const fmtDate = (iso: string) => format(iso, DATE_OPTS);
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalIdx, setModalIdx] = useState<number | null>(null);

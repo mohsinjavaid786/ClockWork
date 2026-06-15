@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Keyboard, Mouse } from 'lucide-react';
 import type { Screenshot } from '@/lib/types';
+import { useTimezone } from '@/context/timezone-context';
 
 interface Props {
   screenshots: Screenshot[];
@@ -10,10 +11,6 @@ interface Props {
   onClose: () => void;
   onNav: (idx: number) => void;
   sessionLabel?: string;
-}
-
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
 function actColor(pct: number) {
@@ -78,6 +75,9 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
 }
 
 export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLabel }: Props) {
+  const { format } = useTimezone();
+  const fmtTime = (iso: string) =>
+    format(iso, { hour: '2-digit', minute: '2-digit' });
   const shot = screenshots[index];
 
   useEffect(() => {
@@ -113,7 +113,7 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
             </div>
             <span className="text-[#444]">·</span>
             <span className="text-sm text-[#666666]">
-              {new Date(shot.capturedAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              {format(shot.capturedAt, { weekday: 'short', month: 'short', day: 'numeric' })}
             </span>
             {sessionLabel && (
               <>

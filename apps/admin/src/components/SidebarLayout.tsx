@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
+import { TimezoneSelect } from '@/components/TimezoneSelect';
 
 const nav = [
   { href: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
@@ -76,6 +77,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="flex-1 overflow-y-auto">
+        <div className="flex justify-end border-b border-[#2A2A2A] bg-[#0A0A0A] px-8 py-2.5">
+          <TimezoneSelect />
+        </div>
         <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
       </main>
     </div>

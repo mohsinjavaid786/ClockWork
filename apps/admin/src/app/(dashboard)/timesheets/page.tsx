@@ -9,7 +9,8 @@ import { Avatar } from '@/components/Avatar';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { EntryDetailPanel, type TimeEntry } from '@/components/EntryDetailPanel';
-import { formatDateTime, formatDuration } from '@/lib/utils';
+import { useTimezone } from '@/context/timezone-context';
+import { formatDuration } from '@/lib/utils';
 
 interface Paged {
   data: TimeEntry[];
@@ -20,6 +21,7 @@ interface Paged {
 }
 
 export default function TimesheetsPage() {
+  const { format } = useTimezone();
   const [result, setResult] = useState<Paged | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -78,7 +80,14 @@ export default function TimesheetsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs text-[#A1A1A1]">{formatDateTime(row.started_at)}</span>
+                        <span className="text-xs text-[#A1A1A1]">
+                          {format(row.started_at, {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         {row.project ? (
