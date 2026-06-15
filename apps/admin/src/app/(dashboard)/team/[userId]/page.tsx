@@ -10,6 +10,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { DataTable } from '@/components/DataTable';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
+import { EntryDetailPanel, type TimeEntry } from '@/components/EntryDetailPanel';
 import { formatDateTime, formatDuration } from '@/lib/utils';
 
 interface Entry {
@@ -38,6 +39,7 @@ export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<TimeEntry | null>(null);
 
   useEffect(() => {
     api.users
@@ -141,13 +143,29 @@ export default function UserDetailPage() {
       <div>
         <h2 className="mb-3 text-xs font-medium uppercase tracking-widest text-[#666666]">
           Recent activity
+          <span className="ml-2 normal-case tracking-normal text-[#444]">
+            — click an entry to see screenshots &amp; activity
+          </span>
         </h2>
         {profile.recentEntries.length === 0 ? (
           <EmptyState title="No time entries yet" />
         ) : (
-          <DataTable columns={columns} data={profile.recentEntries} keyFn={(r) => r.id} />
+          <DataTable
+            columns={columns}
+            data={profile.recentEntries}
+            keyFn={(r) => r.id}
+            onRowClick={(r) =>
+              setSelected({
+                ...r,
+                paused_seconds: null,
+                user: { id: profile.id, name: profile.name, email: profile.email },
+              })
+            }
+          />
         )}
       </div>
+
+      <EntryDetailPanel entry={selected} onClose={() => setSelected(null)} />
     </div>
   );
 }

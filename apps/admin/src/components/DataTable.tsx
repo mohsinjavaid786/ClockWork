@@ -12,9 +12,10 @@ interface Props<T> {
   data: T[];
   keyFn: (row: T) => string;
   className?: string;
+  onRowClick?: (row: T) => void;
 }
 
-export function DataTable<T>({ columns, data, keyFn, className }: Props<T>) {
+export function DataTable<T>({ columns, data, keyFn, className, onRowClick }: Props<T>) {
   return (
     <div className={cn('overflow-x-auto rounded-lg border border-[#2A2A2A]', className)}>
       <table className="w-full text-sm">
@@ -37,7 +38,11 @@ export function DataTable<T>({ columns, data, keyFn, className }: Props<T>) {
           {data.map((row) => (
             <tr
               key={keyFn(row)}
-              className="border-b border-[#1F1F1F] bg-[#0A0A0A] transition-colors hover:bg-[#111111]"
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              className={cn(
+                'border-b border-[#1F1F1F] bg-[#0A0A0A] transition-colors hover:bg-[#111111]',
+                onRowClick && 'cursor-pointer',
+              )}
             >
               {columns.map((col) => (
                 <td key={col.key} className={cn('px-4 py-3 text-[#A1A1A1]', col.className)}>
