@@ -46,7 +46,7 @@ export class EmailService {
     this.logger.log(`Email sent to ${to}: "${subject}"`);
   }
 
-  async sendInvite(to: string, name: string, actionLink: string): Promise<void> {
+  async sendInvite(to: string, name: string, actionLink: string | null): Promise<void> {
     const { mac, win } = this.downloadUrls();
     const html = inviteEmail({
       name,

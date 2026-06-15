@@ -2,7 +2,7 @@
 
 interface InviteParams {
   name: string;
-  actionLink: string;
+  actionLink: string | null;
   macUrl: string;
   winUrl: string;
   companyName: string;
@@ -54,12 +54,18 @@ function button(href: string, label: string): string {
 }
 
 export function inviteEmail(p: InviteParams): string {
+  // With an action link the employee sets their own password; without one the
+  // admin set a temporary password and will share it directly.
+  const passwordStep = p.actionLink
+    ? `<p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#374151;"><strong>Step 1 — Set your password</strong></p>
+    ${button(p.actionLink, 'Set your password')}`
+    : `<p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#374151;"><strong>Step 1 — Sign in</strong></p>
+    <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#374151;">Your administrator has created your account and will share your password. Sign in with this email address and that password.</p>`;
   const inner = `
     <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#374151;">
       Hi ${escapeHtml(p.name)}, you've been invited to join <strong>${escapeHtml(p.companyName)}</strong> on Clockwork — the team time-tracking app.
     </p>
-    <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#374151;"><strong>Step 1 — Set your password</strong></p>
-    ${button(p.actionLink, 'Set your password')}
+    ${passwordStep}
     <p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#374151;"><strong>Step 2 — Download the desktop app</strong></p>
     <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#374151;">Install Clockwork on your computer, then sign in with the email this was sent to.</p>
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 8px;">
@@ -68,7 +74,7 @@ export function inviteEmail(p: InviteParams): string {
         <td><a href="${p.winUrl}" style="display:inline-block;padding:10px 18px;font-size:13px;font-weight:600;color:#111827;text-decoration:none;border:1px solid #d1d5db;border-radius:8px;">Download for Windows</a></td>
       </tr>
     </table>
-    <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">The "Set your password" link expires after a while. If it stops working, ask your admin to re-send the invite.</p>`;
+    ${p.actionLink ? `<p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#9ca3af;">The "Set your password" link expires after a while. If it stops working, ask your admin to re-send the invite.</p>` : ''}`;
   return layout("You're invited to Clockwork", inner);
 }
 

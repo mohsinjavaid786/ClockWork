@@ -19,4 +19,13 @@ export class InviteUserDto {
   @IsOptional()
   @IsString()
   timezone?: string;
+
+  // Optional: when set, the account is created with this password so the
+  // employee can log in immediately (admin shares it manually). When omitted,
+  // an invite link is emailed for them to set their own password.
+  @ApiPropertyOptional({ example: 'Temp1234!', minLength: 8 })
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  password?: string;
 }

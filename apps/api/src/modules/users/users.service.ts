@@ -132,25 +132,46 @@ export class UsersService {
 
     if (existing) throw new ConflictException('Email already registered');
 
-    // Generate a Supabase invite link (creates the auth user with no password)
-    // and email it so the employee sets their own password — no plaintext
-    // password is ever stored or sent.
     const adminUrl = (process.env['ADMIN_URL'] ?? '').replace(/\/$/, '');
-    const { data: linkData, error: linkError } =
-      await this.supabase.client.auth.admin.generateLink({
-        type: 'invite',
-        email: dto.email,
-        options: { redirectTo: `${adminUrl}/reset-password` },
-      });
 
-    if (linkError || !linkData.user) {
-      throw new BadRequestException(linkError?.message ?? 'Failed to create invite');
+    // Two paths:
+    //  - With a temp password: create the account ready-to-use so the employee
+    //    can log in immediately (the admin shares the password). No set-password
+    //    link is needed; the invite email is best-effort.
+    //  - Without: generate a Supabase invite link and email it so they set their
+    //    own password. No plaintext password is ever stored or sent.
+    let authUserId: string;
+    let actionLink: string | null = null;
+
+    if (dto.password) {
+      const { data: created, error: createErr } =
+        await this.supabase.client.auth.admin.createUser({
+          email: dto.email,
+          password: dto.password,
+          email_confirm: true,
+        });
+      if (createErr || !created.user) {
+        throw new BadRequestException(createErr?.message ?? 'Failed to create user');
+      }
+      authUserId = created.user.id;
+    } else {
+      const { data: linkData, error: linkError } =
+        await this.supabase.client.auth.admin.generateLink({
+          type: 'invite',
+          email: dto.email,
+          options: { redirectTo: `${adminUrl}/reset-password` },
+        });
+      if (linkError || !linkData.user) {
+        throw new BadRequestException(linkError?.message ?? 'Failed to create invite');
+      }
+      authUserId = linkData.user.id;
+      actionLink = linkData.properties?.action_link ?? null;
     }
 
     const { data, error } = await this.supabase.client
       .from('users')
       .insert({
-        id: linkData.user.id,
+        id: authUserId,
         name: dto.name,
         email: dto.email,
         role: dto.role,
@@ -161,18 +182,19 @@ export class UsersService {
       .single();
 
     if (error) {
-      await this.supabase.client.auth.admin.deleteUser(linkData.user.id);
+      await this.supabase.client.auth.admin.deleteUser(authUserId);
       throw new BadRequestException(error.message);
     }
 
-    // Send the invite email. If delivery fails, the account still exists — surface
-    // the error so the admin knows to re-send rather than silently leaving the
-    // employee without a way in.
-    const actionLink = linkData.properties?.action_link;
-    if (actionLink) {
-      try {
-        await this.email.sendInvite(dto.email, dto.name, actionLink);
-      } catch (err) {
+    // Email the employee (set-password link when there's no temp password,
+    // otherwise a ready-to-use welcome with download links).
+    try {
+      await this.email.sendInvite(dto.email, dto.name, actionLink);
+    } catch (err) {
+      // With a temp password the admin can hand over credentials directly, so a
+      // failed email shouldn't fail the whole invite — only surface it when the
+      // email was the ONLY way in (set-password link path).
+      if (!dto.password) {
         throw new BadRequestException(
           `User created but invite email failed to send: ${(err as Error).message}`,
         );
