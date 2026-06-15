@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { InviteUserDto } from './dto/invite-user.dto';
@@ -45,5 +45,12 @@ export class UsersController {
   @ApiOperation({ summary: 'Update user role, status, or timezone' })
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Delete a user and all their data (entries + screenshots)' })
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.usersService.remove(id, user.id);
   }
 }

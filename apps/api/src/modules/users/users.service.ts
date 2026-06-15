@@ -29,6 +29,21 @@ export class UsersService {
     weekStart.setDate(now.getDate() - now.getDay());
     weekStart.setHours(0, 0, 0, 0);
 
+    // Determine who has actually accepted their invite (set a password / signed
+    // in) vs. still pending, using Supabase Auth's records.
+    const acceptedIds = new Set<string>();
+    try {
+      const { data: authList } = await this.supabase.client.auth.admin.listUsers({
+        page: 1,
+        perPage: 1000,
+      });
+      for (const au of authList?.users ?? []) {
+        if (au.last_sign_in_at || au.email_confirmed_at) acceptedIds.add(au.id);
+      }
+    } catch {
+      // If the auth lookup fails, fall back to marking everyone pending.
+    }
+
     const result = await Promise.all(
       (data ?? []).map(async (u) => {
         const { data: entries } = await this.supabase.client
@@ -53,6 +68,7 @@ export class UsersService {
           avatarUrl: u.avatar_url as string | undefined,
           createdAt: u.created_at as string,
           weeklyHours: Math.round((weeklySeconds / 3600) * 100) / 100,
+          inviteStatus: acceptedIds.has(u.id as string) ? 'accepted' : 'pending',
         };
       }),
     );
@@ -182,5 +198,40 @@ export class UsersService {
 
     if (error || !data) throw new NotFoundException('User not found');
     return data;
+  }
+
+  async remove(id: string, requesterId: string) {
+    if (id === requesterId) {
+      throw new BadRequestException('You cannot delete your own account');
+    }
+
+    const { data: existing } = await this.supabase.client
+      .from('users')
+      .select('id')
+      .eq('id', id)
+      .single();
+    if (!existing) throw new NotFoundException('User not found');
+
+    // Best-effort: remove the user's screenshot files from storage (DB rows are
+    // cascade-deleted with the user, but the bucket objects are not).
+    try {
+      const { data: files } = await this.supabase.client.storage
+        .from('screenshots')
+        .list(id, { limit: 1000 });
+      if (files?.length) {
+        await this.supabase.client.storage
+          .from('screenshots')
+          .remove(files.map((f) => `${id}/${f.name}`));
+      }
+    } catch {
+      // ignore storage cleanup failures — the account + DB rows still get removed
+    }
+
+    // Deleting the auth user cascades to public.users, time_entries and
+    // screenshots (ON DELETE CASCADE), removing all of the employee's data.
+    const { error } = await this.supabase.client.auth.admin.deleteUser(id);
+    if (error) throw new BadRequestException(error.message);
+
+    return { success: true };
   }
 }
