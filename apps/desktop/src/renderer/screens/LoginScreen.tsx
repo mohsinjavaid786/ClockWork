@@ -5,6 +5,10 @@ interface Props {
   onLogin: (user: CwUser) => void;
 }
 
+// On macOS the frameless window overlays the traffic-light controls at the top
+// left, so pad the title bar clear of them.
+const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform);
+
 export function LoginScreen({ onLogin }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,10 +39,12 @@ export function LoginScreen({ onLogin }: Props) {
           WebkitAppRegion: 'drag',
           display: 'flex',
           alignItems: 'center',
-          paddingLeft: 12,
+          paddingLeft: isMac ? 76 : 12,
         } as React.CSSProperties}
       >
-        <img src={logo} alt="ClockWork" style={{ height: 16, width: 'auto' }} />
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, color: 'var(--text-primary)' }}>
+          CLOCKWORK
+        </span>
       </div>
 
       <div

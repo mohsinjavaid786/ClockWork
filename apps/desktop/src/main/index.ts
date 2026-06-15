@@ -128,6 +128,22 @@ app.whenReady().then(async () => {
 
   startActivityTracking();
 
+  // Resume an open session that survived a quit/auto-update restart, so the
+  // timer keeps running AND screenshots keep being captured (the entry stays the
+  // same one on the server). Without this, capture silently stopped after a
+  // restart even though the timer kept showing as running.
+  const resumed = getTimerState();
+  if (resumed.running) {
+    if (mainWindow) updateTrayMenu(mainWindow, true);
+    if (resumed.paused) {
+      setActivityPaused(true);
+    } else {
+      await refreshConfig();
+      setActivityPaused(false);
+      startScreenshotLoop();
+    }
+  }
+
   if (!IS_DEV) {
     // Never let a failed update check (offline, no published release, missing
     // app-update.yml) surface as an unhandled rejection and disrupt the app.

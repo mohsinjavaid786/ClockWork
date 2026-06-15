@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import logo from '../logo.png';
 
 interface Props {
   user: CwUser;
   onLogout: () => void;
 }
+
+// On macOS the frameless window overlays the traffic-light controls at the top
+// left, so pad the title bar clear of them.
+const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform);
 
 function formatElapsed(seconds: number): string {
   const h = Math.floor(seconds / 3600);
@@ -63,7 +66,14 @@ export function TrackerScreen({ user, onLogout }: Props) {
       setStatus(s);
       setProjects(p);
       setVersion(v);
-      if (s.running && !s.paused && s.startedAt) startTick(s.startedAt);
+      if (s.running && s.startedAt) {
+        if (s.paused) {
+          // Restore the frozen elapsed instead of flashing 00:00:00 on relaunch.
+          setElapsed(Math.max(0, Math.floor((Date.now() - new Date(s.startedAt).getTime()) / 1000)));
+        } else {
+          startTick(s.startedAt);
+        }
+      }
     });
 
     return () => stopTick();
@@ -140,11 +150,13 @@ export function TrackerScreen({ user, onLogout }: Props) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingLeft: 12,
+          paddingLeft: isMac ? 76 : 12,
           paddingRight: 8,
         } as React.CSSProperties}
       >
-        <img src={logo} alt="ClockWork" style={{ height: 16, width: 'auto', WebkitAppRegion: 'drag' } as React.CSSProperties} />
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, color: 'var(--text-primary)' }}>
+          CLOCKWORK
+        </span>
         <button
           onClick={handleLogout}
           style={{

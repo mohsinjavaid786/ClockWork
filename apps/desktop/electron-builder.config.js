@@ -53,9 +53,11 @@ module.exports = {
   },
 
   mac: {
+    // Apple Silicon only — keeps the download small. The .zip is required by
+    // electron-updater for auto-updates; the .dmg is the user-facing installer.
     target: [
-      { target: 'dmg', arch: ['x64', 'arm64'] },
-      { target: 'zip', arch: ['x64', 'arm64'] },
+      { target: 'dmg', arch: ['arm64'] },
+      { target: 'zip', arch: ['arm64'] },
     ],
     category: 'public.app-category.productivity',
     darkModeSupport: true,
