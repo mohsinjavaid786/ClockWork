@@ -6,6 +6,7 @@ import {
   saveToken, getToken, clearToken,
   saveUser, getUser, clearUser,
   saveTimerState, getTimerState, clearTimerState,
+  getStoredVersion, stampVersion, clearSession,
 } from './services/timer.service';
 import { captureAndUpload } from './services/screenshot.service';
 import { startActivityTracking, stopActivityTracking, getActivityPercent, flushActivity, setActivityPaused } from './services/activity.service';
@@ -23,6 +24,43 @@ let screenshotIntervalMinutes = 10;
 // Closing the window normally just hides it (tray app). When the user picks Quit,
 // before-quit sets this so the close handler lets the window actually close.
 let isQuitting = false;
+
+// Resolves once startup session validation has finished. The renderer's auth
+// queries await this so it never reads (and trusts) a stale token before we've
+// had a chance to drop it — otherwise the app would show the tracker UI while
+// every API call 401s.
+let startupValidation: Promise<void> = Promise.resolve();
+
+// Fresh install or version change → require a fresh login. The persisted session
+// lives in userData, which on macOS survives deleting the .app, so without this
+// an updated/reinstalled build would silently sign the user back in (often with
+// a now-expired token). Clearing on version change guarantees each new build
+// starts at the login screen.
+function gateByVersion() {
+  const v = app.getVersion();
+  if (getStoredVersion() !== v) {
+    clearSession();
+    stampVersion(v);
+  }
+}
+
+// Probe the persisted token against an auth-protected endpoint. A 401/403 means
+// the token expired or was revoked, so we clear the session and fall back to the
+// login screen. Network errors are ignored (offline tolerance — keep the session).
+async function validateSession() {
+  const token = getToken();
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/config`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 401 || res.status === 403) {
+      clearSession();
+    }
+  } catch {
+    // offline — can't validate; keep the session as-is
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -120,6 +158,13 @@ app.whenReady().then(async () => {
     cb(allowed.includes(permission));
   });
 
+  // Gate the session by app version BEFORE the window loads, so a freshly
+  // updated/reinstalled build presents the login screen synchronously.
+  gateByVersion();
+
+  // Kick off token validation; the renderer's auth queries await this promise.
+  startupValidation = validateSession();
+
   createWindow();
 
   if (mainWindow) {
@@ -127,6 +172,10 @@ app.whenReady().then(async () => {
   }
 
   startActivityTracking();
+
+  // Wait for validation before deciding whether to resume — a stale token must
+  // not resurrect a screenshot loop that will only ever 401.
+  await startupValidation;
 
   // Resume an open session that survived a quit/auto-update restart, so the
   // timer keeps running AND screenshots keep being captured (the entry stays the
@@ -192,8 +241,14 @@ ipcMain.handle(IPC.AUTH_LOGOUT, async () => {
   return { success: true };
 });
 
-ipcMain.handle(IPC.AUTH_GET_TOKEN, () => getToken());
-ipcMain.handle(IPC.AUTH_GET_USER, () => getUser());
+ipcMain.handle(IPC.AUTH_GET_TOKEN, async () => {
+  await startupValidation;
+  return getToken();
+});
+ipcMain.handle(IPC.AUTH_GET_USER, async () => {
+  await startupValidation;
+  return getUser();
+});
 
 ipcMain.handle(IPC.TIMER_START, async (_e, { projectId, description }: { projectId?: string; description?: string }) => {
   const entry = await apiRequest<{ id: string; started_at: string }>('/time-entries/start', {

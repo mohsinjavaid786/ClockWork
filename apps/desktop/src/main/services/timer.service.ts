@@ -22,6 +22,9 @@ interface Store {
   token?: string;
   user?: StoredUser;
   timer?: TimerState;
+  // App version that last wrote this session. Used to force a fresh login after
+  // an update/reinstall (see gateByVersion in main).
+  version?: string;
 }
 
 // Session data is persisted as plain JSON in the app's private per-user data
@@ -92,5 +95,25 @@ export function getTimerState(): TimerState {
 
 export function clearTimerState() {
   delete load().timer;
+  persist();
+}
+
+export function getStoredVersion(): string | null {
+  return load().version ?? null;
+}
+
+export function stampVersion(v: string) {
+  load().version = v;
+  persist();
+}
+
+// Wipe the signed-in session (token + user + any open timer) without touching
+// the stored version stamp. Used on version change and when a persisted token
+// is found to be stale on startup.
+export function clearSession() {
+  const s = load();
+  delete s.token;
+  delete s.user;
+  delete s.timer;
   persist();
 }
