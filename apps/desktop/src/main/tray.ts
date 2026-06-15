@@ -29,7 +29,10 @@ function dotIcon(bright: boolean): NativeImage {
       }
     }
   }
-  return nativeImage.createFromBuffer(buf, { width: size, height: size });
+  // createFromBitmap (not createFromBuffer) — the buffer is raw BGRA pixels, not
+  // an encoded PNG/JPEG. createFromBuffer would decode it as an image and yield
+  // an empty icon, so the green dot never showed.
+  return nativeImage.createFromBitmap(buf, { width: size, height: size });
 }
 
 let _bright: NativeImage | null = null;
