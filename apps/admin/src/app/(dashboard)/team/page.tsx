@@ -33,6 +33,27 @@ const installerUrl = (file: string) =>
 const MAC_URL = installerUrl('Clockwork.dmg');
 const WIN_URL = installerUrl('Clockwork.exe');
 
+// Common timezones offered when inviting, so "Employee's time" is meaningful.
+const TIMEZONES: { value: string; label: string }[] = [
+  { value: 'UTC', label: 'UTC' },
+  { value: 'America/Los_Angeles', label: 'Pacific — Los Angeles' },
+  { value: 'America/Denver', label: 'Mountain — Denver' },
+  { value: 'America/Chicago', label: 'Central — Chicago' },
+  { value: 'America/New_York', label: 'Eastern — New York' },
+  { value: 'America/Sao_Paulo', label: 'São Paulo' },
+  { value: 'Europe/London', label: 'London' },
+  { value: 'Europe/Berlin', label: 'Berlin / Paris' },
+  { value: 'Africa/Cairo', label: 'Cairo' },
+  { value: 'Asia/Dubai', label: 'Dubai (GMT+4)' },
+  { value: 'Asia/Karachi', label: 'Karachi (GMT+5)' },
+  { value: 'Asia/Kolkata', label: 'India (GMT+5:30)' },
+  { value: 'Asia/Dhaka', label: 'Dhaka (GMT+6)' },
+  { value: 'Asia/Singapore', label: 'Singapore (GMT+8)' },
+  { value: 'Asia/Shanghai', label: 'China (GMT+8)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (GMT+9)' },
+  { value: 'Australia/Sydney', label: 'Sydney' },
+];
+
 export default function TeamPage() {
   const { user: currentUser } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
@@ -43,6 +64,8 @@ export default function TeamPage() {
     name: '',
     email: '',
     role: 'member' as 'admin' | 'member',
+    timezone: 'UTC',
+    password: '',
   });
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
@@ -65,9 +88,11 @@ export default function TeamPage() {
     setInviteError('');
     setInviting(true);
     try {
-      await api.users.invite(inviteForm);
+      const { password, ...rest } = inviteForm;
+      // Only send a password if the admin chose to set a temporary one.
+      await api.users.invite(password.trim() ? { ...rest, password: password.trim() } : rest);
       setInviteOpen(false);
-      setInviteForm({ name: '', email: '', role: 'member' });
+      setInviteForm({ name: '', email: '', role: 'member', timezone: 'UTC', password: '' });
       load();
     } catch (err) {
       setInviteError(err instanceof Error ? err.message : 'Failed to invite user');
@@ -282,9 +307,41 @@ export default function TeamPage() {
               <option value="admin">Admin</option>
             </select>
           </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">Timezone</label>
+            <select
+              value={inviteForm.timezone}
+              onChange={(e) => setInviteForm((p) => ({ ...p, timezone: e.target.value }))}
+              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white outline-none focus:border-[#444]"
+            >
+              {TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-[#666666]">
+              Lets you view their entries in their local time.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">
+              Temporary password <span className="text-[#666666]">(optional)</span>
+            </label>
+            <input
+              type="text"
+              value={inviteForm.password}
+              onChange={(e) => setInviteForm((p) => ({ ...p, password: e.target.value }))}
+              minLength={8}
+              placeholder="Leave blank to email a set-password link"
+              autoComplete="off"
+              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none focus:border-[#444]"
+            />
+          </div>
           <p className="rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-xs text-[#666666]">
-            We&apos;ll email an invitation with a secure link to set their own password and download
-            the desktop app for macOS and Windows.
+            {inviteForm.password.trim()
+              ? 'The account will be ready immediately — share this password with the employee so they can sign in and start the tracker.'
+              : "We'll email an invitation with a secure link for them to set their own password, plus the desktop app downloads."}
           </p>
 
           {inviteError && (
