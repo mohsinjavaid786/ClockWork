@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { UserPlus, Trash2, Apple, Monitor, AlertTriangle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/context/toast-context';
 import { PageHeader } from '@/components/PageHeader';
 import { DataTable } from '@/components/DataTable';
 import { Avatar } from '@/components/Avatar';
@@ -56,6 +57,7 @@ const TIMEZONES: { value: string; label: string }[] = [
 
 export default function TeamPage() {
   const { user: currentUser } = useAuth();
+  const { success } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'employees' | 'admins'>('employees');
@@ -91,6 +93,11 @@ export default function TeamPage() {
       const { password, ...rest } = inviteForm;
       // Only send a password if the admin chose to set a temporary one.
       await api.users.invite(password.trim() ? { ...rest, password: password.trim() } : rest);
+      success(
+        password.trim()
+          ? `${inviteForm.name}'s account is ready`
+          : `Invitation sent to ${inviteForm.email}`,
+      );
       setInviteOpen(false);
       setInviteForm({ name: '', email: '', role: 'member', timezone: 'UTC', password: '' });
       load();
@@ -105,8 +112,10 @@ export default function TeamPage() {
     if (!toDelete) return;
     setDeleteError('');
     setDeleting(true);
+    const name = toDelete.name;
     try {
       await api.users.remove(toDelete.id);
+      success(`${name} and their data were deleted`);
       setToDelete(null);
       load();
     } catch (err) {

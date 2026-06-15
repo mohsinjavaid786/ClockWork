@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/context/auth-context';
 import { TimezoneProvider } from '@/context/timezone-context';
+import { ToastProvider } from '@/context/toast-context';
 import { SidebarLayout } from '@/components/SidebarLayout';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -32,9 +33,11 @@ function GuardedLayout({ children }: { children: React.ReactNode }) {
   if (!user || user.role !== 'admin') return null;
 
   return (
-    <TimezoneProvider>
-      <SidebarLayout>{children}</SidebarLayout>
-    </TimezoneProvider>
+    <ToastProvider>
+      <TimezoneProvider>
+        <SidebarLayout>{children}</SidebarLayout>
+      </TimezoneProvider>
+    </ToastProvider>
   );
 }
 

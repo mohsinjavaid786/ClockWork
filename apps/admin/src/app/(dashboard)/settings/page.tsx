@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { useToast } from '@/context/toast-context';
 import { PageHeader } from '@/components/PageHeader';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -13,6 +14,7 @@ interface Config {
 }
 
 export default function SettingsPage() {
+  const { success, error: toastError } = useToast();
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,8 +38,10 @@ export default function SettingsPage() {
     try {
       await api.config.update(config);
       setSaveStatus('saved');
+      success('Settings saved');
     } catch {
       setSaveStatus('error');
+      toastError('Failed to save settings');
     } finally {
       setSaving(false);
       setTimeout(() => setSaveStatus('idle'), 3000);

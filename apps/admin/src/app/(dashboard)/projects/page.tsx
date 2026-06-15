@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { useToast } from '@/context/toast-context';
 import { PageHeader } from '@/components/PageHeader';
 import { DataTable } from '@/components/DataTable';
 import { Modal } from '@/components/Modal';
@@ -24,6 +25,7 @@ interface Project {
 const COLORS = ['#6366F1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EF4444'];
 
 export default function ProjectsPage() {
+  const { success, error: toastError } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -47,6 +49,7 @@ export default function ProjectsPage() {
     setSaving(true);
     try {
       await api.projects.create(form);
+      success(`Project "${form.name}" created`);
       setOpen(false);
       setForm({ name: '', description: '', color: COLORS[0]! });
       load();
@@ -57,10 +60,15 @@ export default function ProjectsPage() {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, name: string) {
     if (!confirm('Delete this project? All time entries will lose their project association.')) return;
-    await api.projects.remove(id).catch(console.error);
-    load();
+    try {
+      await api.projects.remove(id);
+      success(`Project "${name}" deleted`);
+      load();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to delete project');
+    }
   }
 
   const columns = [
@@ -111,7 +119,7 @@ export default function ProjectsPage() {
       header: '',
       cell: (row: Project) => (
         <button
-          onClick={() => handleDelete(row.id)}
+          onClick={() => handleDelete(row.id, row.name)}
           className="rounded p-1 text-[#444] hover:text-[#ef4444] transition-colors"
         >
           <Trash2 size={13} />
