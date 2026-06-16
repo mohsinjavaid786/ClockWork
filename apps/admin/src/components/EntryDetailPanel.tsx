@@ -54,6 +54,7 @@ function ScreenshotTile({ shot, onClick }: { shot: Screenshot; onClick: () => vo
   const color = activityColor(pct);
   const seed = shot.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const [imgFailed, setImgFailed] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   // The grid only ever shows the small thumbnail — never the multi-MB full PNG
   // (loading dozens of those at once fails). If no thumbnail exists yet, or it
@@ -78,13 +79,17 @@ function ScreenshotTile({ shot, onClick }: { shot: Screenshot; onClick: () => vo
       {/* Lightweight thumbnail in the grid; the full image loads in the modal.
           Falls through to a skeleton if it's missing or fails to load. */}
       {gridSrc ? (
-        <img
-          src={gridSrc}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-          loading="lazy"
-          onError={() => setImgFailed(true)}
-        />
+        <>
+          {!imgLoaded && <div className="cw-skeleton absolute inset-0" />}
+          <img
+            src={gridSrc}
+            alt=""
+            className={`cw-img-fade absolute inset-0 h-full w-full object-cover ${imgLoaded ? 'is-loaded' : ''}`}
+            loading="lazy"
+            onLoad={() => setImgLoaded(true)}
+            onError={() => setImgFailed(true)}
+          />
+        </>
       ) : (
         <>
           <div
@@ -457,8 +462,14 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                 </div>
 
                 {loading ? (
-                  <div className="flex justify-center py-8">
-                    <LoadingSpinner />
+                  <div className="grid grid-cols-3 gap-2">
+                    {Array.from({ length: 9 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="cw-skeleton rounded-lg border border-[#2A2A2A]"
+                        style={{ aspectRatio: '16/9' }}
+                      />
+                    ))}
                   </div>
                 ) : screenshots.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#2A2A2A] py-12">

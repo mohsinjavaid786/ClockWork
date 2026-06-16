@@ -5,7 +5,6 @@ import { X, MoreHorizontal } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Screenshot } from '@/lib/types';
 import { ScreenshotModal } from '@/components/ScreenshotModal';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useTimezone } from '@/context/timezone-context';
 
 const TIME_OPTS: Intl.DateTimeFormatOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
@@ -52,6 +51,7 @@ function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) 
   const pct = shot.activityPercent;
   const color = actColor(pct);
   const [imgFailed, setImgFailed] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const src = !imgFailed ? shot.thumbnailUrl : undefined;
 
   return (
@@ -63,13 +63,17 @@ function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) 
       {/* Real thumbnail when available, otherwise a skeleton */}
       <div style={{ aspectRatio: '16/9', position: 'relative' }}>
         {src ? (
-          <img
-            src={src}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="lazy"
-            onError={() => setImgFailed(true)}
-          />
+          <>
+            {!imgLoaded && <div className="cw-skeleton absolute inset-0" />}
+            <img
+              src={src}
+              alt=""
+              className={`cw-img-fade absolute inset-0 h-full w-full object-cover ${imgLoaded ? 'is-loaded' : ''}`}
+              loading="lazy"
+              onLoad={() => setImgLoaded(true)}
+              onError={() => setImgFailed(true)}
+            />
+          </>
         ) : (
           <>
             <div className="absolute inset-0 opacity-[0.04]" style={{
@@ -240,7 +244,18 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
             {/* Sessions */}
             <div className="flex flex-col gap-4 p-5">
               {loading ? (
-                <div className="flex justify-center py-12"><LoadingSpinner /></div>
+                <div className="flex flex-col gap-4">
+                  {Array.from({ length: 2 }).map((_, s) => (
+                    <div key={s} className="flex flex-col gap-3">
+                      <div className="cw-skeleton h-5 w-40 rounded" />
+                      <div className="flex gap-2">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <div key={i} className="cw-skeleton rounded border border-[#2A2A2A]" style={{ width: 120, aspectRatio: '16/9' }} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : entries.length === 0 && orphanShots.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <p className="text-sm text-[#444]">No sessions recorded for this day</p>

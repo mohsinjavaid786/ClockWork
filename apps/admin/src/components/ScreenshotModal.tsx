@@ -27,10 +27,15 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
     [50, 90, 55, 75, 40],
   ][(seed % 3)]!;
 
-  // Show the full image; while it loads, the thumbnail (if any) stands in, and on
-  // error we drop to the skeleton rather than a broken-image icon. Reset per shot.
+  // Show the full image; while it loads, the thumbnail (if any) stands in behind a
+  // shimmer, and on error we drop to the skeleton rather than a broken-image icon.
+  // Reset per shot.
   const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [shot.id]);
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+    setLoaded(false);
+  }, [shot.id]);
 
   if (shot.signedUrl && !failed) {
     return (
@@ -43,10 +48,12 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
             className="absolute inset-0 h-full w-full object-contain blur-sm scale-105"
           />
         )}
+        {!loaded && <div className="cw-skeleton absolute inset-0" style={{ opacity: shot.thumbnailUrl ? 0.5 : 1 }} />}
         <img
           src={shot.signedUrl}
           alt={`Screen ${shot.screenNumber}`}
-          className="absolute inset-0 h-full w-full object-contain"
+          className={`cw-img-fade absolute inset-0 h-full w-full object-contain ${loaded ? 'is-loaded' : ''}`}
+          onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}
         />
       </div>
@@ -85,6 +92,50 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
         }} />
       )}
     </div>
+  );
+}
+
+// One thumbnail in the modal's bottom filmstrip. Real thumbnail with a shimmer
+// skeleton behind it while it loads (or a static skeleton if none exists).
+function FilmstripThumb({ shot, active, onClick }: { shot: Screenshot; active: boolean; onClick: () => void }) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const src = !failed ? shot.thumbnailUrl : undefined;
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative flex-shrink-0 overflow-hidden rounded border transition-colors"
+      style={{
+        width: 48,
+        height: 30,
+        background: '#0d0d1f',
+        borderColor: active ? '#fff' : '#2A2A2A',
+        opacity: active ? 1 : 0.55,
+      }}
+    >
+      {src ? (
+        <>
+          {!loaded && <div className="cw-skeleton absolute inset-0" />}
+          <img
+            src={src}
+            alt=""
+            loading="lazy"
+            className={`cw-img-fade absolute inset-0 h-full w-full object-cover ${loaded ? 'is-loaded' : ''}`}
+            onLoad={() => setLoaded(true)}
+            onError={() => setFailed(true)}
+          />
+        </>
+      ) : (
+        <div
+          className="h-full w-full opacity-20"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 10px)',
+          }}
+        />
+      )}
+    </button>
   );
 }
 
@@ -261,21 +312,12 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
             {screenshots.slice(Math.max(0, index - 2), index + 4).map((s, i) => {
               const realIdx = Math.max(0, index - 2) + i;
               return (
-                <button
+                <FilmstripThumb
                   key={s.id}
+                  shot={s}
+                  active={realIdx === index}
                   onClick={() => onNav(realIdx)}
-                  className="flex-shrink-0 overflow-hidden rounded border transition-colors"
-                  style={{
-                    width: 48, height: 30,
-                    background: '#0d0d1f',
-                    borderColor: realIdx === index ? '#fff' : '#2A2A2A',
-                    opacity: realIdx === index ? 1 : 0.5,
-                  }}
-                >
-                  <div className="h-full w-full opacity-20" style={{
-                    backgroundImage: 'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 10px)',
-                  }} />
-                </button>
+                />
               );
             })}
           </div>
