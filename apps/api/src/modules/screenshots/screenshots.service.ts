@@ -155,11 +155,20 @@ export class ScreenshotsService {
   // Generate + store thumbnails for existing screenshots that don't have one
   // (captured by older desktop builds). Processed in bounded batches so the
   // request can't time out; returns how many were done and how many remain.
-  async backfillThumbnails(limit = 25) {
-    const { data: rows, error } = await this.supabase.client
+  // Optional filters let a caller (e.g. the drawer) prioritise one entry's window.
+  async backfillThumbnails(
+    limit = 25,
+    filters?: { userId?: string; from?: string; to?: string },
+  ) {
+    let q = this.supabase.client
       .from('screenshots')
       .select('id, user_id, storage_path')
-      .is('thumbnail_path', null)
+      .is('thumbnail_path', null);
+    if (filters?.userId) q = q.eq('user_id', filters.userId);
+    if (filters?.from) q = q.gte('captured_at', filters.from);
+    if (filters?.to) q = q.lte('captured_at', filters.to);
+
+    const { data: rows, error } = await q
       .order('captured_at', { ascending: false })
       .limit(limit);
 
@@ -194,10 +203,14 @@ export class ScreenshotsService {
       }
     }
 
-    const { count } = await this.supabase.client
+    let cq = this.supabase.client
       .from('screenshots')
       .select('id', { count: 'exact', head: true })
       .is('thumbnail_path', null);
+    if (filters?.userId) cq = cq.eq('user_id', filters.userId);
+    if (filters?.from) cq = cq.gte('captured_at', filters.from);
+    if (filters?.to) cq = cq.lte('captured_at', filters.to);
+    const { count } = await cq;
 
     return { processed, remaining: count ?? 0 };
   }

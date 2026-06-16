@@ -64,8 +64,13 @@ export class ScreenshotsController {
   @Post('backfill-thumbnails')
   @Roles('admin')
   @ApiOperation({ summary: 'Generate thumbnails for older screenshots missing one (admin)' })
-  backfillThumbnails(@Query('limit') limit?: string) {
+  backfillThumbnails(
+    @Query('limit') limit?: string,
+    @Query('userId') userId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
     const n = limit ? Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100) : 25;
-    return this.screenshotsService.backfillThumbnails(n);
+    return this.screenshotsService.backfillThumbnails(n, { userId, from, to });
   }
 }
