@@ -97,21 +97,30 @@ function createWindow() {
   });
 }
 
-async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function apiRequest<T>(path: string, init: RequestInit = {}, timeoutMs = 20000): Promise<T> {
   const token = getToken();
-  const res = await fetch(`${API_BASE}/api/v1${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+  // Bound every request so a stalled network call can never hang the app (e.g.
+  // the Stop button waiting forever on a request that never resolves).
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${API_BASE}/api/v1${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init.headers ?? {}),
+      },
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+    }
+    return res.json() as Promise<T>;
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json() as Promise<T>;
 }
 
 function startScreenshotLoop() {
@@ -358,17 +367,36 @@ ipcMain.handle(IPC.TIMER_START, async (_e, { projectId, description }: { project
   return state;
 });
 
+// Best-effort: close the entry on the server, retrying transient failures. An
+// "already stopped"/"not found" response means there's nothing left to do.
+async function stopServerEntry(entryId: string, attempts = 3) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await apiRequest(`/time-entries/${entryId}/stop`, { method: 'POST', body: '{}' }, 10000);
+      return;
+    } catch (err) {
+      const msg = String((err as Error)?.message ?? '');
+      if (/not running|not found|HTTP 4/i.test(msg)) return; // already closed server-side
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1500));
+    }
+  }
+  console.error('Could not stop entry on server after retries:', entryId);
+}
+
 ipcMain.handle(IPC.TIMER_STOP, async () => {
   const state = getTimerState();
-  if (!state.running || !state.entryId) return { running: false };
 
-  await apiRequest(`/time-entries/${state.entryId}/stop`, { method: 'POST', body: '{}' });
-
+  // Stop locally first and return immediately, so the button never hangs on the
+  // network. The server stop runs in the background (with retries); on the next
+  // launch reconcileTimer confirms against the server regardless.
   clearTimerState();
   stopScreenshotLoop();
   setActivityPaused(false);
-
   if (mainWindow) updateTrayMenu(mainWindow, false);
+
+  if (state.running && state.entryId) {
+    void stopServerEntry(state.entryId);
+  }
 
   return { running: false };
 });
