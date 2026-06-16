@@ -1,0 +1,134 @@
+# Changelog
+
+All notable changes to Clockwork are documented here. The format is based on
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Each tagged desktop release (`vX.Y.Z`) publishes installers to GitHub Releases
+with the matching section below as its notes. Portal (Vercel) and API (Railway)
+changes deploy continuously; changes not yet bundled into a desktop release are
+listed under **[Unreleased]**.
+
+## [Unreleased]
+
+### Added
+- **Admin force-stop for stuck trackers** — a *Stop tracker* button in the
+  Timesheets detail drawer closes any running/paused entry server-side
+  (`POST /time-entries/:id/admin-stop`), for overriding a tracker left open by a
+  crashed client.
+- **Server-side screenshot thumbnails** — the API now generates a small JPEG
+  thumbnail with `sharp` at upload time whenever the desktop doesn't supply one,
+  so grids always have a lightweight image regardless of which build captured the
+  screenshot.
+- **Thumbnail backfill** — admin endpoint and a *Generate thumbnails* action in
+  the drawer create thumbnails for older screenshots that don't have one yet.
+- **Real filmstrip thumbnails + shimmer skeletons** — the screenshot modal's
+  filmstrip now shows real thumbnails, and drawers/tiles/the full image display a
+  shimmer skeleton while loading and fade in once decoded.
+
+### Fixed
+- **Screenshots not loading** — grids now load only the small thumbnail (never
+  the multi-MB full-resolution PNG) and fall back to a skeleton on a missing or
+  failed image instead of a broken-image icon.
+- **API healthcheck** — the Docker healthcheck now hits the public `/health`
+  endpoint; it previously hit `/config`, which became auth-protected and returned
+  401 (marking the container unhealthy).
+
+## [1.1.9] - 2026-06-16
+
+### Fixed
+- **Start tracking works after a lost session** — the desktop now reconciles its
+  timer against the server on launch and re-adopts any still-open entry, instead
+  of failing with a silent 409 when the server already had an open entry the
+  client didn't know about.
+
+### Added
+- `GET /time-entries/current` — returns the caller's open (running/paused) entry,
+  enabling the client/server reconciliation above.
+
+## [1.1.8] - 2026-06-15
+
+### Fixed
+- **Fresh login required on install/update** — the persisted session lives in
+  `userData` (which survives deleting the app on macOS), so updated/reinstalled
+  builds were silently signing the user back in, often with an expired token. The
+  session is now version-stamped and the token is validated on startup; a stale
+  token is dropped and the app falls back to the login screen.
+- **Tray tracking dot** — the green "tracking" indicator renders correctly now
+  (`createFromBitmap` for the raw pixel buffer; `createFromBuffer` produced an
+  empty icon).
+
+## [1.1.7] - 2026-06-15
+
+### Added
+- **Timezone switcher** for viewing entries (My Time / UTC / employee's time).
+- **Screenshot thumbnails** for fast grid loading.
+- **Toast notifications** for success/error across the portal.
+- Invite form gains an optional **temporary password** and a **timezone** field.
+
+### Fixed
+- Desktop resumes an open session on relaunch (timer + screenshot capture), shows
+  a blinking tray indicator while tracking, and fixes the macOS title overlap.
+- Screenshot modal's per-minute table scrolls internally instead of growing the
+  modal.
+- Admins are excluded from the Work Diary member picker.
+
+## [1.1.6] - 2026-06-15
+
+### Added
+- **Email (Resend)** — invite and password-reset emails; invites link to the
+  latest macOS/Windows installers.
+- **Password set/reset pages** and email-based invite flow in the portal.
+- **Team management** — delete an employee (with cascade warning), signup status
+  (pending/accepted), in-portal installer downloads, and separate
+  Employees/Admins tabs.
+- Installers are hosted in a public Supabase bucket for direct download links.
+
+### Fixed / Security
+- **Role-based access** — the portal and dashboard APIs are now restricted to
+  admins (closing direct/Postman access by non-admins).
+
+## [1.1.5] - 2026-06-14
+
+### Changed
+- Desktop resolves its API URL dynamically (never hardcoded), and debug
+  screenshot logging was removed.
+
+## [1.1.4] - 2026-06-14
+
+### Fixed
+- Desktop refreshes the screenshot interval on every timer start, so an admin's
+  interval change takes effect without the employee signing out.
+
+## [1.1.3] - 2026-06-14
+
+### Fixed
+- Desktop uploads screenshots to the production API instead of localhost.
+
+## [1.1.2] - 2026-06-14
+
+### Fixed
+- Desktop no longer uses the macOS keychain (which prompted on every launch for
+  an un-notarized app); the session is persisted to disk instead.
+
+## [1.1.1] - 2026-06-14
+
+### Fixed
+- Desktop exits properly on Quit, reaches the production API, and hardens the
+  auto-updater.
+- Packaged app renders correctly (relative asset paths under `file://`).
+- CI pins pnpm to 11.4.0 so Vercel reads the lockfile correctly.
+
+## [1.1.0] - 2026-06-14
+
+Initial production release of the rebuilt Clockwork.
+
+### Added
+- **Desktop tracker** — pause/resume, real keystroke/mouse/active-window capture
+  with per-minute detail, app/tray icons, and an ad-hoc-signed macOS build.
+- **Admin portal** — live Work Diary and screenshots wired to per-account data,
+  Timesheet entry detail with screenshots and paused time, branding/favicon.
+- **API** — pause/resume endpoints, screenshot activity detail, and corrected
+  RLS policies (admin-only user management, auth isolated from the service-role
+  client).
+- Packaging fixes so the release build bundles all runtime deps.
