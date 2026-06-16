@@ -11,6 +11,15 @@ listed under **[Unreleased]**.
 
 ## [Unreleased]
 
+## [1.1.11] - 2026-06-16
+
+### Fixed
+- **Stop button hang** — the desktop now stops tracking locally and updates the
+  UI immediately, then closes the entry on the server in the background (bounded
+  by a request timeout, with retries). Previously a stalled stop request had no
+  timeout, so the button could hang indefinitely and a force-quit left the entry
+  running on relaunch. All API requests from the desktop are now time-bounded.
+
 ## [1.1.10] - 2026-06-16
 
 ### Added
