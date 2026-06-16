@@ -13,9 +13,30 @@ interface EntryRow {
   project: { name: string } | null;
 }
 
+interface OpenEntry {
+  started_at: string;
+  status: string;
+  paused_seconds: number | null;
+  pauses: Array<{ pausedAt?: string; resumedAt?: string | null }> | null;
+}
+
 @Injectable()
 export class ReportsService {
   constructor(private readonly supabase: SupabaseService) {}
+
+  // Tracked seconds for a still-open entry, computed live (mirrors the stop()
+  // calculation): elapsed since start minus already-closed pause intervals. A
+  // paused entry freezes at the moment it was paused so its value stops growing.
+  private liveSeconds(e: OpenEntry, nowMs: number): number {
+    const start = new Date(e.started_at).getTime();
+    const closedPaused = (e.paused_seconds as number) ?? 0;
+    let endRef = nowMs;
+    if (e.status === 'paused') {
+      const last = (e.pauses ?? [])[(e.pauses ?? []).length - 1];
+      if (last?.pausedAt && !last.resumedAt) endRef = new Date(last.pausedAt).getTime();
+    }
+    return Math.max(0, Math.floor((endRef - start) / 1000) - closedPaused);
+  }
 
   private async fetchEntries(query: ReportQueryDto): Promise<EntryRow[]> {
     let q = this.supabase.client
@@ -111,7 +132,7 @@ tr:nth-child(even) td { background: #f9f9f9; }
     const prevWeekStart = new Date(weekStart);
     prevWeekStart.setDate(prevWeekStart.getDate() - 7);
 
-    const [todayEntries, screenshotsToday, activeNow, weekEntries, prevWeekEntries] =
+    const [todayEntries, screenshotsToday, activeNow, weekEntries, prevWeekEntries, openEntries] =
       await Promise.all([
         this.supabase.client
           .from('time_entries')
@@ -137,13 +158,19 @@ tr:nth-child(even) td { background: #f9f9f9; }
           .eq('status', 'stopped')
           .gte('started_at', prevWeekStart.toISOString())
           .lt('started_at', weekStart.toISOString()),
+        // Still-open entries so today/this-week reflect time as it accrues, not
+        // only after the tracker stops.
+        this.supabase.client
+          .from('time_entries')
+          .select('started_at, status, paused_seconds, pauses')
+          .in('status', ['running', 'paused']),
       ]);
 
-    const todaySeconds = (todayEntries.data ?? []).reduce(
+    let todaySeconds = (todayEntries.data ?? []).reduce(
       (s, e) => s + ((e.duration_seconds as number) ?? 0),
       0,
     );
-    const weekSeconds = (weekEntries.data ?? []).reduce(
+    let weekSeconds = (weekEntries.data ?? []).reduce(
       (s, e) => s + ((e.duration_seconds as number) ?? 0),
       0,
     );
@@ -151,6 +178,16 @@ tr:nth-child(even) td { background: #f9f9f9; }
       (s, e) => s + ((e.duration_seconds as number) ?? 0),
       0,
     );
+
+    // Fold in live time from open entries, attributed to the day/week they began
+    // (matching how stopped entries are bucketed by started_at).
+    const nowMs = now.getTime();
+    for (const e of (openEntries.data ?? []) as unknown as OpenEntry[]) {
+      const secs = this.liveSeconds(e, nowMs);
+      const startedMs = new Date(e.started_at).getTime();
+      if (startedMs >= todayStart.getTime()) todaySeconds += secs;
+      if (startedMs >= weekStart.getTime()) weekSeconds += secs;
+    }
 
     const weeklyChange =
       prevWeekSeconds > 0
@@ -169,6 +206,14 @@ tr:nth-child(even) td { background: #f9f9f9; }
   async getWeeklyChart(): Promise<Array<{ day: string; date: string; hours: number }>> {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const now = new Date();
+    const nowMs = now.getTime();
+
+    // Open entries once, so each day's bar includes time accruing right now.
+    const { data: openData } = await this.supabase.client
+      .from('time_entries')
+      .select('started_at, status, paused_seconds, pauses')
+      .in('status', ['running', 'paused']);
+    const openEntries = (openData ?? []) as unknown as OpenEntry[];
 
     const result = await Promise.all(
       Array.from({ length: 7 }, async (_, i) => {
@@ -186,10 +231,17 @@ tr:nth-child(even) td { background: #f9f9f9; }
           .gte('started_at', start.toISOString())
           .lte('started_at', end.toISOString());
 
-        const seconds = (data ?? []).reduce(
+        let seconds = (data ?? []).reduce(
           (s, e) => s + ((e.duration_seconds as number) ?? 0),
           0,
         );
+
+        for (const e of openEntries) {
+          const startedMs = new Date(e.started_at).getTime();
+          if (startedMs >= start.getTime() && startedMs <= end.getTime()) {
+            seconds += this.liveSeconds(e, nowMs);
+          }
+        }
 
         return {
           day: days[d.getDay()]!,
