@@ -152,6 +152,43 @@ async function refreshConfig() {
   }
 }
 
+interface ServerEntry {
+  id: string;
+  started_at: string;
+  status: 'running' | 'paused';
+  project_id?: string | null;
+  description?: string | null;
+}
+
+// Reconcile local timer state with the server's open entry. The server is the
+// source of truth: an entry stays open there until explicitly stopped, so after
+// a reinstall/relogin (or any time local session.json was cleared) the desktop
+// must re-adopt that open entry rather than assume nothing is running — otherwise
+// the client and server disagree and starting a new timer 409s forever. If the
+// server has no open entry, any stale local timer state is cleared.
+async function reconcileTimer(): Promise<ReturnType<typeof getTimerState>> {
+  try {
+    const { entry } = await apiRequest<{ entry: ServerEntry | null }>('/time-entries/current');
+    if (entry && entry.id) {
+      const state = {
+        running: true,
+        paused: entry.status === 'paused',
+        entryId: entry.id,
+        startedAt: entry.started_at,
+        projectId: entry.project_id ?? undefined,
+        description: entry.description ?? undefined,
+      };
+      saveTimerState(state);
+      return state;
+    }
+    clearTimerState();
+    return { running: false };
+  } catch {
+    // offline or transient error — trust whatever is stored locally
+    return getTimerState();
+  }
+}
+
 app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
     const allowed = ['media', 'display-capture'];
@@ -179,9 +216,9 @@ app.whenReady().then(async () => {
 
   // Resume an open session that survived a quit/auto-update restart, so the
   // timer keeps running AND screenshots keep being captured (the entry stays the
-  // same one on the server). Without this, capture silently stopped after a
-  // restart even though the timer kept showing as running.
-  const resumed = getTimerState();
+  // same one on the server). Reconcile against the server (not just local state)
+  // so a client that lost its local session still re-adopts the open entry.
+  const resumed = await reconcileTimer();
   if (resumed.running) {
     if (mainWindow) updateTrayMenu(mainWindow, true);
     if (resumed.paused) {
@@ -251,23 +288,32 @@ ipcMain.handle(IPC.AUTH_GET_USER, async () => {
 });
 
 ipcMain.handle(IPC.TIMER_START, async (_e, { projectId, description }: { projectId?: string; description?: string }) => {
-  const entry = await apiRequest<{ id: string; started_at: string }>('/time-entries/start', {
-    method: 'POST',
-    body: JSON.stringify({ projectId, description }),
-  });
-
-  const state = {
-    running: true,
-    entryId: entry.id,
-    startedAt: entry.started_at,
-    projectId,
-    description,
-  };
-  saveTimerState(state);
+  let state;
+  try {
+    const entry = await apiRequest<{ id: string; started_at: string }>('/time-entries/start', {
+      method: 'POST',
+      body: JSON.stringify({ projectId, description }),
+    });
+    state = {
+      running: true,
+      entryId: entry.id,
+      startedAt: entry.started_at,
+      projectId,
+      description,
+    };
+    saveTimerState(state);
+  } catch (err) {
+    // Most likely a 409: the server already has an open entry this client didn't
+    // know about (left over from a prior session/build). Adopt it so the user can
+    // see and stop it, instead of being permanently unable to start.
+    const recovered = await reconcileTimer();
+    if (!recovered.running) throw err;
+    state = recovered;
+  }
 
   if (mainWindow) updateTrayMenu(mainWindow, true);
   await refreshConfig(); // honour the latest admin interval for this session
-  startScreenshotLoop();
+  if (!state.paused) startScreenshotLoop();
 
   return state;
 });

@@ -23,6 +23,7 @@ export function TrackerScreen({ user, onLogout }: Props) {
   const [description, setDescription] = useState('');
   const [elapsed, setElapsed] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [version, setVersion] = useState('');
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -81,6 +82,7 @@ export function TrackerScreen({ user, onLogout }: Props) {
 
   async function handleStart() {
     setLoading(true);
+    setError('');
     try {
       const s = await window.clockwork.timer.start(
         selectedProject || undefined,
@@ -89,7 +91,7 @@ export function TrackerScreen({ user, onLogout }: Props) {
       setStatus(s);
       if (s.startedAt) startTick(s.startedAt);
     } catch (err) {
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'Could not start the timer');
     } finally {
       setLoading(false);
     }
@@ -262,6 +264,23 @@ export function TrackerScreen({ user, onLogout }: Props) {
               style={{ fontSize: 12 }}
             />
           </div>
+        )}
+
+        {error && (
+          <p
+            style={{
+              margin: 0,
+              padding: '8px 10px',
+              borderRadius: 8,
+              fontSize: 11,
+              color: 'var(--red)',
+              background: '#1c0a0a',
+              border: '1px solid #3f1515',
+              textAlign: 'center',
+            }}
+          >
+            {error}
+          </p>
         )}
 
         {!status.running ? (
