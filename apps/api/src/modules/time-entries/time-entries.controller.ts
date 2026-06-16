@@ -18,6 +18,12 @@ export class TimeEntriesController {
     return this.timeEntriesService.start(user.id, dto);
   }
 
+  @Get('current')
+  @ApiOperation({ summary: "Get the current user's open timer (running or paused), if any" })
+  current(@CurrentUser() user: AuthUser) {
+    return this.timeEntriesService.current(user.id);
+  }
+
   @Post(':id/stop')
   @ApiOperation({ summary: 'Stop a running timer' })
   stop(

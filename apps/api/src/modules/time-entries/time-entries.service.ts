@@ -37,6 +37,21 @@ export class TimeEntriesService {
     return data;
   }
 
+  // The caller's currently open entry (running or paused), or null. Lets the
+  // desktop app reconcile its local state against server truth on startup — so a
+  // reinstalled/updated client that lost its local session can re-adopt an entry
+  // that's still open on the server instead of being unable to start a new one.
+  async current(userId: string) {
+    const { data } = await this.supabase.client
+      .from('time_entries')
+      .select('id, started_at, status, project_id, description, paused_seconds')
+      .eq('user_id', userId)
+      .in('status', ['running', 'paused'])
+      .maybeSingle();
+
+    return { entry: data ?? null };
+  }
+
   async pause(userId: string, entryId: string) {
     const { data: entry, error: fetchError } = await this.supabase.client
       .from('time_entries')
