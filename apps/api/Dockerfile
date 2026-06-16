@@ -46,7 +46,8 @@ COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
 EXPOSE 3001
 
+# Use the public /health endpoint — /config now requires auth and would 401.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:3001/api/v1/config || exit 1
+  CMD wget -qO- http://localhost:3001/api/v1/health || exit 1
 
 CMD ["node", "apps/api/dist/main.js"]
