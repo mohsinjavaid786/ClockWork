@@ -159,6 +159,56 @@ export class TimeEntriesService {
     return data;
   }
 
+  // Admin override: stop any user's entry (not just the caller's). Used when a
+  // tracker is stuck open — e.g. a desktop client died without stopping. Mirrors
+  // stop() but resolves the entry by id alone.
+  async adminStop(entryId: string) {
+    const { data: entry, error: fetchError } = await this.supabase.client
+      .from('time_entries')
+      .select('id, started_at, status, pauses, paused_seconds')
+      .eq('id', entryId)
+      .single();
+
+    if (fetchError || !entry) throw new NotFoundException('Time entry not found');
+    if (entry.status === 'stopped') return entry;
+
+    const endedAt = new Date().toISOString();
+    const startedAt = new Date(entry.started_at as string);
+
+    const pauses = ((entry.pauses as Array<Record<string, unknown>>) ?? []).slice();
+    let pausedSeconds = (entry.paused_seconds as number) ?? 0;
+    if (entry.status === 'paused') {
+      const last = pauses[pauses.length - 1];
+      if (last && !last['resumedAt']) {
+        last['resumedAt'] = endedAt;
+        pausedSeconds += Math.floor(
+          (new Date(endedAt).getTime() - new Date(last['pausedAt'] as string).getTime()) / 1000,
+        );
+      }
+    }
+
+    const durationSeconds = Math.max(
+      0,
+      Math.floor((new Date(endedAt).getTime() - startedAt.getTime()) / 1000) - pausedSeconds,
+    );
+
+    const { data, error } = await this.supabase.client
+      .from('time_entries')
+      .update({
+        ended_at: endedAt,
+        duration_seconds: durationSeconds,
+        paused_seconds: pausedSeconds,
+        pauses,
+        status: 'stopped',
+      })
+      .eq('id', entryId)
+      .select()
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
+
   async list(query: ListEntriesQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;

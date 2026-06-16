@@ -60,6 +60,13 @@ export class TimeEntriesController {
     return this.timeEntriesService.getActive();
   }
 
+  @Post(':id/admin-stop')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Force-stop any open entry (admin override for stuck trackers)' })
+  adminStop(@Param('id') id: string) {
+    return this.timeEntriesService.adminStop(id);
+  }
+
   @Delete(':id')
   @Roles('admin')
   @ApiOperation({ summary: 'Delete a time entry (admin)' })
