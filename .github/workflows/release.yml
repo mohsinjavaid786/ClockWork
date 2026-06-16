@@ -118,12 +118,60 @@ jobs:
       contents: write
 
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
       - name: List release files
         run: find artifacts -type f | sort
+
+      # Pull the curated notes for this version out of CHANGELOG.md and prepend
+      # them to the standing install instructions. This becomes the release body,
+      # so GitHub Releases mirror the maintained changelog.
+      - name: Assemble release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${GITHUB_REF_NAME#v}"
+          notes=$(awk -v ver="$VER" '
+            /^## \[/ { if (f) exit; if (index($0, "[" ver "]") > 0) { f=1; next } }
+            f { print }
+          ' CHANGELOG.md)
+          {
+            echo "## What's new in Clockwork ${GITHUB_REF_NAME}"
+            echo
+            if [ -n "$notes" ]; then echo "$notes"; else echo "_See the commit history for changes in this release._"; fi
+            cat <<'EOF'
+
+          ### Download
+
+          | Platform | File | Notes |
+          |---|---|---|
+          | **macOS** | `Clockwork-*.dmg` | Apple Silicon + Intel universal |
+          | **Windows** | `Clockwork Setup *.exe` | Windows 10/11 x64 |
+
+          ### macOS — first-time installation
+          1. Download `Clockwork-*.dmg`
+          2. Open the `.dmg` and drag **Clockwork** to Applications
+          3. macOS will say *"Apple could not verify Clockwork is free of malware"* (the app isn't notarized). **First launch only:**
+             - **System Settings → Privacy & Security** → scroll down → **Open Anyway** → authenticate, **or**
+             - Terminal: `xattr -dr com.apple.quarantine /Applications/Clockwork.app`
+             *(Safe to proceed — the app is ad-hoc signed but not notarized through a paid Apple Developer account.)*
+
+          ### Windows — installation
+          1. Download `Clockwork Setup *.exe`
+          2. Run the installer
+          3. If SmartScreen appears → **More info** → **Run anyway**
+
+          ---
+          > **Auto-update:** Clockwork checks for updates automatically on every launch.
+          > **Full changelog:** see [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md).
+          EOF
+          } > release-notes.md
+          echo "----- release-notes.md -----"
+          cat release-notes.md
 
       # Publish installers to the public Supabase bucket under stable "latest"
       # names so invite emails can link to them directly (repo stays private).
@@ -161,32 +209,9 @@ jobs:
           name: Clockwork ${{ github.ref_name }}
           draft: false
           prerelease: false
+          # Append GitHub's auto-generated commit/PR list below the curated notes.
           generate_release_notes: true
+          body_path: release-notes.md
           files: |
             artifacts/macos/*
             artifacts/windows/*
-          body: |
-            ## Clockwork ${{ github.ref_name }}
-
-            ### Download
-
-            | Platform | File | Notes |
-            |---|---|---|
-            | **macOS** | `Clockwork-*.dmg` | Apple Silicon + Intel universal |
-            | **Windows** | `Clockwork Setup *.exe` | Windows 10/11 x64 |
-
-            ### macOS — first-time installation
-            1. Download `Clockwork-*.dmg`
-            2. Open the `.dmg` and drag **Clockwork** to Applications
-            3. macOS will say *"Apple could not verify Clockwork is free of malware"* (the app isn't notarized). **First launch only:**
-               - **System Settings → Privacy & Security** → scroll down → **Open Anyway** → authenticate, **or**
-               - Terminal: `xattr -dr com.apple.quarantine /Applications/Clockwork.app`
-               *(Safe to proceed — the app is ad-hoc signed but not notarized through a paid Apple Developer account.)*
-
-            ### Windows — installation
-            1. Download `Clockwork Setup *.exe`
-            2. Run the installer
-            3. If SmartScreen appears → **More info** → **Run anyway**
-
-            ---
-            > **Auto-update:** Clockwork checks for updates automatically on every launch.
