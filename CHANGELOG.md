@@ -11,11 +11,19 @@ listed under **[Unreleased]**.
 
 ## [Unreleased]
 
+## [1.1.10] - 2026-06-16
+
 ### Added
-- **Admin force-stop for stuck trackers** — a *Stop tracker* button in the
-  Timesheets detail drawer closes any running/paused entry server-side
-  (`POST /time-entries/:id/admin-stop`), for overriding a tracker left open by a
-  crashed client.
+- **Admin can stop an employee's tracker remotely** — the *Stop tracker* button
+  in the Timesheets drawer closes the entry server-side
+  (`POST /time-entries/:id/admin-stop`); the employee's desktop app detects this
+  within ~30s, stops tracking, and shows *"Your tracker was stopped by an
+  administrator."* (the employee can start a new session anytime).
+- **Live logged hours** — the dashboard's Today/This-week totals and the weekly
+  chart now include time from currently-running trackers (updated as it accrues,
+  not only after stop); the dashboard auto-refreshes every minute.
+- **Dashboard refresh button**, and the *Tracking now* entries are now clickable
+  and open the member's detail page.
 - **Automatic screenshot thumbnails** — the API generates a small JPEG thumbnail
   with `sharp` at upload time, and the drawer auto-backfills any older
   screenshots missing one (scoped to the entry's window) on open — no manual
