@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { RefreshCw } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -42,12 +44,15 @@ interface ActiveMember {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [chart, setChart] = useState<ChartPoint[]>([]);
   const [active, setActive] = useState<ActiveMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  function load(isRefresh = false) {
+    if (isRefresh) setRefreshing(true);
     Promise.all([
       api.reports.stats(),
       api.reports.weeklyChart(),
@@ -59,7 +64,18 @@ export default function DashboardPage() {
         setActive(a as ActiveMember[]);
       })
       .catch(console.error)
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setLoading(false);
+        setRefreshing(false);
+      });
+  }
+
+  useEffect(() => {
+    load();
+    // Refresh every minute so logged hours (incl. time from running trackers)
+    // and the "tracking now" list stay current without a manual refresh.
+    const id = setInterval(() => load(), 60_000);
+    return () => clearInterval(id);
   }, []);
 
   if (loading) {
@@ -75,6 +91,16 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Overview of team activity and time tracking"
+        action={
+          <button
+            onClick={() => load(true)}
+            disabled={refreshing}
+            className="flex items-center gap-2 rounded-md border border-[#2A2A2A] bg-[#111111] px-3 py-2 text-xs font-medium text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white disabled:opacity-50 transition-colors"
+          >
+            <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        }
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -143,9 +169,14 @@ export default function DashboardPage() {
           {active.length === 0 ? (
             <p className="text-sm text-[#444]">No one is tracking right now.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {active.map((m) => (
-                <div key={m.userId} className="flex items-start gap-3">
+                <button
+                  key={m.userId}
+                  onClick={() => router.push(`/team/${m.userId}`)}
+                  className="flex w-full items-start gap-3 rounded-md p-2 text-left transition-colors hover:bg-[#1A1A1A]"
+                  title={`View ${m.name}'s details`}
+                >
                   <div className="relative mt-0.5">
                     <Avatar name={m.name} size="sm" />
                     <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#22c55e] ring-2 ring-[#111111]" />
@@ -157,7 +188,7 @@ export default function DashboardPage() {
                     </p>
                     <p className="text-[11px] text-[#444]">{formatDuration(m.elapsedSeconds)}</p>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
