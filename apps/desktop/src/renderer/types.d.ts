@@ -39,6 +39,7 @@ interface Window {
       pause: () => Promise<TimerStatus>;
       resume: () => Promise<TimerStatus>;
       getStatus: () => Promise<TimerStatus>;
+      onRemoteStop: (cb: () => void) => () => void;
     };
     activity: {
       get: () => Promise<number>;

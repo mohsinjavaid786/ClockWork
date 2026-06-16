@@ -24,6 +24,7 @@ export function TrackerScreen({ user, onLogout }: Props) {
   const [elapsed, setElapsed] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [version, setVersion] = useState('');
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -80,9 +81,22 @@ export function TrackerScreen({ user, onLogout }: Props) {
     return () => stopTick();
   }, [startTick, stopTick]);
 
+  // The admin can stop a tracker from the portal; the main process detects it and
+  // notifies us. Reset to the stopped state and let the employee know.
+  useEffect(() => {
+    const unsubscribe = window.clockwork.timer.onRemoteStop(() => {
+      stopTick();
+      setStatus({ running: false });
+      setError('');
+      setNotice('Your tracker was stopped by an administrator. You can start a new session whenever you’re ready.');
+    });
+    return unsubscribe;
+  }, [stopTick]);
+
   async function handleStart() {
     setLoading(true);
     setError('');
+    setNotice('');
     try {
       const s = await window.clockwork.timer.start(
         selectedProject || undefined,
@@ -180,6 +194,32 @@ export function TrackerScreen({ user, onLogout }: Props) {
             {user.name}
           </p>
         </div>
+
+        {notice && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 8,
+              padding: '10px 12px',
+              borderRadius: 8,
+              fontSize: 11,
+              lineHeight: 1.4,
+              color: '#eab308',
+              background: '#2e2305',
+              border: '1px solid #854d0e',
+            }}
+          >
+            <span style={{ flex: 1 }}>{notice}</span>
+            <button
+              onClick={() => setNotice('')}
+              style={{ background: 'none', color: '#eab308', fontSize: 13, lineHeight: 1, padding: 0 }}
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        )}
 
         <div
           style={{

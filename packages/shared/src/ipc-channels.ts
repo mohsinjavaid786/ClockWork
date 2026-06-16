@@ -8,6 +8,8 @@ export const IPC = {
   TIMER_PAUSE: 'timer:pause',
   TIMER_RESUME: 'timer:resume',
   TIMER_GET_STATUS: 'timer:get-status',
+  // Main → renderer push: the open entry was stopped server-side (admin override).
+  TIMER_REMOTE_STOP: 'timer:remote-stop',
   SCREENSHOT_CAPTURE: 'screenshot:capture',
   SCREENSHOT_UPLOAD: 'screenshot:upload',
   ACTIVITY_GET: 'activity:get',

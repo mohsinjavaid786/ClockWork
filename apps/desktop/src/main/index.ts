@@ -189,6 +189,41 @@ async function reconcileTimer(): Promise<ReturnType<typeof getTimerState>> {
   }
 }
 
+// While a timer is open locally, poll the server so an admin force-stop (or any
+// server-side close of this entry) is reflected here promptly: we stop tracking
+// and tell the renderer to show a notice. Returns early (no network) when idle.
+let sessionSyncInterval: ReturnType<typeof setInterval> | null = null;
+
+async function checkRemoteStop() {
+  const local = getTimerState();
+  if (!local.running || !local.entryId) return;
+  let entry: ServerEntry | null;
+  try {
+    ({ entry } = await apiRequest<{ entry: ServerEntry | null }>('/time-entries/current'));
+  } catch {
+    return; // network blip — try again next tick
+  }
+  // Our open entry is gone (or replaced) on the server → it was stopped remotely.
+  if (!entry || entry.id !== local.entryId) {
+    clearTimerState();
+    stopScreenshotLoop();
+    setActivityPaused(false);
+    if (mainWindow) {
+      updateTrayMenu(mainWindow, false);
+      mainWindow.webContents.send(IPC.TIMER_REMOTE_STOP);
+      if (!mainWindow.isVisible()) mainWindow.show();
+      mainWindow.focus();
+    }
+  }
+}
+
+function startSessionSync() {
+  if (sessionSyncInterval) return;
+  sessionSyncInterval = setInterval(() => {
+    checkRemoteStop().catch(() => {});
+  }, 30_000);
+}
+
 app.whenReady().then(async () => {
   session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
     const allowed = ['media', 'display-capture'];
@@ -209,6 +244,7 @@ app.whenReady().then(async () => {
   }
 
   startActivityTracking();
+  startSessionSync();
 
   // Wait for validation before deciding whether to resume — a stale token must
   // not resurrect a screenshot loop that will only ever 401.
@@ -247,6 +283,10 @@ app.on('before-quit', () => {
   isQuitting = true;
   stopScreenshotLoop();
   stopActivityTracking();
+  if (sessionSyncInterval) {
+    clearInterval(sessionSyncInterval);
+    sessionSyncInterval = null;
+  }
 });
 
 ipcMain.handle(IPC.AUTH_LOGIN, async (_e, { email, password }: { email: string; password: string }) => {

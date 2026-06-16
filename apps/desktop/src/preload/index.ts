@@ -30,6 +30,12 @@ contextBridge.exposeInMainWorld('clockwork', {
     pause: () => ipcRenderer.invoke(IPC.TIMER_PAUSE),
     resume: () => ipcRenderer.invoke(IPC.TIMER_RESUME),
     getStatus: (): Promise<TimerStatus> => ipcRenderer.invoke(IPC.TIMER_GET_STATUS),
+    // Subscribe to admin-initiated stops; returns an unsubscribe fn.
+    onRemoteStop: (cb: () => void) => {
+      const handler = () => cb();
+      ipcRenderer.on(IPC.TIMER_REMOTE_STOP, handler);
+      return () => ipcRenderer.removeListener(IPC.TIMER_REMOTE_STOP, handler);
+    },
   },
   activity: {
     get: () => ipcRenderer.invoke(IPC.ACTIVITY_GET),

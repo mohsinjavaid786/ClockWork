@@ -5,7 +5,10 @@ export declare const IPC: {
     readonly AUTH_GET_USER: "auth:get-user";
     readonly TIMER_START: "timer:start";
     readonly TIMER_STOP: "timer:stop";
+    readonly TIMER_PAUSE: "timer:pause";
+    readonly TIMER_RESUME: "timer:resume";
     readonly TIMER_GET_STATUS: "timer:get-status";
+    readonly TIMER_REMOTE_STOP: "timer:remote-stop";
     readonly SCREENSHOT_CAPTURE: "screenshot:capture";
     readonly SCREENSHOT_UPLOAD: "screenshot:upload";
     readonly ACTIVITY_GET: "activity:get";
