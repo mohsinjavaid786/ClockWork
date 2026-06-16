@@ -16,12 +16,14 @@ listed under **[Unreleased]**.
   Timesheets detail drawer closes any running/paused entry server-side
   (`POST /time-entries/:id/admin-stop`), for overriding a tracker left open by a
   crashed client.
-- **Server-side screenshot thumbnails** — the API now generates a small JPEG
-  thumbnail with `sharp` at upload time whenever the desktop doesn't supply one,
-  so grids always have a lightweight image regardless of which build captured the
-  screenshot.
-- **Thumbnail backfill** — admin endpoint and a *Generate thumbnails* action in
-  the drawer create thumbnails for older screenshots that don't have one yet.
+- **Automatic screenshot thumbnails** — the API generates a small JPEG thumbnail
+  with `sharp` at upload time, and the drawer auto-backfills any older
+  screenshots missing one (scoped to the entry's window) on open — no manual
+  step. Grids/filmstrips show only the lightweight thumbnail; the full-resolution
+  screenshot loads only when opened in the modal.
+- **Paginated, sortable screenshots** — the drawer lists 10 screenshots per page
+  with prev/next and a sort control (newest / oldest / most active / least
+  active), in a wider (920px) layout.
 - **Real filmstrip thumbnails + shimmer skeletons** — the screenshot modal's
   filmstrip now shows real thumbnails, and drawers/tiles/the full image display a
   shimmer skeleton while loading and fade in once decoded.
