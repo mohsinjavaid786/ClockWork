@@ -60,4 +60,12 @@ export class ScreenshotsController {
   getSignedUrl(@Param('id') id: string) {
     return this.screenshotsService.getSignedUrl(id);
   }
+
+  @Post('backfill-thumbnails')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Generate thumbnails for older screenshots missing one (admin)' })
+  backfillThumbnails(@Query('limit') limit?: string) {
+    const n = limit ? Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100) : 25;
+    return this.screenshotsService.backfillThumbnails(n);
+  }
 }
