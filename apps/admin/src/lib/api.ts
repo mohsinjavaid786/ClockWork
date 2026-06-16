@@ -62,7 +62,9 @@ function toScreenshot(s: RawScreenshot): Screenshot {
     minuteActivity: Array.isArray(s.minute_activity) ? s.minute_activity : [],
     user: s.user,
     signedUrl: s.signedUrl,
-    thumbnailUrl: s.thumbnailUrl ?? s.signedUrl,
+    // Only a real (small) thumbnail — never the full image — so grids never load
+    // multi-MB PNGs. Undefined → the tile renders a skeleton.
+    thumbnailUrl: s.thumbnailUrl ?? undefined,
   };
 }
 
@@ -119,6 +121,8 @@ export const api = {
       );
     },
     getActive: () => request<unknown[]>('/time-entries/active'),
+    adminStop: (id: string) =>
+      request(`/time-entries/${id}/admin-stop`, { method: 'POST', body: '{}' }),
     remove: (id: string) => request(`/time-entries/${id}`, { method: 'DELETE' }),
   },
 
@@ -134,6 +138,11 @@ export const api = {
       }>(`/screenshots${qs}`);
       return { ...res, data: (res.data ?? []).map(toScreenshot) };
     },
+    backfillThumbnails: (limit = 50) =>
+      request<{ processed: number; remaining: number }>(
+        `/screenshots/backfill-thumbnails?limit=${limit}`,
+        { method: 'POST', body: '{}' },
+      ),
   },
 
   reports: {

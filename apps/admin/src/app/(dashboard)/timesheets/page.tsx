@@ -27,14 +27,16 @@ export default function TimesheetsPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<TimeEntry | null>(null);
 
-  useEffect(() => {
+  function load() {
     setLoading(true);
     api.timeEntries
       .list({ page: String(page), limit: '25' })
       .then((d) => setResult(d as Paged))
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [page]);
+  }
+
+  useEffect(load, [page]);
 
   return (
     <>
@@ -151,7 +153,7 @@ export default function TimesheetsPage() {
         )}
       </div>
 
-      <EntryDetailPanel entry={selected} onClose={() => setSelected(null)} />
+      <EntryDetailPanel entry={selected} onClose={() => setSelected(null)} onChanged={load} />
     </>
   );
 }

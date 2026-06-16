@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X, ChevronLeft, ChevronRight, Keyboard, Mouse } from 'lucide-react';
 import type { Screenshot } from '@/lib/types';
 import { useTimezone } from '@/context/timezone-context';
@@ -27,13 +27,27 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
     [50, 90, 55, 75, 40],
   ][(seed % 3)]!;
 
-  if (shot.signedUrl) {
+  // Show the full image; while it loads, the thumbnail (if any) stands in, and on
+  // error we drop to the skeleton rather than a broken-image icon. Reset per shot.
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [shot.id]);
+
+  if (shot.signedUrl && !failed) {
     return (
       <div className="relative w-full overflow-hidden rounded-lg border border-[#2A2A2A] bg-black" style={{ aspectRatio: '16/9' }}>
+        {shot.thumbnailUrl && (
+          <img
+            src={shot.thumbnailUrl}
+            alt=""
+            aria-hidden
+            className="absolute inset-0 h-full w-full object-contain blur-sm scale-105"
+          />
+        )}
         <img
           src={shot.signedUrl}
           alt={`Screen ${shot.screenNumber}`}
           className="absolute inset-0 h-full w-full object-contain"
+          onError={() => setFailed(true)}
         />
       </div>
     );

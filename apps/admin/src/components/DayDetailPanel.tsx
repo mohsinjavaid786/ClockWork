@@ -51,6 +51,8 @@ function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) 
   const seed = shot.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
   const pct = shot.activityPercent;
   const color = actColor(pct);
+  const [imgFailed, setImgFailed] = useState(false);
+  const src = !imgFailed ? shot.thumbnailUrl : undefined;
 
   return (
     <button
@@ -60,12 +62,13 @@ function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) 
     >
       {/* Real thumbnail when available, otherwise a skeleton */}
       <div style={{ aspectRatio: '16/9', position: 'relative' }}>
-        {shot.thumbnailUrl ?? shot.signedUrl ? (
+        {src ? (
           <img
-            src={shot.thumbnailUrl ?? shot.signedUrl}
-            alt={`Screen ${shot.screenNumber}`}
+            src={src}
+            alt=""
             className="absolute inset-0 h-full w-full object-cover"
             loading="lazy"
+            onError={() => setImgFailed(true)}
           />
         ) : (
           <>

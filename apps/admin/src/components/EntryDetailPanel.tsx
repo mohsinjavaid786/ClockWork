@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, Keyboard, Mouse, Camera, Clock } from 'lucide-react';
+import { X, Keyboard, Mouse, Camera, Clock, Square, ImageDown } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Screenshot } from '@/lib/types';
 import { Avatar } from '@/components/Avatar';
@@ -9,6 +9,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ScreenshotModal } from '@/components/ScreenshotModal';
 import { useTimezone } from '@/context/timezone-context';
+import { useToast } from '@/context/toast-context';
 import { formatDuration } from '@/lib/utils';
 
 export interface TimeEntry {
@@ -26,6 +27,9 @@ export interface TimeEntry {
 interface Props {
   entry: TimeEntry | null;
   onClose: () => void;
+  // Called after the entry changes server-side (e.g. force-stopped) so the
+  // parent list can refresh.
+  onChanged?: () => void;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -49,6 +53,12 @@ function ScreenshotTile({ shot, onClick }: { shot: Screenshot; onClick: () => vo
   const pct = shot.activityPercent;
   const color = activityColor(pct);
   const seed = shot.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  // The grid only ever shows the small thumbnail — never the multi-MB full PNG
+  // (loading dozens of those at once fails). If no thumbnail exists yet, or it
+  // errors, fall through to the skeleton instead of a broken-image icon.
+  const gridSrc = !imgFailed ? shot.thumbnailUrl : undefined;
 
   // Deterministic "random" layout tweaks so tiles look different from each other
   const barWidths = [
@@ -66,13 +76,14 @@ function ScreenshotTile({ shot, onClick }: { shot: Screenshot; onClick: () => vo
       style={{ aspectRatio: '16/9' }}
     >
       {/* Lightweight thumbnail in the grid; the full image loads in the modal.
-          Falls through to a skeleton if neither is available. */}
-      {shot.thumbnailUrl ?? shot.signedUrl ? (
+          Falls through to a skeleton if it's missing or fails to load. */}
+      {gridSrc ? (
         <img
-          src={shot.thumbnailUrl ?? shot.signedUrl}
-          alt={`Screen ${shot.screenNumber} captured at ${fmtTime(shot.capturedAt)}`}
+          src={gridSrc}
+          alt=""
           className="absolute inset-0 h-full w-full object-cover"
           loading="lazy"
+          onError={() => setImgFailed(true)}
         />
       ) : (
         <>
@@ -194,29 +205,72 @@ function ActivityTimeline({ screenshots }: { screenshots: Screenshot[] }) {
 
 // ── Main panel ────────────────────────────────────────────────────────────────
 
-export function EntryDetailPanel({ entry, onClose }: Props) {
+export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
   const { format } = useTimezone();
+  const { success, error: toastError } = useToast();
   const fmtTime = (iso: string) => format(iso, TIME_OPTS);
   const fmtDate = (iso: string) => format(iso, DATE_OPTS);
   const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalIdx, setModalIdx] = useState<number | null>(null);
+  const [statusOverride, setStatusOverride] = useState<string | null>(null);
+  const [stopping, setStopping] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
 
-  useEffect(() => {
-    if (!entry) { setScreenshots([]); setModalIdx(null); return; }
+  function loadScreenshots(e: TimeEntry) {
     setLoading(true);
     const params: Record<string, string> = {
-      from: entry.started_at,
-      to: entry.ended_at ?? new Date().toISOString(),
+      from: e.started_at,
+      to: e.ended_at ?? new Date().toISOString(),
       limit: '1000',
     };
-    if (entry.user?.id) params['userId'] = entry.user.id;
+    if (e.user?.id) params['userId'] = e.user.id;
     api.screenshots
       .list(params)
-      .then((res) => setScreenshots((res.data ?? []).filter((s) => s.timeEntryId === entry.id)))
+      .then((res) => setScreenshots((res.data ?? []).filter((s) => s.timeEntryId === e.id)))
       .catch(() => setScreenshots([]))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    setStatusOverride(null);
+    if (!entry) { setScreenshots([]); setModalIdx(null); return; }
+    loadScreenshots(entry);
   }, [entry?.id]);
+
+  const status = statusOverride ?? entry?.status ?? '';
+  const isOpen = status === 'running' || status === 'paused';
+  const missingThumbs = screenshots.some((s) => !s.thumbnailUrl);
+
+  async function handleAdminStop() {
+    if (!entry) return;
+    if (!confirm(`Force-stop ${entry.user?.name ?? 'this member'}'s tracker? The entry will be closed now.`)) return;
+    setStopping(true);
+    try {
+      await api.timeEntries.adminStop(entry.id);
+      setStatusOverride('stopped');
+      success('Tracker stopped');
+      onChanged?.();
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to stop tracker');
+    } finally {
+      setStopping(false);
+    }
+  }
+
+  async function handleBackfill() {
+    if (!entry) return;
+    setBackfilling(true);
+    try {
+      const res = await api.screenshots.backfillThumbnails(50);
+      success(`Generated ${res.processed} thumbnail${res.processed === 1 ? '' : 's'}${res.remaining ? ` · ${res.remaining} left` : ''}`);
+      loadScreenshots(entry);
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : 'Failed to generate thumbnails');
+    } finally {
+      setBackfilling(false);
+    }
+  }
 
   const avgActivity =
     screenshots.length > 0
@@ -260,12 +314,25 @@ export function EntryDetailPanel({ entry, onClose }: Props) {
                   <p className="text-xs text-[#666666]">{fmtDate(entry.started_at)}</p>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="rounded p-1.5 text-[#666666] hover:bg-[#1A1A1A] hover:text-white transition-colors"
-              >
-                <X size={15} />
-              </button>
+              <div className="flex items-center gap-2">
+                {isOpen && (
+                  <button
+                    onClick={handleAdminStop}
+                    disabled={stopping}
+                    className="flex items-center gap-1.5 rounded-md border border-[#3f1515] bg-[#1c0a0a] px-2.5 py-1.5 text-xs font-medium text-[#ef4444] hover:bg-[#2a0d0d] disabled:opacity-50 transition-colors"
+                    title="Force-stop this tracker"
+                  >
+                    {stopping ? <LoadingSpinner size="sm" /> : <Square size={11} />}
+                    Stop tracker
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="rounded p-1.5 text-[#666666] hover:bg-[#1A1A1A] hover:text-white transition-colors"
+                >
+                  <X size={15} />
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col gap-6 p-6">
@@ -286,7 +353,7 @@ export function EntryDetailPanel({ entry, onClose }: Props) {
                   )}
                 </div>
                 <div className="ml-auto">
-                  <StatusBadge status={entry.status} />
+                  <StatusBadge status={status} />
                 </div>
               </div>
 
@@ -372,9 +439,22 @@ export function EntryDetailPanel({ entry, onClose }: Props) {
 
               {/* Screenshots grid */}
               <div>
-                <p className="mb-3 text-xs font-medium uppercase tracking-widest text-[#444]">
-                  Screenshots {screenshots.length > 0 && `(${screenshots.length})`}
-                </p>
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-xs font-medium uppercase tracking-widest text-[#444]">
+                    Screenshots {screenshots.length > 0 && `(${screenshots.length})`}
+                  </p>
+                  {missingThumbs && (
+                    <button
+                      onClick={handleBackfill}
+                      disabled={backfilling}
+                      className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] px-2.5 py-1 text-[11px] text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white disabled:opacity-50 transition-colors"
+                      title="Generate thumbnails for older screenshots so they load"
+                    >
+                      {backfilling ? <LoadingSpinner size="sm" /> : <ImageDown size={12} />}
+                      Generate thumbnails
+                    </button>
+                  )}
+                </div>
 
                 {loading ? (
                   <div className="flex justify-center py-8">
