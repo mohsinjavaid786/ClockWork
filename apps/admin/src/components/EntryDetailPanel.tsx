@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { X, Keyboard, Mouse, Camera, Clock, Square, ImageDown } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { X, Keyboard, Mouse, Camera, Clock, Square, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Screenshot } from '@/lib/types';
 import { Avatar } from '@/components/Avatar';
@@ -38,6 +38,14 @@ interface Props {
 
 const TIME_OPTS: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit' };
 const DATE_OPTS: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+
+type SortKey = 'newest' | 'oldest' | 'active-desc' | 'active-asc';
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'active-desc', label: 'Most active' },
+  { value: 'active-asc', label: 'Least active' },
+];
 
 function activityColor(pct: number): string {
   if (pct >= 70) return '#22c55e';
@@ -220,7 +228,12 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
   const [modalIdx, setModalIdx] = useState<number | null>(null);
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   const [stopping, setStopping] = useState(false);
-  const [backfilling, setBackfilling] = useState(false);
+  const [optimizing, setOptimizing] = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>('newest');
+  const [page, setPage] = useState(1);
+  // One auto-backfill pass per opened entry, so an un-thumbnailable screenshot
+  // can't drive an infinite retry loop.
+  const backfilledFor = useRef<string | null>(null);
 
   function loadScreenshots(e: TimeEntry) {
     setLoading(true);
@@ -239,13 +252,48 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
 
   useEffect(() => {
     setStatusOverride(null);
-    if (!entry) { setScreenshots([]); setModalIdx(null); return; }
+    setPage(1);
+    backfilledFor.current = null;
+    setScreenshots([]); // drop the previous entry's shots so auto-backfill can't fire on stale data
+    if (!entry) { setModalIdx(null); return; }
     loadScreenshots(entry);
   }, [entry?.id]);
 
+  // Auto-generate any missing thumbnails for this entry (older captures), then
+  // refresh — no manual button. Scoped to the entry's window so its tiles fill
+  // in first; loops in batches until none remain.
+  useEffect(() => {
+    if (!entry || loading) return;
+    if (backfilledFor.current === entry.id) return;
+    if (!screenshots.some((s) => !s.thumbnailUrl)) return;
+    backfilledFor.current = entry.id;
+    const userId = entry.user?.id;
+    const from = entry.started_at;
+    const to = entry.ended_at ?? new Date().toISOString();
+    let cancelled = false;
+    (async () => {
+      setOptimizing(true);
+      try {
+        let guard = 0;
+        let res: { processed: number; remaining: number };
+        do {
+          res = await api.screenshots.backfillThumbnails({ limit: 50, userId, from, to });
+          guard += 1;
+        } while (res.processed > 0 && res.remaining > 0 && guard < 20 && !cancelled);
+      } catch {
+        // best-effort; leave tiles as skeletons
+      } finally {
+        if (!cancelled) {
+          setOptimizing(false);
+          loadScreenshots(entry);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [screenshots, entry?.id, loading]);
+
   const status = statusOverride ?? entry?.status ?? '';
   const isOpen = status === 'running' || status === 'paused';
-  const missingThumbs = screenshots.some((s) => !s.thumbnailUrl);
 
   async function handleAdminStop() {
     if (!entry) return;
@@ -263,19 +311,26 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
     }
   }
 
-  async function handleBackfill() {
-    if (!entry) return;
-    setBackfilling(true);
-    try {
-      const res = await api.screenshots.backfillThumbnails(50);
-      success(`Generated ${res.processed} thumbnail${res.processed === 1 ? '' : 's'}${res.remaining ? ` · ${res.remaining} left` : ''}`);
-      loadScreenshots(entry);
-    } catch (err) {
-      toastError(err instanceof Error ? err.message : 'Failed to generate thumbnails');
-    } finally {
-      setBackfilling(false);
+  // Sorted view of the screenshots; the modal navigates this same array.
+  const sorted = [...screenshots].sort((a, b) => {
+    switch (sortBy) {
+      case 'oldest':
+        return a.capturedAt.localeCompare(b.capturedAt);
+      case 'active-desc':
+        return b.activityPercent - a.activityPercent;
+      case 'active-asc':
+        return a.activityPercent - b.activityPercent;
+      case 'newest':
+      default:
+        return b.capturedAt.localeCompare(a.capturedAt);
     }
-  }
+  });
+
+  const PAGE_SIZE = 10;
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const pageShots = sorted.slice(pageStart, pageStart + PAGE_SIZE);
 
   const avgActivity =
     screenshots.length > 0
@@ -302,7 +357,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
 
       {/* Panel */}
       <div
-        className="fixed right-0 top-0 z-50 h-full w-full max-w-[620px] overflow-y-auto bg-[#0A0A0A] border-l border-[#2A2A2A] shadow-2xl"
+        className="fixed right-0 top-0 z-50 h-full w-full max-w-[920px] overflow-y-auto bg-[#0A0A0A] border-l border-[#2A2A2A] shadow-2xl"
         style={{
           transform: open ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 250ms cubic-bezier(0.4,0,0.2,1)',
@@ -444,26 +499,34 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
 
               {/* Screenshots grid */}
               <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="text-xs font-medium uppercase tracking-widest text-[#444]">
-                    Screenshots {screenshots.length > 0 && `(${screenshots.length})`}
-                  </p>
-                  {missingThumbs && (
-                    <button
-                      onClick={handleBackfill}
-                      disabled={backfilling}
-                      className="flex items-center gap-1.5 rounded-md border border-[#2A2A2A] px-2.5 py-1 text-[11px] text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white disabled:opacity-50 transition-colors"
-                      title="Generate thumbnails for older screenshots so they load"
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-medium uppercase tracking-widest text-[#444]">
+                      Screenshots {screenshots.length > 0 && `(${screenshots.length})`}
+                    </p>
+                    {optimizing && (
+                      <span className="flex items-center gap-1 text-[10px] text-[#666666]">
+                        <Loader2 size={10} className="animate-spin" />
+                        Optimizing…
+                      </span>
+                    )}
+                  </div>
+                  {screenshots.length > 0 && (
+                    <select
+                      value={sortBy}
+                      onChange={(e) => { setSortBy(e.target.value as SortKey); setPage(1); }}
+                      className="rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2.5 py-1 text-xs text-[#A1A1A1] outline-none focus:border-[#444]"
                     >
-                      {backfilling ? <LoadingSpinner size="sm" /> : <ImageDown size={12} />}
-                      Generate thumbnails
-                    </button>
+                      {SORT_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
                   )}
                 </div>
 
                 {loading ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {Array.from({ length: 9 }).map((_, i) => (
+                  <div className="grid grid-cols-5 gap-2">
+                    {Array.from({ length: 10 }).map((_, i) => (
                       <div
                         key={i}
                         className="cw-skeleton rounded-lg border border-[#2A2A2A]"
@@ -477,11 +540,42 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                     <p className="text-xs text-[#444]">No screenshots for this entry</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {screenshots.map((shot, idx) => (
-                      <ScreenshotTile key={shot.id} shot={shot} onClick={() => setModalIdx(idx)} />
-                    ))}
-                  </div>
+                  <>
+                    <div className="grid grid-cols-5 gap-2">
+                      {pageShots.map((shot, i) => (
+                        <ScreenshotTile
+                          key={shot.id}
+                          shot={shot}
+                          onClick={() => setModalIdx(pageStart + i)}
+                        />
+                      ))}
+                    </div>
+
+                    {totalPages > 1 && (
+                      <div className="mt-4 flex items-center justify-between text-xs text-[#666666]">
+                        <span>
+                          {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, sorted.length)} of {sorted.length}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            disabled={safePage === 1}
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            className="flex items-center gap-1 rounded border border-[#2A2A2A] px-2.5 py-1.5 hover:bg-[#1A1A1A] disabled:opacity-30 transition-colors"
+                          >
+                            <ChevronLeft size={13} /> Prev
+                          </button>
+                          <span className="font-mono">{safePage} / {totalPages}</span>
+                          <button
+                            disabled={safePage >= totalPages}
+                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                            className="flex items-center gap-1 rounded border border-[#2A2A2A] px-2.5 py-1.5 hover:bg-[#1A1A1A] disabled:opacity-30 transition-colors"
+                          >
+                            Next <ChevronRight size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -489,10 +583,10 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
         )}
       </div>
 
-      {/* Screenshot modal (above the panel) */}
-      {modalIdx !== null && screenshots[modalIdx] && (
+      {/* Screenshot modal (above the panel) — navigates the full sorted list */}
+      {modalIdx !== null && sorted[modalIdx] && (
         <ScreenshotModal
-          screenshots={screenshots}
+          screenshots={sorted}
           index={modalIdx}
           onClose={() => setModalIdx(null)}
           onNav={(idx) => setModalIdx(idx)}

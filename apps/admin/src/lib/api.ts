@@ -138,11 +138,16 @@ export const api = {
       }>(`/screenshots${qs}`);
       return { ...res, data: (res.data ?? []).map(toScreenshot) };
     },
-    backfillThumbnails: (limit = 50) =>
-      request<{ processed: number; remaining: number }>(
-        `/screenshots/backfill-thumbnails?limit=${limit}`,
+    backfillThumbnails: (opts?: { limit?: number; userId?: string; from?: string; to?: string }) => {
+      const params = new URLSearchParams({ limit: String(opts?.limit ?? 50) });
+      if (opts?.userId) params.set('userId', opts.userId);
+      if (opts?.from) params.set('from', opts.from);
+      if (opts?.to) params.set('to', opts.to);
+      return request<{ processed: number; remaining: number }>(
+        `/screenshots/backfill-thumbnails?${params.toString()}`,
         { method: 'POST', body: '{}' },
-      ),
+      );
+    },
   },
 
   reports: {
