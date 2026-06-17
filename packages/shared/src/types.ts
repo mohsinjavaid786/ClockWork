@@ -1,5 +1,7 @@
 export type UserRole = 'admin' | 'member';
-export type EntryStatus = 'running' | 'stopped';
+// An open entry is 'running' or 'paused'; 'stopped' is terminal. 'paused' is a
+// real persisted status (migration 005), not just a UI state.
+export type EntryStatus = 'running' | 'paused' | 'stopped';
 
 export interface User {
   id: string;
@@ -36,16 +38,29 @@ export interface TimeEntry {
   project?: Project;
 }
 
+export interface MinuteActivity {
+  t: string; // ISO8601 start of the minute
+  keys: number;
+  mouse: number;
+  window?: string;
+}
+
 export interface Screenshot {
   id: string;
   userId: string;
-  timeEntryId?: string;
+  timeEntryId?: string | null;
   storagePath: string;
   capturedAt: string;
   activityPercent: number;
   screenNumber: number;
   displayCount: number;
+  keyCount?: number;
+  mouseCount?: number;
+  activeWindow?: string | null;
+  minuteActivity?: MinuteActivity[];
   signedUrl?: string;
+  // Small grid thumbnail; absent until generated/backfilled.
+  thumbnailUrl?: string;
   user?: User;
 }
 
