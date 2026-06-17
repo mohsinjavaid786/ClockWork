@@ -11,7 +11,22 @@ listed under **[Unreleased]**.
 
 ## [Unreleased]
 
+### Added
+- **Dark / light mode** — a theme toggle in the top bar; tokens are CSS-variable
+  driven so the whole portal flips instantly (persisted, no flash on load).
+- **Scrubbable dashboard timeline** — a Mercury-style draggable/resizable date
+  range over a month axis, plus presets (7d/30d/3m/6m/YTD/12m); the KPIs and
+  hours chart filter to the selected window via a new `/reports/range` endpoint.
+- **Screenshot zoom** — zoom (100–400%) and pan in the screenshot viewer.
+
 ### Changed
+- **Status tags colour-coded** — active green, paused yellow, stopped red, admin
+  blue, etc., each with a matching dot.
+- **Work Diary moved under team member detail** — per-employee diary in a tab on
+  the member page; the standalone route redirects to Team.
+- Restored the ClockWork logo in the sidebar and inset dropdown chevrons.
+
+### Changed (earlier)
 - **Admin portal redesign (light, editorial)** — the entire portal moves from the
   dark monochrome theme to a light "Steep-inspired" editorial system: a fog
   canvas with white cards (24px radius, soft elevation), Inter + Newsreader
