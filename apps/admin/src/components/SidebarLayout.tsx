@@ -35,7 +35,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-fog">
-      <aside className="flex w-60 flex-shrink-0 flex-col bg-fog">
+      <aside className="flex w-60 flex-shrink-0 flex-col border-r border-dove/50 bg-fog">
         {/* Logo */}
         <div className="px-5 pb-2 pt-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
