@@ -247,8 +247,12 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
   // One auto-backfill pass per opened entry, so an un-thumbnailable screenshot
   // can't drive an infinite retry loop.
   const backfilledFor = useRef<string | null>(null);
+  // Bumped on every load; a response is only applied if it's still the latest
+  // request, so switching entries quickly can't render entry A's shots under B.
+  const loadSeq = useRef(0);
 
   function loadScreenshots(e: TimeEntry) {
+    const seq = ++loadSeq.current;
     setLoading(true);
     const params: Record<string, string> = {
       from: e.started_at,
@@ -258,9 +262,16 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
     if (e.user?.id) params['userId'] = e.user.id;
     api.screenshots
       .list(params)
-      .then((res) => setScreenshots((res.data ?? []).filter((s) => s.timeEntryId === e.id)))
-      .catch(() => setScreenshots([]))
-      .finally(() => setLoading(false));
+      .then((res) => {
+        if (seq !== loadSeq.current) return; // a newer load superseded this one
+        setScreenshots((res.data ?? []).filter((s) => s.timeEntryId === e.id));
+      })
+      .catch(() => {
+        if (seq === loadSeq.current) setScreenshots([]);
+      })
+      .finally(() => {
+        if (seq === loadSeq.current) setLoading(false);
+      });
   }
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { RefreshCw } from 'lucide-react';
 import {
@@ -85,6 +85,13 @@ export default function DashboardPage() {
 
   const bucket = useMemo(() => bucketFor(from, to), [from, to]);
 
+  // Latest window, readable from the mount-only refresh interval without
+  // re-subscribing it on every range change.
+  const fromRef = useRef(from);
+  const toRef = useRef(to);
+  fromRef.current = from;
+  toRef.current = to;
+
   const loadRange = useCallback(
     (f: Date, t: Date) =>
       api.reports
@@ -102,7 +109,13 @@ export default function DashboardPage() {
   useEffect(() => {
     Promise.all([loadRange(from, to), loadActive()]).finally(() => setLoading(false));
     setNow(Date.now());
-    const a = setInterval(loadActive, 60_000);
+    // Refresh the live roster AND the period KPIs/chart every minute so hours,
+    // sessions and screenshots reflect time accruing on running trackers — not
+    // only the live "Active now" count.
+    const a = setInterval(() => {
+      loadActive();
+      loadRange(fromRef.current, toRef.current);
+    }, 60_000);
     const c = setInterval(() => setNow(Date.now()), 1000);
     return () => {
       clearInterval(a);
