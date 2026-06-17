@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, MoreHorizontal } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Screenshot } from '@/lib/types';
@@ -181,6 +182,18 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
     idx: number;
     label: string;
   } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // Lock background scroll while the drawer is open so scrolling stays inside it.
+  useEffect(() => {
+    if (!date) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [date]);
 
   useEffect(() => {
     if (!date) { setEntries([]); setShots([]); return; }
@@ -204,7 +217,7 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
   const totalSecs = entries.reduce((s, e) => s + (e.duration_seconds ?? 0), 0);
   const open = date !== null;
 
-  return (
+  const overlay = (
     <>
       {/* Backdrop — blurs everything behind so the drawer is in prime focus */}
       <div
@@ -307,4 +320,6 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
       )}
     </>
   );
+
+  return mounted ? createPortal(overlay, document.body) : null;
 }

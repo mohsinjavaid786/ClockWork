@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Keyboard, Mouse, Camera, Clock, Square, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Screenshot } from '@/lib/types';
@@ -231,6 +232,18 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
   const [optimizing, setOptimizing] = useState(false);
   const [sortBy, setSortBy] = useState<SortKey>('newest');
   const [page, setPage] = useState(1);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  // Lock background scroll while the drawer is open so scrolling stays inside it.
+  useEffect(() => {
+    if (!entry) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [entry]);
   // One auto-backfill pass per opened entry, so an un-thumbnailable screenshot
   // can't drive an infinite retry loop.
   const backfilledFor = useRef<string | null>(null);
@@ -342,7 +355,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
 
   const open = entry !== null;
 
-  return (
+  const overlay = (
     <>
       {/* Backdrop — blurs everything behind so the drawer is in prime focus */}
       <div
@@ -594,4 +607,6 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
       )}
     </>
   );
+
+  return mounted ? createPortal(overlay, document.body) : null;
 }
