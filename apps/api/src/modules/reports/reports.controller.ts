@@ -24,6 +24,17 @@ export class ReportsController {
     return this.reportsService.getWeeklyChart();
   }
 
+  @Get('range')
+  @ApiOperation({ summary: 'Range-scoped dashboard stats + bucketed series' })
+  getRange(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('bucket') bucket?: 'day' | 'week' | 'month',
+    @Query('userId') userId?: string,
+  ) {
+    return this.reportsService.getRange(from, to, bucket ?? 'day', userId);
+  }
+
   @Get('csv')
   @ApiOperation({ summary: 'Stream time entries as CSV' })
   streamCsv(@Query() query: ReportQueryDto, @Res() res: Response) {

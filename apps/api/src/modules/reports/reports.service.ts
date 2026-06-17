@@ -203,6 +203,96 @@ tr:nth-child(even) td { background: #f9f9f9; }
     };
   }
 
+  // Range-scoped dashboard data for an arbitrary [from, to] window, bucketed by
+  // day / week / month. Powers the draggable timeline on the dashboard.
+  async getRange(
+    from: string,
+    to: string,
+    bucket: 'day' | 'week' | 'month',
+    userId?: string,
+  ) {
+    const fromMs = new Date(from).getTime();
+    const toMs = new Date(to).getTime();
+
+    let stoppedQ = this.supabase.client
+      .from('time_entries')
+      .select('started_at, duration_seconds')
+      .eq('status', 'stopped')
+      .gte('started_at', from)
+      .lte('started_at', to);
+    let openQ = this.supabase.client
+      .from('time_entries')
+      .select('started_at, status, paused_seconds, pauses')
+      .in('status', ['running', 'paused']);
+    let shotsQ = this.supabase.client
+      .from('screenshots')
+      .select('id', { count: 'exact', head: true })
+      .gte('captured_at', from)
+      .lte('captured_at', to);
+    let activeQ = this.supabase.client
+      .from('time_entries')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'running');
+
+    if (userId) {
+      stoppedQ = stoppedQ.eq('user_id', userId);
+      openQ = openQ.eq('user_id', userId);
+      shotsQ = shotsQ.eq('user_id', userId);
+      activeQ = activeQ.eq('user_id', userId);
+    }
+
+    const [stopped, open, shots, active] = await Promise.all([stoppedQ, openQ, shotsQ, activeQ]);
+
+    const startOfDay = (ms: number) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+    const startOfWeek = (ms: number) => { const d = new Date(startOfDay(ms)); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); };
+    const startOfMonth = (ms: number) => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); };
+    const keyOf = (ms: number) =>
+      bucket === 'month' ? startOfMonth(ms) : bucket === 'week' ? startOfWeek(ms) : startOfDay(ms);
+
+    // Ordered buckets spanning the window.
+    const buckets = new Map<number, { date: string; label: string; seconds: number }>();
+    let cursor = keyOf(fromMs);
+    let guard = 0;
+    while (cursor <= toMs && guard++ < 1000) {
+      const d = new Date(cursor);
+      const label =
+        bucket === 'month'
+          ? d.toLocaleDateString('en-US', { month: 'short' })
+          : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      buckets.set(cursor, { date: new Date(cursor).toISOString(), label, seconds: 0 });
+      if (bucket === 'month') cursor = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+      else cursor += (bucket === 'week' ? 7 : 1) * 86_400_000;
+    }
+
+    let totalSeconds = 0;
+    const add = (startedMs: number, secs: number) => {
+      if (startedMs < fromMs || startedMs > toMs || secs <= 0) return;
+      totalSeconds += secs;
+      const b = buckets.get(keyOf(startedMs));
+      if (b) b.seconds += secs;
+    };
+
+    for (const e of stopped.data ?? []) {
+      add(new Date(e.started_at as string).getTime(), (e.duration_seconds as number) ?? 0);
+    }
+    const nowMs = Date.now();
+    for (const e of (open.data ?? []) as unknown as OpenEntry[]) {
+      add(new Date(e.started_at).getTime(), this.liveSeconds(e, nowMs));
+    }
+
+    return {
+      totalHours: Math.round((totalSeconds / 3600) * 100) / 100,
+      activeNow: active.count ?? 0,
+      screenshots: shots.count ?? 0,
+      entries: (stopped.data ?? []).length,
+      series: Array.from(buckets.values()).map((b) => ({
+        label: b.label,
+        date: b.date,
+        hours: Math.round((b.seconds / 3600) * 100) / 100,
+      })),
+    };
+  }
+
   async getWeeklyChart(): Promise<Array<{ day: string; date: string; hours: number }>> {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const now = new Date();
