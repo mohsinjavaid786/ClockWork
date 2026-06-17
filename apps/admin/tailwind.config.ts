@@ -1,26 +1,32 @@
 import type { Config } from 'tailwindcss';
 
+// Colors are driven by CSS variables (channel triplets "R G B") defined in
+// globals.css for both light (:root) and dark (.dark). Using the
+// rgb(var(--x) / <alpha-value>) form keeps Tailwind opacity utilities working
+// (e.g. text-ink/50, border-error/30).
+const v = (name: string) => `rgb(var(${name}) / <alpha-value>)`;
+
 const config: Config = {
+  darkMode: 'class',
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        // Steep-inspired light, editorial system
-        ink: '#17191c',
-        ash: '#4c4c4c',
-        graphite: '#777b86',
-        dove: '#a3a6af',
-        slate: '#8b8c8d',
-        fog: '#f7f7f8',
-        card: '#ffffff',
-        hair: '#ececee', // subtle hairline borders / table separators
-        rust: '#5d2a1a',
-        apricot: '#fbe1d1',
-        sky: '#d3e3fc',
-        success: { DEFAULT: '#3a7d44', bg: '#f0faf2' },
-        warning: { DEFAULT: '#a05c00', bg: '#fdf6ec' },
-        error: { DEFAULT: '#b91c1c', bg: '#fef2f2' },
-        info: { DEFAULT: '#1d4ed8', bg: '#eff6ff' },
+        ink: v('--c-ink'),
+        ash: v('--c-ash'),
+        graphite: v('--c-graphite'),
+        dove: v('--c-dove'),
+        slate: v('--c-slate'),
+        fog: v('--c-fog'),
+        card: v('--c-card'),
+        hair: v('--c-hair'),
+        rust: v('--c-rust'),
+        apricot: v('--c-apricot'),
+        sky: v('--c-sky'),
+        success: { DEFAULT: v('--c-success'), bg: v('--c-success-bg') },
+        warning: { DEFAULT: v('--c-warning'), bg: v('--c-warning-bg') },
+        error: { DEFAULT: v('--c-error'), bg: v('--c-error-bg') },
+        info: { DEFAULT: v('--c-info'), bg: v('--c-info-bg') },
       },
       fontFamily: {
         sans: ['var(--font-ui)', 'system-ui', 'sans-serif'],
@@ -32,9 +38,9 @@ const config: Config = {
         card: '24px',
       },
       boxShadow: {
-        card: 'rgba(4, 23, 43, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.10) 0px 20px 25px -5px, rgba(0, 0, 0, 0.10) 0px 8px 10px -6px',
-        subtle: 'rgba(4, 23, 43, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 4px 8px -2px',
-        modal: 'rgba(0, 0, 0, 0.14) 0px 24px 48px -12px',
+        card: 'var(--shadow-card)',
+        subtle: 'var(--shadow-subtle)',
+        modal: 'var(--shadow-modal)',
       },
     },
   },

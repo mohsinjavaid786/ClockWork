@@ -2,16 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Steep-inspired editorial system. Token values are RGB channel triplets so
+   Tailwind's rgb(var(--x) / <alpha>) form supports opacity utilities. Light is
+   :root; dark is .dark on <html>. */
 :root {
-  /* Steep-inspired light, editorial system */
-  --color-ink: #17191c;
-  --color-ash: #4c4c4c;
-  --color-graphite: #777b86;
-  --color-dove: #a3a6af;
-  --color-fog: #f7f7f8;
-  --color-card: #ffffff;
-  --color-hair: #ececee;
-  --color-rust: #5d2a1a;
+  --c-ink: 23 25 28;
+  --c-ash: 76 76 76;
+  --c-graphite: 119 123 134;
+  --c-dove: 163 166 175;
+  --c-slate: 139 140 141;
+  --c-fog: 247 247 248;
+  --c-card: 255 255 255;
+  --c-hair: 236 236 238;
+  --c-rust: 93 42 26;
+  --c-apricot: 251 225 209;
+  --c-sky: 211 227 252;
+  --c-success: 58 125 68;
+  --c-success-bg: 240 250 242;
+  --c-warning: 160 92 0;
+  --c-warning-bg: 253 246 236;
+  --c-error: 185 28 28;
+  --c-error-bg: 254 242 242;
+  --c-info: 29 78 216;
+  --c-info-bg: 239 246 255;
+
+  --shadow-card: rgba(4, 23, 43, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.10) 0px 20px 25px -5px,
+    rgba(0, 0, 0, 0.10) 0px 8px 10px -6px;
+  --shadow-subtle: rgba(4, 23, 43, 0.05) 0px 0px 0px 1px, rgba(0, 0, 0, 0.06) 0px 4px 8px -2px;
+  --shadow-modal: rgba(0, 0, 0, 0.14) 0px 24px 48px -12px;
+
+  --scroll-thumb: #d7d7da;
+}
+
+.dark {
+  --c-ink: 236 236 238;
+  --c-ash: 180 182 188;
+  --c-graphite: 138 141 150;
+  --c-dove: 91 95 106;
+  --c-slate: 139 140 141;
+  --c-fog: 14 17 22;
+  --c-card: 23 26 33;
+  --c-hair: 38 42 51;
+  --c-rust: 200 127 99;
+  --c-apricot: 58 42 32;
+  --c-sky: 27 42 63;
+  --c-success: 95 207 114;
+  --c-success-bg: 22 39 27;
+  --c-warning: 224 169 63;
+  --c-warning-bg: 46 37 16;
+  --c-error: 240 122 122;
+  --c-error-bg: 46 20 20;
+  --c-info: 110 168 255;
+  --c-info-bg: 21 35 59;
+
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 20px 25px -5px rgba(0, 0, 0, 0.5),
+    0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --shadow-subtle: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 4px 8px -2px rgba(0, 0, 0, 0.4);
+  --shadow-modal: 0 24px 48px -12px rgba(0, 0, 0, 0.7);
+
+  --scroll-thumb: #353a44;
 }
 
 * {
@@ -22,8 +71,8 @@
 
 html,
 body {
-  background-color: var(--color-fog);
-  color: var(--color-ink);
+  background-color: rgb(var(--c-fog));
+  color: rgb(var(--c-ink));
   font-family: var(--font-ui), system-ui, -apple-system, sans-serif;
   letter-spacing: -0.009em;
   -webkit-font-smoothing: antialiased;
@@ -37,30 +86,35 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d7d7da;
+  background: var(--scroll-thumb);
   border-radius: 4px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-dove);
+
+/* Consistent dropdown chrome: remove the native control and inset a chevron
+   inside the field so the arrow always sits within the button. */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23777b86' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 14px;
+  padding-right: 2rem !important;
 }
 
 /* Skeleton + shimmer used while drawers and screenshots load. */
 .cw-skeleton {
   position: relative;
   overflow: hidden;
-  background: #ececed;
+  background: rgb(var(--c-hair));
 }
 .cw-skeleton::after {
   content: '';
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(0, 0, 0, 0.05) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, rgba(127, 127, 127, 0.18) 50%, transparent 100%);
   animation: cw-shimmer 1.4s ease-in-out infinite;
 }
 @keyframes cw-shimmer {

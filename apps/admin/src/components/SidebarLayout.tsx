@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Users,
   Clock,
-  CalendarDays,
   FolderKanban,
   BarChart2,
   Settings,
@@ -15,12 +14,12 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { TimezoneSelect } from '@/components/TimezoneSelect';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const nav = [
   { href: '/dashboard',   label: 'Dashboard',   icon: LayoutDashboard },
   { href: '/team',        label: 'Team',         icon: Users },
   { href: '/timesheets',  label: 'Timesheets',   icon: Clock },
-  { href: '/work-diary',  label: 'Work Diary',   icon: CalendarDays },
   { href: '/projects',    label: 'Projects',     icon: FolderKanban },
   { href: '/reports',     label: 'Reports',      icon: BarChart2 },
   { href: '/settings',    label: 'Settings',     icon: Settings },
@@ -37,12 +36,10 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-fog">
       <aside className="flex w-60 flex-shrink-0 flex-col bg-fog">
-        {/* Wordmark */}
-        <div className="flex items-center gap-2.5 px-5 pb-2 pt-6">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink">
-            <Clock size={15} className="text-white" strokeWidth={2} />
-          </span>
-          <span className="font-display text-[19px] font-medium tracking-tight text-ink">Clockwork</span>
+        {/* Logo */}
+        <div className="px-5 pb-2 pt-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="ClockWork" className="h-9 w-auto" />
         </div>
 
         <nav className="flex-1 space-y-0.5 px-3 py-4">
@@ -89,8 +86,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="sticky top-0 z-20 flex h-16 items-center justify-end border-b border-dove/50 bg-card px-8">
+        <div className="sticky top-0 z-20 flex h-16 items-center justify-end gap-3 border-b border-hair bg-card px-8">
           <TimezoneSelect />
+          <ThemeToggle />
         </div>
         <div className="mx-auto max-w-[1200px] px-8 py-8">{children}</div>
       </main>
