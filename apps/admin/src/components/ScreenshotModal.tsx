@@ -39,7 +39,7 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
 
   if (shot.signedUrl && !failed) {
     return (
-      <div className="relative w-full overflow-hidden rounded-lg border border-[#2A2A2A] bg-black" style={{ aspectRatio: '16/9' }}>
+      <div className="relative w-full overflow-hidden rounded-field border border-hair bg-black" style={{ aspectRatio: '16/9' }}>
         {shot.thumbnailUrl && (
           <img
             src={shot.thumbnailUrl}
@@ -62,7 +62,7 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-lg border border-[#2A2A2A]"
+      className="relative w-full overflow-hidden rounded-field border border-hair"
       style={{ aspectRatio: '16/9', background: `linear-gradient(135deg, #0d0d1f ${seed % 3 * 15}%, #080818 100%)` }}
     >
       <div className="absolute inset-0 opacity-[0.04]" style={{
@@ -110,7 +110,7 @@ function FilmstripThumb({ shot, active, onClick }: { shot: Screenshot; active: b
         width: 48,
         height: 30,
         background: '#0d0d1f',
-        borderColor: active ? '#fff' : '#2A2A2A',
+        borderColor: active ? '#17191c' : '#ececee',
         opacity: active ? 1 : 0.55,
       }}
     >
@@ -163,43 +163,43 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-6">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/[0.32] backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative z-10 w-full max-w-5xl rounded-2xl border border-[#2A2A2A] bg-[#0A0A0A] shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-5xl rounded-card bg-card shadow-modal overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#2A2A2A] px-6 py-4">
+        <div className="flex items-center justify-between border-b border-hair px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full" style={{ background: color }} />
-              <span className="text-sm font-medium text-white">
+              <span className="text-sm font-medium text-ink">
                 {shot.user?.name ?? 'Unknown'}
               </span>
             </div>
-            <span className="text-[#444]">·</span>
-            <span className="text-sm text-[#666666]">
+            <span className="text-dove">·</span>
+            <span className="text-sm text-graphite">
               {format(shot.capturedAt, { weekday: 'short', month: 'short', day: 'numeric' })}
             </span>
             {sessionLabel && (
               <>
-                <span className="text-[#444]">·</span>
-                <span className="text-xs text-[#666666]">{sessionLabel}</span>
+                <span className="text-dove">·</span>
+                <span className="text-xs text-graphite">{sessionLabel}</span>
               </>
             )}
             {shot.displayCount > 1 && (
               <>
-                <span className="text-[#444]">·</span>
-                <span className="text-xs font-medium text-[#A1A1A1]">
+                <span className="text-dove">·</span>
+                <span className="text-xs font-medium text-ash">
                   Screen {shot.screenNumber} of {shot.displayCount}
                 </span>
               </>
             )}
           </div>
           <div className="flex items-center gap-3">
-            <span className="rounded border border-[#2A2A2A] px-2.5 py-1 font-mono text-xs text-[#666666]">
+            <span className="rounded-full border border-dove px-2.5 py-1 font-mono text-xs text-graphite">
               {index + 1} of {screenshots.length}
             </span>
-            <button onClick={onClose} className="rounded p-1.5 text-[#666666] hover:bg-[#1A1A1A] hover:text-white transition-colors">
+            <button onClick={onClose} className="rounded-full p-1.5 text-graphite hover:bg-fog hover:text-ink transition-colors">
               <X size={15} />
             </button>
           </div>
@@ -208,33 +208,33 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
         {/* Body */}
         <div className="grid grid-cols-[1fr_300px]">
           {/* Left — screenshot + active window + input totals */}
-          <div className="border-r border-[#2A2A2A] p-6 flex flex-col gap-4">
+          <div className="border-r border-hair p-6 flex flex-col gap-4">
             <BigScreenshot shot={shot} />
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-[#666666]">Active window</p>
-                <p className="mt-0.5 truncate text-sm text-white">{shot.activeWindow ?? '—'}</p>
+                <p className="text-xs font-medium text-graphite">Active window</p>
+                <p className="mt-0.5 truncate text-sm text-ink">{shot.activeWindow ?? '—'}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs font-medium text-[#666666]">Captured</p>
-                <p className="mt-0.5 font-mono text-sm text-white">{fmtTime(shot.capturedAt)}</p>
+                <p className="text-xs font-medium text-graphite">Captured</p>
+                <p className="mt-0.5 font-mono text-sm text-ink">{fmtTime(shot.capturedAt)}</p>
               </div>
             </div>
 
             {/* Input totals for this interval */}
             <div className="flex gap-3">
-              <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-3 py-2.5">
-                <Keyboard size={12} className="text-[#555]" />
+              <div className="flex flex-1 items-center gap-2 rounded-field bg-fog px-3 py-2.5">
+                <Keyboard size={12} className="text-graphite" />
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-[#444]">Keystrokes</p>
-                  <p className="font-mono text-sm font-semibold text-white">{shot.keyCount.toLocaleString()}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-graphite">Keystrokes</p>
+                  <p className="font-mono text-sm font-semibold text-ink">{shot.keyCount.toLocaleString()}</p>
                 </div>
               </div>
-              <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-3 py-2.5">
-                <Mouse size={12} className="text-[#555]" />
+              <div className="flex flex-1 items-center gap-2 rounded-field bg-fog px-3 py-2.5">
+                <Mouse size={12} className="text-graphite" />
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-[#444]">Mouse events</p>
-                  <p className="font-mono text-sm font-semibold text-white">{shot.mouseCount.toLocaleString()}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-graphite">Mouse events</p>
+                  <p className="font-mono text-sm font-semibold text-ink">{shot.mouseCount.toLocaleString()}</p>
                 </div>
               </div>
             </div>
@@ -247,13 +247,13 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
           <div className="relative">
             <div className="absolute inset-0 flex flex-col gap-5 p-5">
               <div className="flex-shrink-0">
-                <p className="mb-2 text-xs font-medium text-[#666666]">Activity Level</p>
+                <p className="mb-2 text-xs font-medium text-graphite">Activity Level</p>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {Array.from({ length: 10 }, (_, i) => (
                     <div
                       key={i}
                       className="h-3 w-5 rounded-sm"
-                      style={{ background: i < activeBlocks ? color : '#1A1A1A', border: '1px solid #2A2A2A' }}
+                      style={{ background: i < activeBlocks ? color : '#f7f7f8', border: '1px solid #ececee' }}
                     />
                   ))}
                 </div>
@@ -264,29 +264,29 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
 
               {/* Per-minute breakdown */}
               <div className="flex min-h-0 flex-1 flex-col">
-                <p className="mb-2 flex-shrink-0 text-xs font-medium text-[#666666]">Per-minute activity</p>
+                <p className="mb-2 flex-shrink-0 text-xs font-medium text-graphite">Per-minute activity</p>
                 {shot.minuteActivity.length === 0 ? (
-                  <p className="text-xs text-[#444]">No per-minute data</p>
+                  <p className="text-xs text-graphite">No per-minute data</p>
                 ) : (
-                  <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-[#2A2A2A]">
+                  <div className="min-h-0 flex-1 overflow-y-auto rounded-field border border-hair">
                     <table className="w-full text-xs">
                       <thead className="sticky top-0 z-10">
-                        <tr className="border-b border-[#2A2A2A] bg-[#111111]">
-                          <th className="bg-[#111111] px-3 py-2 text-left font-medium text-[#555]">Time</th>
-                          <th className="bg-[#111111] px-3 py-2 text-right font-medium text-[#555]">
+                        <tr className="border-b border-hair bg-fog">
+                          <th className="bg-fog px-3 py-2 text-left font-medium text-graphite">Time</th>
+                          <th className="bg-fog px-3 py-2 text-right font-medium text-graphite">
                             <Keyboard size={10} className="inline mr-1" />Keys
                           </th>
-                          <th className="bg-[#111111] px-3 py-2 text-right font-medium text-[#555]">
+                          <th className="bg-fog px-3 py-2 text-right font-medium text-graphite">
                             <Mouse size={10} className="inline mr-1" />Mouse
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {shot.minuteActivity.map((row, i) => (
-                          <tr key={i} className="border-b border-[#1A1A1A] last:border-0">
-                            <td className="px-3 py-1.5 font-mono text-[#666666]">{fmtTime(row.t)}</td>
-                            <td className="px-3 py-1.5 text-right font-mono text-white">{row.keys}</td>
-                            <td className="px-3 py-1.5 text-right font-mono text-white">{row.mouse}</td>
+                          <tr key={i} className="border-b border-hair last:border-0">
+                            <td className="px-3 py-1.5 font-mono text-graphite">{fmtTime(row.t)}</td>
+                            <td className="px-3 py-1.5 text-right font-mono text-ink">{row.keys}</td>
+                            <td className="px-3 py-1.5 text-right font-mono text-ink">{row.mouse}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -299,11 +299,11 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
         </div>
 
         {/* Navigation footer */}
-        <div className="flex items-center justify-between border-t border-[#2A2A2A] px-6 py-4">
+        <div className="flex items-center justify-between border-t border-hair px-6 py-4">
           <button
             onClick={() => onNav(index - 1)}
             disabled={index === 0}
-            className="flex items-center gap-2 rounded-full border border-[#2A2A2A] px-4 py-2 text-sm text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white disabled:opacity-30 transition-colors"
+            className="flex items-center gap-2 rounded-full border border-dove px-4 py-2 text-sm text-ink hover:bg-black/[0.03] disabled:opacity-30 transition-colors"
           >
             <ChevronLeft size={14} /> Previous
           </button>
@@ -324,7 +324,7 @@ export function ScreenshotModal({ screenshots, index, onClose, onNav, sessionLab
           <button
             onClick={() => onNav(index + 1)}
             disabled={index === screenshots.length - 1}
-            className="flex items-center gap-2 rounded-full border border-[#2A2A2A] px-4 py-2 text-sm text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white disabled:opacity-30 transition-colors"
+            className="flex items-center gap-2 rounded-full border border-dove px-4 py-2 text-sm text-ink hover:bg-black/[0.03] disabled:opacity-30 transition-colors"
           >
             Next <ChevronRight size={14} />
           </button>

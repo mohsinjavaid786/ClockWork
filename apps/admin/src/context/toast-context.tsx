@@ -19,9 +19,9 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const STYLES: Record<ToastType, { border: string; icon: React.ReactNode }> = {
-  success: { border: '#14532d', icon: <CheckCircle2 size={16} className="text-[#22c55e]" /> },
-  error: { border: '#3f1515', icon: <AlertCircle size={16} className="text-[#ef4444]" /> },
-  info: { border: '#2A2A2A', icon: <Info size={16} className="text-[#A1A1A1]" /> },
+  success: { border: '#cdeccf', icon: <CheckCircle2 size={16} className="text-success" /> },
+  error: { border: '#f6d4d4', icon: <AlertCircle size={16} className="text-error" /> },
+  info: { border: '#e0e0e3', icon: <Info size={16} className="text-graphite" /> },
 };
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -51,14 +51,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="pointer-events-auto flex items-center gap-3 rounded-lg border bg-[#111111] px-4 py-3 shadow-2xl"
+            className="pointer-events-auto flex items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-card"
             style={{ borderColor: STYLES[t.type].border, animation: 'cw-toast-in 160ms ease-out' }}
           >
             {STYLES[t.type].icon}
-            <span className="text-sm text-white">{t.message}</span>
+            <span className="text-sm text-ink">{t.message}</span>
             <button
               onClick={() => dismiss(t.id)}
-              className="ml-2 text-[#666666] transition-colors hover:text-white"
+              className="ml-2 text-graphite transition-colors hover:text-ink"
             >
               <X size={13} />
             </button>

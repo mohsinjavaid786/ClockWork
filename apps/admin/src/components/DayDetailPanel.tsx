@@ -57,8 +57,8 @@ function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) 
   return (
     <button
       onClick={onClick}
-      className="group flex-shrink-0 overflow-hidden rounded border border-[#2A2A2A] hover:border-[#444] transition-colors"
-      style={{ width: 120, background: `linear-gradient(135deg, #0d0d1f ${seed % 3 * 15}%, #08081a 100%)` }}
+      className="group flex-shrink-0 overflow-hidden rounded border border-hair hover:border-dove transition-colors"
+      style={{ width: 120, background: `linear-gradient(135deg, #eef0f3 ${seed % 3 * 15}%, #f7f7f8 100%)` }}
     >
       {/* Real thumbnail when available, otherwise a skeleton */}
       <div style={{ aspectRatio: '16/9', position: 'relative' }}>
@@ -76,13 +76,13 @@ function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) 
           </>
         ) : (
           <>
-            <div className="absolute inset-0 opacity-[0.04]" style={{
-              backgroundImage: 'repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 32px)',
+            <div className="absolute inset-0 opacity-[0.06]" style={{
+              backgroundImage: 'repeating-linear-gradient(0deg,#17191c 0,#17191c 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,#17191c 0,#17191c 1px,transparent 1px,transparent 32px)',
             }} />
-            <div className="absolute inset-[8%] flex flex-col gap-[6%] opacity-[0.2]">
-              <div className="h-[10%] w-3/4 rounded-sm bg-white" />
-              <div className="flex-1 rounded-sm bg-white/15" />
-              <div className="h-[8%] w-1/2 rounded-sm bg-white/25" />
+            <div className="absolute inset-[8%] flex flex-col gap-[6%] opacity-[0.25]">
+              <div className="h-[10%] w-3/4 rounded-sm bg-graphite" />
+              <div className="flex-1 rounded-sm bg-graphite/30" />
+              <div className="h-[8%] w-1/2 rounded-sm bg-graphite/40" />
             </div>
           </>
         )}
@@ -98,7 +98,7 @@ function MiniShot({ shot, onClick }: { shot: Screenshot; onClick: () => void }) 
         )}
       </div>
       {/* Activity bar at bottom (Upwork-style) */}
-      <div className="h-1.5 w-full" style={{ background: '#1A1A1A' }}>
+      <div className="h-1.5 w-full" style={{ background: '#f7f7f8' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: color }} />
       </div>
     </button>
@@ -123,22 +123,22 @@ function SessionBlock({ entry, shots, onShotClick }: SessionBlockProps) {
     : 0;
 
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] overflow-hidden">
+    <div className="rounded-card bg-card shadow-card overflow-hidden">
       {/* Session header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#2A2A2A]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-hair">
         <div className="flex items-center gap-2.5">
           <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{
             background: entry.project?.color ?? '#22c55e',
           }} />
-          <span className="text-sm font-medium text-white">{sessionLabel}</span>
+          <span className="text-sm font-medium text-ink">{sessionLabel}</span>
         </div>
         <div className="flex items-center gap-3">
           {shots.length > 0 && (
-            <span className="text-xs text-[#666666]" style={{ color: actColor(avgPct) }}>
+            <span className="text-xs text-graphite" style={{ color: actColor(avgPct) }}>
               {avgPct}% avg activity
             </span>
           )}
-          <button className="rounded p-1 text-[#444] hover:text-[#666666] transition-colors">
+          <button className="rounded p-1 text-dove hover:text-graphite transition-colors">
             <MoreHorizontal size={14} />
           </button>
         </div>
@@ -146,16 +146,16 @@ function SessionBlock({ entry, shots, onShotClick }: SessionBlockProps) {
 
       {/* Project + description */}
       {(entry.project || entry.description) && (
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-[#1F1F1F]">
-          {entry.project && <span className="text-xs text-[#666666]">{entry.project.name}</span>}
-          {entry.description && <span className="text-xs text-[#444]">· {entry.description}</span>}
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-hair">
+          {entry.project && <span className="text-xs text-graphite">{entry.project.name}</span>}
+          {entry.description && <span className="text-xs text-dove">· {entry.description}</span>}
         </div>
       )}
 
       {/* Screenshot strip */}
       <div className="px-4 py-3">
         {shots.length === 0 ? (
-          <p className="py-2 text-xs text-[#333]">No screenshots for this session</p>
+          <p className="py-2 text-xs text-dove">No screenshots for this session</p>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
             {shots.map((shot, idx) => (
@@ -209,22 +209,22 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+        className="fixed inset-0 z-40 bg-black/[0.32] backdrop-blur-[2px]"
         style={{ opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none', transition: 'opacity 200ms ease' }}
       />
 
       {/* Panel */}
       <div
-        className="fixed right-0 top-0 z-50 h-full w-full max-w-[680px] bg-[#0A0A0A] border-l border-[#2A2A2A] shadow-2xl overflow-y-auto"
+        className="fixed right-0 top-0 z-50 h-full w-full max-w-[680px] bg-card border-l border-hair shadow-modal overflow-y-auto"
         style={{ transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 250ms cubic-bezier(0.4,0,0.2,1)' }}
       >
         {date && (
           <div className="flex flex-col">
             {/* Header */}
-            <div className="sticky top-0 z-10 border-b border-[#2A2A2A] bg-[#0A0A0A] px-6 py-4">
+            <div className="sticky top-0 z-10 border-b border-hair bg-card px-6 py-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-mono text-base font-semibold text-white">{fmtDayLabel(date)}</h2>
-                <button onClick={onClose} className="rounded p-1.5 text-[#666666] hover:bg-[#1A1A1A] hover:text-white transition-colors">
+                <h2 className="text-[15px] font-medium text-ink">{fmtDayLabel(date)}</h2>
+                <button onClick={onClose} className="rounded p-1.5 text-graphite hover:bg-fog hover:text-ink transition-colors">
                   <X size={15} />
                 </button>
               </div>
@@ -232,11 +232,11 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
                 <div className="mt-2 flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full bg-[#22c55e]" />
-                    <span className="text-xs text-[#A1A1A1]">
-                      Total: <span className="font-mono font-semibold text-white">{fmtHHMM(totalSecs)}</span>
+                    <span className="text-xs text-ash">
+                      Total: <span className="font-mono font-semibold text-ink">{fmtHHMM(totalSecs)}</span>
                     </span>
                   </div>
-                  <span className="text-xs text-[#444]">{entries.length} session{entries.length !== 1 ? 's' : ''}</span>
+                  <span className="text-xs text-dove">{entries.length} session{entries.length !== 1 ? 's' : ''}</span>
                 </div>
               )}
             </div>
@@ -250,7 +250,7 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
                       <div className="cw-skeleton h-5 w-40 rounded" />
                       <div className="flex gap-2">
                         {Array.from({ length: 4 }).map((_, i) => (
-                          <div key={i} className="cw-skeleton rounded border border-[#2A2A2A]" style={{ width: 120, aspectRatio: '16/9' }} />
+                          <div key={i} className="cw-skeleton rounded border border-hair" style={{ width: 120, aspectRatio: '16/9' }} />
                         ))}
                       </div>
                     </div>
@@ -258,7 +258,7 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
                 </div>
               ) : entries.length === 0 && orphanShots.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <p className="text-sm text-[#444]">No sessions recorded for this day</p>
+                  <p className="text-sm text-graphite">No sessions recorded for this day</p>
                 </div>
               ) : (
                 <>
@@ -271,9 +271,9 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
                     />
                   ))}
                   {orphanShots.length > 0 && (
-                    <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] overflow-hidden">
-                      <div className="px-4 py-3 border-b border-[#2A2A2A]">
-                        <span className="text-sm font-medium text-white">Other screenshots</span>
+                    <div className="rounded-card bg-card shadow-card overflow-hidden">
+                      <div className="px-4 py-3 border-b border-hair">
+                        <span className="text-sm font-medium text-ink">Other screenshots</span>
                       </div>
                       <div className="px-4 py-3">
                         <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'thin' }}>

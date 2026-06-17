@@ -81,7 +81,7 @@ function ScreenshotTile({ shot, onClick }: { shot: Screenshot; onClick: () => vo
   return (
     <button
       onClick={onClick}
-      className="group relative block w-full overflow-hidden rounded-lg border border-[#2A2A2A] bg-[#080810] hover:border-[#3A3A3A] transition-colors cursor-pointer text-left"
+      className="group relative block w-full overflow-hidden rounded-field border border-hair bg-fog hover:border-dove transition-colors cursor-pointer text-left"
       style={{ aspectRatio: '16/9' }}
     >
       {/* Lightweight thumbnail in the grid; the full image loads in the modal.
@@ -189,7 +189,7 @@ function ActivityTimeline({ screenshots }: { screenshots: Screenshot[] }) {
 
   return (
     <div>
-      <p className="mb-2 text-xs font-medium uppercase tracking-widest text-[#444]">
+      <p className="mb-2 text-xs font-medium uppercase tracking-widest text-graphite">
         Activity timeline
       </p>
       <div className="flex items-end gap-px overflow-hidden rounded" style={{ height: 32 }}>
@@ -209,8 +209,8 @@ function ActivityTimeline({ screenshots }: { screenshots: Screenshot[] }) {
         })}
       </div>
       <div className="mt-1 flex justify-between">
-        <span className="font-mono text-[10px] text-[#444]">{fmtTime(screenshots[0]!.capturedAt)}</span>
-        <span className="font-mono text-[10px] text-[#444]">{fmtTime(screenshots[screenshots.length - 1]!.capturedAt)}</span>
+        <span className="font-mono text-[10px] text-graphite">{fmtTime(screenshots[0]!.capturedAt)}</span>
+        <span className="font-mono text-[10px] text-graphite">{fmtTime(screenshots[screenshots.length - 1]!.capturedAt)}</span>
       </div>
     </div>
   );
@@ -347,7 +347,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
       {/* Backdrop */}
       <div
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-black/60 backdrop-blur-[2px]"
+        className="fixed inset-0 z-40 bg-black/[0.32] backdrop-blur-[2px]"
         style={{
           opacity: open ? 1 : 0,
           pointerEvents: open ? 'auto' : 'none',
@@ -357,7 +357,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
 
       {/* Panel */}
       <div
-        className="fixed right-0 top-0 z-50 h-full w-full max-w-[920px] overflow-y-auto bg-[#0A0A0A] border-l border-[#2A2A2A] shadow-2xl"
+        className="fixed right-0 top-0 z-50 h-full w-full max-w-[920px] overflow-y-auto bg-card border-l border-hair shadow-modal"
         style={{
           transform: open ? 'translateX(0)' : 'translateX(100%)',
           transition: 'transform 250ms cubic-bezier(0.4,0,0.2,1)',
@@ -366,12 +366,12 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
         {entry && (
           <div className="flex flex-col gap-0">
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#2A2A2A] bg-[#0A0A0A] px-6 py-4">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-hair bg-card px-6 py-4">
               <div className="flex items-center gap-3">
                 <Avatar name={entry.user?.name ?? '?'} size="sm" />
                 <div>
-                  <p className="text-sm font-semibold text-white">{entry.user?.name ?? 'Unknown'}</p>
-                  <p className="text-xs text-[#666666]">{fmtDate(entry.started_at)}</p>
+                  <p className="text-sm font-semibold text-ink">{entry.user?.name ?? 'Unknown'}</p>
+                  <p className="text-xs text-graphite">{fmtDate(entry.started_at)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -379,7 +379,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                   <button
                     onClick={handleAdminStop}
                     disabled={stopping}
-                    className="flex items-center gap-1.5 rounded-md border border-[#3f1515] bg-[#1c0a0a] px-2.5 py-1.5 text-xs font-medium text-[#ef4444] hover:bg-[#2a0d0d] disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-1.5 rounded-full border border-error/30 px-2.5 py-1.5 text-xs font-medium text-error hover:bg-error-bg disabled:opacity-50 transition-colors"
                     title="Force-stop this tracker"
                   >
                     {stopping ? <LoadingSpinner size="sm" /> : <Square size={11} />}
@@ -388,7 +388,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                 )}
                 <button
                   onClick={onClose}
-                  className="rounded p-1.5 text-[#666666] hover:bg-[#1A1A1A] hover:text-white transition-colors"
+                  className="rounded-full p-1.5 text-graphite hover:bg-fog hover:text-ink transition-colors"
                 >
                   <X size={15} />
                 </button>
@@ -405,11 +405,11 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                   />
                 )}
                 <div>
-                  <p className="text-sm font-medium text-white">
+                  <p className="text-sm font-medium text-ink">
                     {entry.project?.name ?? 'No project'}
                   </p>
                   {entry.description && (
-                    <p className="mt-0.5 text-xs text-[#666666]">{entry.description}</p>
+                    <p className="mt-0.5 text-xs text-graphite">{entry.description}</p>
                   )}
                 </div>
                 <div className="ml-auto">
@@ -441,13 +441,13 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                     value: avgActivity != null ? `${avgActivity}%` : '—',
                   },
                 ].map(({ icon, label, value }) => (
-                  <div key={label} className="rounded-lg border border-[#2A2A2A] bg-[#111111] p-3">
-                    <div className="flex items-center gap-1 text-[#444]">
+                  <div key={label} className="rounded-field bg-fog p-3">
+                    <div className="flex items-center gap-1 text-graphite">
                       {icon}
                       <p className="text-[10px] uppercase tracking-wider">{label}</p>
                     </div>
                     <p
-                      className="mt-1.5 font-mono text-base font-semibold text-white"
+                      className="mt-1.5 font-mono text-base font-semibold text-ink"
                       style={{ fontSize: value.length > 5 ? 13 : 16 }}
                     >
                       {value}
@@ -458,9 +458,9 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
 
               {/* Paused time (excluded from duration) */}
               {(entry.paused_seconds ?? 0) > 0 && (
-                <p className="text-xs text-[#666666]">
+                <p className="text-xs text-graphite">
                   Paused for{' '}
-                  <span className="font-mono font-semibold text-[#eab308]">
+                  <span className="font-mono font-semibold text-warning">
                     {formatDuration(entry.paused_seconds as number)}
                   </span>{' '}
                   (excluded from tracked duration)
@@ -470,25 +470,25 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
               {/* Input summary */}
               {screenshots.length > 0 && (
                 <div className="flex gap-3">
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-4 py-3">
-                    <Keyboard size={13} className="text-[#666666]" />
+                  <div className="flex flex-1 items-center gap-2 rounded-field bg-fog px-4 py-3">
+                    <Keyboard size={13} className="text-graphite" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-[#444]">Keystrokes</p>
-                      <p className="font-mono text-sm font-semibold text-white">{totalKeys.toLocaleString()}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-graphite">Keystrokes</p>
+                      <p className="font-mono text-sm font-semibold text-ink">{totalKeys.toLocaleString()}</p>
                     </div>
                   </div>
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-4 py-3">
-                    <Mouse size={13} className="text-[#666666]" />
+                  <div className="flex flex-1 items-center gap-2 rounded-field bg-fog px-4 py-3">
+                    <Mouse size={13} className="text-graphite" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-[#444]">Mouse events</p>
-                      <p className="font-mono text-sm font-semibold text-white">{totalMouse.toLocaleString()}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-graphite">Mouse events</p>
+                      <p className="font-mono text-sm font-semibold text-ink">{totalMouse.toLocaleString()}</p>
                     </div>
                   </div>
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#111111] px-4 py-3">
-                    <Camera size={13} className="text-[#666666]" />
+                  <div className="flex flex-1 items-center gap-2 rounded-field bg-fog px-4 py-3">
+                    <Camera size={13} className="text-graphite" />
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-[#444]">Screenshots</p>
-                      <p className="font-mono text-sm font-semibold text-white">{screenshots.length}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-graphite">Screenshots</p>
+                      <p className="font-mono text-sm font-semibold text-ink">{screenshots.length}</p>
                     </div>
                   </div>
                 </div>
@@ -501,11 +501,11 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
               <div>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <p className="text-xs font-medium uppercase tracking-widest text-[#444]">
+                    <p className="text-xs font-medium uppercase tracking-widest text-graphite">
                       Screenshots {screenshots.length > 0 && `(${screenshots.length})`}
                     </p>
                     {optimizing && (
-                      <span className="flex items-center gap-1 text-[10px] text-[#666666]">
+                      <span className="flex items-center gap-1 text-[10px] text-graphite">
                         <Loader2 size={10} className="animate-spin" />
                         Optimizing…
                       </span>
@@ -515,7 +515,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                     <select
                       value={sortBy}
                       onChange={(e) => { setSortBy(e.target.value as SortKey); setPage(1); }}
-                      className="rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2.5 py-1 text-xs text-[#A1A1A1] outline-none focus:border-[#444]"
+                      className="rounded-field border border-dove bg-card px-2.5 py-1 text-xs text-ink outline-none focus:border-ink"
                     >
                       {SORT_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>{o.label}</option>
@@ -529,15 +529,15 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                     {Array.from({ length: 10 }).map((_, i) => (
                       <div
                         key={i}
-                        className="cw-skeleton rounded-lg border border-[#2A2A2A]"
+                        className="cw-skeleton rounded-field border border-hair"
                         style={{ aspectRatio: '16/9' }}
                       />
                     ))}
                   </div>
                 ) : screenshots.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[#2A2A2A] py-12">
-                    <Camera size={20} className="mb-2 text-[#333]" />
-                    <p className="text-xs text-[#444]">No screenshots for this entry</p>
+                  <div className="flex flex-col items-center justify-center rounded-field border border-dashed border-dove py-12">
+                    <Camera size={20} className="mb-2 text-dove" />
+                    <p className="text-xs text-graphite">No screenshots for this entry</p>
                   </div>
                 ) : (
                   <>
@@ -552,7 +552,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                     </div>
 
                     {totalPages > 1 && (
-                      <div className="mt-4 flex items-center justify-between text-xs text-[#666666]">
+                      <div className="mt-4 flex items-center justify-between text-xs text-graphite">
                         <span>
                           {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, sorted.length)} of {sorted.length}
                         </span>
@@ -560,7 +560,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                           <button
                             disabled={safePage === 1}
                             onClick={() => setPage((p) => Math.max(1, p - 1))}
-                            className="flex items-center gap-1 rounded border border-[#2A2A2A] px-2.5 py-1.5 hover:bg-[#1A1A1A] disabled:opacity-30 transition-colors"
+                            className="flex items-center gap-1 rounded-full border border-dove px-2.5 py-1.5 text-ink hover:bg-black/[0.03] disabled:opacity-30 transition-colors"
                           >
                             <ChevronLeft size={13} /> Prev
                           </button>
@@ -568,7 +568,7 @@ export function EntryDetailPanel({ entry, onClose, onChanged }: Props) {
                           <button
                             disabled={safePage >= totalPages}
                             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                            className="flex items-center gap-1 rounded border border-[#2A2A2A] px-2.5 py-1.5 hover:bg-[#1A1A1A] disabled:opacity-30 transition-colors"
+                            className="flex items-center gap-1 rounded-full border border-dove px-2.5 py-1.5 text-ink hover:bg-black/[0.03] disabled:opacity-30 transition-colors"
                           >
                             Next <ChevronRight size={13} />
                           </button>

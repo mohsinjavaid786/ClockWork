@@ -7,7 +7,10 @@ interface Props {
   className?: string;
 }
 
-const sizes = { sm: 'h-7 w-7 text-xs', md: 'h-9 w-9 text-sm', lg: 'h-11 w-11 text-base' };
+const sizes = { sm: 'h-7 w-7 text-[11px]', md: 'h-9 w-9 text-[13px]', lg: 'h-11 w-11 text-[15px]' };
+
+// Calm pastel tints (mint / sky / peach) chosen deterministically per name.
+const tints = ['bg-[#c5e8d4]', 'bg-sky', 'bg-apricot'];
 
 function initials(name: string) {
   return name
@@ -19,10 +22,12 @@ function initials(name: string) {
 }
 
 export function Avatar({ name, src, size = 'md', className }: Props) {
+  const tint = tints[name.charCodeAt(0) % tints.length];
   return (
     <div
       className={cn(
-        'flex items-center justify-center rounded-full bg-[#1A1A1A] border border-[#2A2A2A] font-medium text-white flex-shrink-0',
+        'flex flex-shrink-0 items-center justify-center rounded-full font-medium text-ink',
+        tint,
         sizes[size],
         className,
       )}

@@ -17,15 +17,15 @@ interface Props<T> {
 
 export function DataTable<T>({ columns, data, keyFn, className, onRowClick }: Props<T>) {
   return (
-    <div className={cn('overflow-x-auto rounded-lg border border-[#2A2A2A]', className)}>
+    <div className={cn('overflow-x-auto rounded-card bg-card shadow-card', className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[#2A2A2A] bg-[#111111]">
+          <tr className="border-b border-hair">
             {columns.map((col) => (
               <th
                 key={col.key}
                 className={cn(
-                  'px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#666666]',
+                  'px-4 py-3 text-left text-[13px] font-medium uppercase tracking-[0.04em] text-graphite',
                   col.className,
                 )}
               >
@@ -40,12 +40,12 @@ export function DataTable<T>({ columns, data, keyFn, className, onRowClick }: Pr
               key={keyFn(row)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={cn(
-                'border-b border-[#1F1F1F] bg-[#0A0A0A] transition-colors hover:bg-[#111111]',
+                'border-b border-hair transition-colors last:border-0 hover:bg-fog',
                 onRowClick && 'cursor-pointer',
               )}
             >
               {columns.map((col) => (
-                <td key={col.key} className={cn('px-4 py-3 text-[#A1A1A1]', col.className)}>
+                <td key={col.key} className={cn('px-4 py-3.5 text-[14px] text-ink', col.className)}>
                   {col.cell(row)}
                 </td>
               ))}

@@ -24,7 +24,7 @@ function GuardedLayout({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A]">
+      <div className="flex min-h-screen items-center justify-center bg-fog">
         <LoadingSpinner size="lg" />
       </div>
     );

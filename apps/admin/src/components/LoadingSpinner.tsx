@@ -11,7 +11,7 @@ export function LoadingSpinner({ size = 'md', className }: Props) {
   return (
     <div
       className={cn(
-        'animate-spin rounded-full border-2 border-[#2A2A2A] border-t-white',
+        'animate-spin rounded-full border-2 border-hair border-t-ink',
         sizes[size],
         className,
       )}

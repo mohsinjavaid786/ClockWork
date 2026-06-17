@@ -10,25 +10,22 @@ interface Props {
 
 export function StatCard({ label, value, sub, trend, className }: Props) {
   return (
-    <div
-      className={cn(
-        'rounded-lg border border-[#2A2A2A] bg-[#111111] p-5',
-        className,
-      )}
-    >
-      <p className="text-xs font-medium uppercase tracking-widest text-[#666666]">{label}</p>
-      <p className="mt-2 font-mono text-3xl font-semibold text-white">{value}</p>
+    <div className={cn('rounded-card bg-card p-5 shadow-card', className)}>
+      <p className="text-[13px] text-graphite">{label}</p>
+      <p className="mt-2 text-[32px] font-medium leading-none tracking-tight text-ink">{value}</p>
       {(sub !== undefined || trend !== undefined) && (
-        <div className="mt-1 flex items-center gap-2">
-          {sub && <span className="text-xs text-[#666666]">{sub}</span>}
+        <div className="mt-2 flex items-center gap-2">
           {trend !== undefined && (
             <span
-              className={cn('text-xs font-medium', trend >= 0 ? 'text-[#22c55e]' : 'text-[#ef4444]')}
+              className={cn(
+                'inline-flex items-center gap-0.5 text-xs font-medium',
+                trend >= 0 ? 'text-success' : 'text-error',
+              )}
             >
-              {trend >= 0 ? '+' : ''}
-              {trend}%
+              {trend >= 0 ? '▲' : '▼'} {Math.abs(trend)}%
             </span>
           )}
+          {sub && <span className="text-[13px] text-graphite">{sub}</span>}
         </div>
       )}
     </div>

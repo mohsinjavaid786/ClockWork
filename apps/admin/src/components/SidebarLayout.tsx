@@ -26,19 +26,26 @@ const nav = [
   { href: '/settings',    label: 'Settings',     icon: Settings },
 ];
 
+function monogram(name: string) {
+  return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase();
+}
+
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
   return (
-    <div className="flex h-screen bg-[#0A0A0A]">
-      <aside className="flex w-56 flex-col border-r border-[#2A2A2A] bg-[#0A0A0A]">
-        <div className="border-b border-[#2A2A2A] px-5 py-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="ClockWork" className="h-7 w-auto" />
+    <div className="flex h-screen bg-fog">
+      <aside className="flex w-60 flex-shrink-0 flex-col bg-fog">
+        {/* Wordmark */}
+        <div className="flex items-center gap-2.5 px-5 pb-2 pt-6">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink">
+            <Clock size={15} className="text-white" strokeWidth={2} />
+          </span>
+          <span className="font-display text-[19px] font-medium tracking-tight text-ink">Clockwork</span>
         </div>
 
-        <nav className="flex-1 space-y-0.5 px-2 py-3">
+        <nav className="flex-1 space-y-0.5 px-3 py-4">
           {nav.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
             return (
@@ -46,13 +53,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                 key={href}
                 href={href}
                 className={cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                  'flex items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] transition-colors',
                   active
-                    ? 'bg-[#1A1A1A] text-white'
-                    : 'text-[#666666] hover:bg-[#111111] hover:text-[#A1A1A1]',
+                    ? 'bg-card text-ink shadow-subtle'
+                    : 'text-graphite hover:bg-black/[0.04] hover:text-ink',
                 )}
               >
-                <Icon size={15} />
+                <Icon size={16} strokeWidth={1.5} />
                 {label}
               </Link>
             );
@@ -60,27 +67,32 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {user && (
-          <div className="border-t border-[#2A2A2A] px-2 py-3">
-            <div className="mb-1 px-3 py-1">
-              <p className="text-xs font-medium text-white truncate">{user.name}</p>
-              <p className="text-[11px] text-[#666666] truncate">{user.role}</p>
+          <div className="px-3 pb-4">
+            <div className="flex items-center gap-3 rounded-[10px] px-3 py-2.5">
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-sky text-[13px] font-medium text-ink">
+                {monogram(user.name)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[14px] font-medium text-ink">{user.name}</p>
+                <p className="truncate text-[12px] capitalize text-graphite">{user.role}</p>
+              </div>
+              <button
+                onClick={logout}
+                title="Sign out"
+                className="rounded-md p-1.5 text-graphite transition-colors hover:bg-black/[0.04] hover:text-error"
+              >
+                <LogOut size={16} strokeWidth={1.5} />
+              </button>
             </div>
-            <button
-              onClick={logout}
-              className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-[#666666] transition-colors hover:bg-[#111111] hover:text-[#ef4444]"
-            >
-              <LogOut size={15} />
-              Sign out
-            </button>
           </div>
         )}
       </aside>
 
       <main className="flex-1 overflow-y-auto">
-        <div className="flex justify-end border-b border-[#2A2A2A] bg-[#0A0A0A] px-8 py-2.5">
+        <div className="sticky top-0 z-20 flex h-16 items-center justify-end border-b border-dove/50 bg-card px-8">
           <TimezoneSelect />
         </div>
-        <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+        <div className="mx-auto max-w-[1200px] px-8 py-8">{children}</div>
       </main>
     </div>
   );

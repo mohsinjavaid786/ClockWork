@@ -26,21 +26,18 @@ export function Modal({ open, onClose, title, children, className }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/[0.32]" onClick={onClose} />
       <div
         className={cn(
-          'relative z-10 w-full max-w-lg rounded-xl border border-[#2A2A2A] bg-[#111111] shadow-2xl',
+          'relative z-10 w-full max-w-lg rounded-[24px] bg-card shadow-modal',
           className,
         )}
       >
-        <div className="flex items-center justify-between border-b border-[#2A2A2A] px-6 py-4">
-          <h2 className="font-mono text-sm font-semibold text-white">{title}</h2>
+        <div className="flex items-center justify-between border-b border-hair px-6 py-4">
+          <h2 className="text-[18px] font-medium text-ink">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded p-1 text-[#666666] hover:bg-[#1A1A1A] hover:text-white transition-colors"
+            className="rounded-full p-1.5 text-graphite transition-colors hover:bg-fog hover:text-ink"
           >
             <X size={16} />
           </button>

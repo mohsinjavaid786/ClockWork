@@ -15,13 +15,13 @@ export function TimezoneSelect() {
   }
 
   return (
-    <label className="flex items-center gap-2 text-xs text-[#666666]">
+    <label className="flex items-center gap-2 text-xs text-graphite">
       <Globe size={13} />
       <span className="hidden sm:inline">Timezone</span>
       <select
         value={mode}
         onChange={(e) => setMode(e.target.value as TzMode)}
-        className="rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-2 py-1.5 text-xs text-white outline-none focus:border-[#444]"
+        className="rounded-field border border-dove bg-card px-2 py-1.5 text-xs text-ink outline-none transition-colors hover:bg-fog focus:border-ink"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
