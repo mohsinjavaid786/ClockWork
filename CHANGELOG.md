@@ -11,6 +11,15 @@ listed under **[Unreleased]**.
 
 ## [Unreleased]
 
+### Changed
+- **Dashboard redesign ("Régulateur")** — the admin dashboard is reimagined as a
+  precision-instrument panel: an engraved guilloché hero with a large "logged
+  today" readout on a chronometer-style dial rim and an hours tick-rail, brass
+  engraving as the accent, and lume-green reserved strictly for live/active
+  state. The week chart is an engraved barograph (today highlighted in lume), and
+  "Tracking now" is a live roster with pulsing lume indicators and a chronometer
+  elapsed readout. Includes a live clock, manual refresh, and clickable members.
+
 ## [1.1.11] - 2026-06-16
 
 ### Fixed
