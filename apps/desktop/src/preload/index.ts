@@ -22,6 +22,12 @@ contextBridge.exposeInMainWorld('clockwork', {
     logout: () => ipcRenderer.invoke(IPC.AUTH_LOGOUT),
     getToken: () => ipcRenderer.invoke(IPC.AUTH_GET_TOKEN),
     getUser: () => ipcRenderer.invoke(IPC.AUTH_GET_USER),
+    // Subscribe to forced sign-outs (token expired/revoked); returns unsubscribe.
+    onSessionExpired: (cb: () => void) => {
+      const handler = () => cb();
+      ipcRenderer.on(IPC.AUTH_SESSION_EXPIRED, handler);
+      return () => ipcRenderer.removeListener(IPC.AUTH_SESSION_EXPIRED, handler);
+    },
   },
   timer: {
     start: (projectId?: string, description?: string) =>

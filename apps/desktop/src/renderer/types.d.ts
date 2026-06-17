@@ -32,6 +32,7 @@ interface Window {
       logout: () => Promise<{ success: boolean }>;
       getToken: () => Promise<string | null>;
       getUser: () => Promise<CwUser | null>;
+      onSessionExpired: (cb: () => void) => () => void;
     };
     timer: {
       start: (projectId?: string, description?: string) => Promise<TimerStatus>;

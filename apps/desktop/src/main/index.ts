@@ -24,6 +24,15 @@ let screenshotIntervalMinutes = 10;
 // Closing the window normally just hides it (tray app). When the user picks Quit,
 // before-quit sets this so the close handler lets the window actually close.
 let isQuitting = false;
+// Timestamp of the last user-initiated timer action (start/stop). The startup
+// reconcile uses it to avoid clobbering a timer the user kicked off while the
+// reconcile request was still in flight.
+let lastUserTimerAction = 0;
+// In-flight background server-stops. Stop returns immediately and closes the
+// entry on the server in the background; on quit we wait for these so an entry
+// isn't left open server-side until the next launch.
+const pendingStops = new Set<Promise<unknown>>();
+let flushedStops = false;
 
 // Resolves once startup session validation has finished. The renderer's auth
 // queries await this so it never reads (and trusts) a stale token before we've
@@ -50,15 +59,24 @@ function gateByVersion() {
 async function validateSession() {
   const token = getToken();
   if (!token) return;
+  // Bound this probe like every other request — a bare fetch with no timeout can
+  // stall indefinitely on a captive portal / dead connection, and the whole auth
+  // bootstrap (and timer resume) awaits this promise, so the app would hang on a
+  // blank screen until the OS gave up the socket.
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(`${API_BASE}/api/v1/config`, {
       headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     });
     if (res.status === 401 || res.status === 403) {
       clearSession();
     }
   } catch {
-    // offline — can't validate; keep the session as-is
+    // offline or timed out — can't validate; keep the session as-is
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -114,6 +132,10 @@ async function apiRequest<T>(path: string, init: RequestInit = {}, timeoutMs = 2
       },
     });
     if (!res.ok) {
+      // A 401 on a request that carried a token means the session is dead
+      // (expired/revoked). Drop it and bounce the renderer to login instead of
+      // leaving a signed-in-but-broken app whose every call 401s.
+      if (res.status === 401 && token) handleSessionExpired();
       const body = await res.json().catch(() => ({}));
       throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
     }
@@ -175,9 +197,14 @@ interface ServerEntry {
 // must re-adopt that open entry rather than assume nothing is running — otherwise
 // the client and server disagree and starting a new timer 409s forever. If the
 // server has no open entry, any stale local timer state is cleared.
-async function reconcileTimer(): Promise<ReturnType<typeof getTimerState>> {
+async function reconcileTimer(respectUserAction = false): Promise<ReturnType<typeof getTimerState>> {
+  const startedAt = Date.now();
   try {
     const { entry } = await apiRequest<{ entry: ServerEntry | null }>('/time-entries/current');
+    // If the user started/stopped a timer while this request was in flight, their
+    // action reflects newer intent than this server snapshot — don't overwrite it.
+    // (Skipped for the 409-recovery call, which explicitly wants to adopt server state.)
+    if (respectUserAction && lastUserTimerAction >= startedAt) return getTimerState();
     if (entry && entry.id) {
       const state = {
         running: true,
@@ -202,6 +229,20 @@ async function reconcileTimer(): Promise<ReturnType<typeof getTimerState>> {
 // server-side close of this entry) is reflected here promptly: we stop tracking
 // and tell the renderer to show a notice. Returns early (no network) when idle.
 let sessionSyncInterval: ReturnType<typeof setInterval> | null = null;
+
+// Forced sign-out: a token came back 401. Clear local session + timer, stop
+// capture, and tell the renderer to show the login screen.
+function handleSessionExpired() {
+  clearSession();
+  stopScreenshotLoop();
+  setActivityPaused(false);
+  if (mainWindow) {
+    updateTrayMenu(mainWindow, false);
+    mainWindow.webContents.send(IPC.AUTH_SESSION_EXPIRED);
+    if (!mainWindow.isVisible()) mainWindow.show();
+    mainWindow.focus();
+  }
+}
 
 async function checkRemoteStop() {
   const local = getTimerState();
@@ -263,7 +304,7 @@ app.whenReady().then(async () => {
   // timer keeps running AND screenshots keep being captured (the entry stays the
   // same one on the server). Reconcile against the server (not just local state)
   // so a client that lost its local session still re-adopts the open entry.
-  const resumed = await reconcileTimer();
+  const resumed = await reconcileTimer(true);
   if (resumed.running) {
     if (mainWindow) updateTrayMenu(mainWindow, true);
     if (resumed.paused) {
@@ -288,13 +329,24 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (e) => {
   isQuitting = true;
   stopScreenshotLoop();
   stopActivityTracking();
   if (sessionSyncInterval) {
     clearInterval(sessionSyncInterval);
     sessionSyncInterval = null;
+  }
+  // If a background server-stop is still retrying, defer the quit briefly so the
+  // entry actually closes server-side (otherwise it stays open until the next
+  // launch). Bounded so a dead network can't block the quit indefinitely.
+  if (pendingStops.size && !flushedStops) {
+    flushedStops = true;
+    e.preventDefault();
+    void Promise.race([
+      Promise.allSettled([...pendingStops]),
+      new Promise((r) => setTimeout(r, 8000)),
+    ]).then(() => app.quit());
   }
 });
 
@@ -337,6 +389,7 @@ ipcMain.handle(IPC.AUTH_GET_USER, async () => {
 });
 
 ipcMain.handle(IPC.TIMER_START, async (_e, { projectId, description }: { projectId?: string; description?: string }) => {
+  lastUserTimerAction = Date.now();
   let state;
   try {
     const entry = await apiRequest<{ id: string; started_at: string }>('/time-entries/start', {
@@ -384,6 +437,7 @@ async function stopServerEntry(entryId: string, attempts = 3) {
 }
 
 ipcMain.handle(IPC.TIMER_STOP, async () => {
+  lastUserTimerAction = Date.now();
   const state = getTimerState();
 
   // Stop locally first and return immediately, so the button never hangs on the
@@ -395,7 +449,8 @@ ipcMain.handle(IPC.TIMER_STOP, async () => {
   if (mainWindow) updateTrayMenu(mainWindow, false);
 
   if (state.running && state.entryId) {
-    void stopServerEntry(state.entryId);
+    const p = stopServerEntry(state.entryId).finally(() => pendingStops.delete(p));
+    pendingStops.add(p);
   }
 
   return { running: false };

@@ -3,6 +3,9 @@ export const IPC = {
   AUTH_LOGOUT: 'auth:logout',
   AUTH_GET_TOKEN: 'auth:get-token',
   AUTH_GET_USER: 'auth:get-user',
+  // Main → renderer push: the session expired (a request came back 401), so the
+  // renderer should drop back to the login screen.
+  AUTH_SESSION_EXPIRED: 'auth:session-expired',
   TIMER_START: 'timer:start',
   TIMER_STOP: 'timer:stop',
   TIMER_PAUSE: 'timer:pause',

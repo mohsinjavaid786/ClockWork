@@ -19,6 +19,15 @@ export function App() {
     });
   }, []);
 
+  // The main process forces a sign-out if a request comes back 401 (token
+  // expired/revoked); fall back to login instead of sitting on a dead session.
+  useEffect(() => {
+    return window.clockwork.auth.onSessionExpired(() => {
+      setUser(null);
+      setState('login');
+    });
+  }, []);
+
   if (state === 'loading') {
     return (
       <div
