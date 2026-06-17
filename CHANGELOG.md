@@ -26,6 +26,35 @@ listed under **[Unreleased]**.
   the member page; the standalone route redirects to Team.
 - Restored the ClockWork logo in the sidebar and inset dropdown chevrons.
 
+### Fixed
+- **Desktop never hangs on launch and signs out cleanly** — startup session
+  validation is now time-bounded (a stalled network can't freeze the app on a
+  blank screen), and a request that comes back 401 drops the session and returns
+  to the login screen instead of leaving a signed-in-but-broken app.
+- **Stop is honoured even if you quit immediately** — quitting while a background
+  server-stop is still retrying now waits briefly for it to finish, so an entry
+  isn't left running server-side until the next launch. The startup reconcile
+  also no longer clobbers a timer you started while it was still loading.
+- **One open timer per user** — the database now enforces a single running/paused
+  entry per user, closing a race where two quick starts could open two entries.
+- **Dashboard KPIs stay live** — Hours / Sessions / Screenshots and the chart now
+  refresh every minute alongside the live roster, not only on manual refresh.
+- **Screenshots can't desync** — switching between entries quickly no longer shows
+  one entry's screenshots under another while requests race.
+- **Reports week alignment** — the dashboard stat card now uses the same
+  Monday-based week as the timeline and weekly chart.
+- **Safer report exports** — CSV cells are escaped against spreadsheet formula
+  injection and PDF/HTML fields are escaped against markup injection.
+- **No orphaned thumbnails** — deleting an employee now also removes their
+  screenshot thumbnails from storage (previously only full images were cleared).
+
+### Security
+- API responses no longer echo raw database error text (which could disclose
+  schema); details are logged server-side and a generic message is returned.
+- CORS no longer falls back to `localhost` with credentials when `ADMIN_URL` is
+  unset in production; the portal API URL also fails loudly instead of silently
+  defaulting to `localhost` in a production build.
+
 ### Changed (earlier)
 - **Admin portal redesign (light, editorial)** — the entire portal moves from the
   dark monochrome theme to a light "Steep-inspired" editorial system: a fog
