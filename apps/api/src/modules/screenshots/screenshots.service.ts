@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import sharp from 'sharp';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { dbError } from '../../common/db';
 import { UploadScreenshotDto, ListScreenshotsQueryDto } from './dto/screenshot.dto';
 
 // Grid thumbnails: small JPEGs so the portal never downloads multi-MB full-res
@@ -45,7 +46,7 @@ export class ScreenshotsService {
       .from('screenshots')
       .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
 
-    if (uploadError) throw new BadRequestException(uploadError.message);
+    if (uploadError) throw dbError(uploadError);
 
     // Always have a small thumbnail for the grid. Prefer the client-provided one
     // (saves a resize); otherwise generate it server-side from the full image so
@@ -89,7 +90,7 @@ export class ScreenshotsService {
       .select()
       .single();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     return data;
   }
 
@@ -113,7 +114,7 @@ export class ScreenshotsService {
     if (query.to) q = q.lte('captured_at', query.to);
 
     const { data, error, count } = await q;
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
 
     // Batch-sign full images + thumbnails in one round-trip each.
     const fullPaths = (data ?? []).map((s) => s.storage_path as string);
@@ -172,7 +173,7 @@ export class ScreenshotsService {
       .order('captured_at', { ascending: false })
       .limit(limit);
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     if (!rows || rows.length === 0) return { processed: 0, remaining: 0 };
 
     let processed = 0;

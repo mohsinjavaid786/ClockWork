@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { dbError } from '../../common/db';
 import { UpdateConfigDto } from './dto/config.dto';
 
 @Injectable()
@@ -40,7 +41,7 @@ export class ConfigService {
       .select()
       .single();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
 
     return {
       screenshotIntervalMinutes: data.screenshot_interval_minutes as number,

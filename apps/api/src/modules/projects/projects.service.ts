@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { dbError } from '../../common/db';
 import { CreateProjectDto, UpdateProjectDto } from './dto/create-project.dto';
 
 @Injectable()
@@ -12,7 +13,7 @@ export class ProjectsService {
       .select('id, name, description, color, is_archived, created_by, created_at')
       .order('created_at', { ascending: false });
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
 
     const result = await Promise.all(
       (data ?? []).map(async (p) => {
@@ -91,7 +92,7 @@ export class ProjectsService {
       .select()
       .single();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     return data;
   }
 
@@ -115,7 +116,7 @@ export class ProjectsService {
 
   async remove(id: string) {
     const { error } = await this.supabase.client.from('projects').delete().eq('id', id);
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     return { success: true };
   }
 }
