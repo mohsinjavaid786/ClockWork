@@ -1,6 +1,17 @@
 import type { MinuteActivity, Screenshot } from './types';
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// Resolve the API origin. NEXT_PUBLIC_API_URL is inlined at build time; if it's
+// missing in a production build we must NOT silently fall back to localhost
+// (every request would fail in users' browsers) — fail loudly instead. Only dev
+// gets the localhost default.
+function apiBase(): string {
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  if (url) return url;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_API_URL is not configured for this deployment');
+  }
+  return 'http://localhost:3001';
+}
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -9,7 +20,7 @@ function getToken(): string | null {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
-  const res = await fetch(`${BASE}/api/v1${path}`, {
+  const res = await fetch(`${apiBase()}/api/v1${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -170,11 +181,11 @@ export const api = {
     },
     csvUrl: (params?: Record<string, string>) => {
       const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-      return `${BASE}/api/v1/reports/csv${qs}`;
+      return `${apiBase()}/api/v1/reports/csv${qs}`;
     },
     pdfUrl: (params?: Record<string, string>) => {
       const qs = params ? '?' + new URLSearchParams(params).toString() : '';
-      return `${BASE}/api/v1/reports/pdf${qs}`;
+      return `${apiBase()}/api/v1/reports/pdf${qs}`;
     },
   },
 
