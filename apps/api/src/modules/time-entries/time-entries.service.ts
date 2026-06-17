@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { dbError } from '../../common/db';
 import { StartTimerDto, StopTimerDto, ListEntriesQueryDto } from './dto/time-entry.dto';
 
 @Injectable()
@@ -33,7 +34,13 @@ export class TimeEntriesService {
       .select()
       .single();
 
-    if (error) throw new BadRequestException(error.message);
+    // The check above is racy; the partial unique index (migration 008) is the
+    // real guard. A concurrent start trips it with a unique violation (23505),
+    // which we surface as the same 409 the client already handles.
+    if (error) {
+      if (error.code === '23505') throw new ConflictException('A timer is already running');
+      throw dbError(error);
+    }
     return data;
   }
 
@@ -42,14 +49,18 @@ export class TimeEntriesService {
   // reinstalled/updated client that lost its local session can re-adopt an entry
   // that's still open on the server instead of being unable to start a new one.
   async current(userId: string) {
+    // Take the most recent open entry rather than maybeSingle(): if a user ever
+    // ends up with more than one open entry, maybeSingle() errors and the client
+    // can never reconcile. Newest-first + limit(1) always resolves to one.
     const { data } = await this.supabase.client
       .from('time_entries')
       .select('id, started_at, status, project_id, description, paused_seconds')
       .eq('user_id', userId)
       .in('status', ['running', 'paused'])
-      .maybeSingle();
+      .order('started_at', { ascending: false })
+      .limit(1);
 
-    return { entry: data ?? null };
+    return { entry: data?.[0] ?? null };
   }
 
   async pause(userId: string, entryId: string) {
@@ -73,7 +84,7 @@ export class TimeEntriesService {
       .select()
       .single();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     return data;
   }
 
@@ -106,7 +117,7 @@ export class TimeEntriesService {
       .select()
       .single();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     return data;
   }
 
@@ -155,7 +166,7 @@ export class TimeEntriesService {
       .select()
       .single();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     return data;
   }
 
@@ -205,7 +216,7 @@ export class TimeEntriesService {
       .select()
       .single();
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     return data;
   }
 
@@ -230,7 +241,7 @@ export class TimeEntriesService {
 
     const { data, error, count } = await q;
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
 
     const total = count ?? 0;
     return {
@@ -247,7 +258,7 @@ export class TimeEntriesService {
     if (!isAdmin) q.eq('user_id', userId);
 
     const { error } = await q;
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     return { success: true };
   }
 
@@ -259,7 +270,7 @@ export class TimeEntriesService {
       )
       .eq('status', 'running');
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
 
     const now = Date.now();
     return (data ?? []).map((e) => {
