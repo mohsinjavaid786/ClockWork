@@ -7,19 +7,20 @@
 ## Table of Contents
 
 - [Accessing the portal](#accessing-the-portal)
+- [The top bar — theme and timezone](#the-top-bar--theme-and-timezone)
 - [Demo mode](#demo-mode)
 - [Dashboard](#dashboard)
-- [Work Diary](#work-diary)
-  - [Calendar](#calendar)
-  - [Weekly bar chart](#weekly-bar-chart)
-  - [Day detail — sessions and screenshots](#day-detail--sessions-and-screenshots)
-  - [Screenshot modal](#screenshot-modal)
 - [Timesheets](#timesheets)
-  - [Entry detail panel](#entry-detail-panel)
+  - [Entry detail drawer](#entry-detail-drawer)
+  - [Screenshot grid](#screenshot-grid)
+  - [Screenshot viewer](#screenshot-viewer)
+  - [Force-stopping a stuck tracker](#force-stopping-a-stuck-tracker)
 - [Team](#team)
   - [Inviting a new member](#inviting-a-new-member)
-  - [Member profile](#member-profile)
-  - [Deactivating a member](#deactivating-a-member)
+  - [Member detail page](#member-detail-page)
+  - [Work diary tab](#work-diary-tab)
+  - [Deleting a member](#deleting-a-member)
+  - [Downloading the installers](#downloading-the-installers)
 - [Projects](#projects)
 - [Reports](#reports)
 - [Settings](#settings)
@@ -37,6 +38,22 @@ You'll see the login screen. Sign in with your admin credentials. Only users wit
 > ```sql
 > UPDATE public.users SET role = 'admin' WHERE email = 'you@yourcompany.com';
 > ```
+
+---
+
+## The top bar — theme and timezone
+
+Every page has a sticky top bar. On the right-hand side you'll find two controls that apply across the whole portal.
+
+**Theme toggle.** Clockwork uses a light, editorial theme by default. Click the **sun / moon button** in the top bar to switch between **Light** and **Dark** mode. Your choice is remembered in this browser, so the portal opens in your preferred theme next time.
+
+**Timezone switcher.** A globe dropdown next to the theme toggle controls how every time and date in the portal is displayed:
+
+- **My time** — your own local timezone (the offset is shown in the label, e.g. `My time (UTC+5:00)`)
+- **UTC** — coordinated universal time, useful when comparing members across regions
+- **Employee's time** — the timezone of the employee you're currently viewing. This option only appears when you're on a member's detail page.
+
+Switching the timezone re-labels timestamps everywhere — the dashboard, timesheets, the work diary and the screenshot viewer all follow this setting.
 
 ---
 
@@ -64,161 +81,47 @@ All pages, panels, and exports work in demo mode. Data is generated in-browser �
 
 **URL:** `/dashboard`
 
-The dashboard gives you a live snapshot of the team's activity.
+The dashboard gives you a live snapshot of the team's activity over a date range you choose.
 
 ```
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│  Today       │ │  Active now  │ │  This week   │ │  Screenshots │
-│  12.5 hrs    │ │  3 members   │ │  145.5 hrs   │ │  47 today    │
-│              │ │              │ │  +12% vs last│ │              │
-└──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘
-
-┌────────────────────────────────────────┐  ┌──────────────────────┐
-│  Hours this week (bar chart)           │  │  Tracking now        │
-│                                        │  │                      │
-│  Mon ████████████                      │  │  ● James Wilson      │
-│  Tue ███████████████                   │  │    Website Redesign  │
-│  Wed █████████████████                 │  │    1h 23m            │
-│  Thu █████████████                     │  │                      │
-│  Fri ████████                          │  │  ● Priya Patel       │
-│  Sat ░                                 │  │    Mobile App v2     │
-│  Sun ░                                 │  │    45m               │
-└────────────────────────────────────────┘  └──────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Dashboard          [ Last 7 days ▾ ]                 [ ↻ Refresh ]        │
+│  ┌──────────────────────────────────────────────────────────────────────┐ │
+│  │  Apr   May   Jun ▏▒▒▒▒▒▒▒▒▒▒▏ Jul   Aug      ← draggable timeline    │ │
+│  └──────────────────────────────────────────────────────────────────────┘ │
+├──────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐      │
+│  │ Hours tracked│ │  Active now  │ │  Sessions    │ │ Screenshots  │      │
+│  │  145.5       │ │  3 members   │ │  35          │ │  412         │      │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘      │
+│                                                                            │
+│  ┌────────────────────────────────────────┐  ┌──────────────────────┐    │
+│  │  Hours over period (bar chart)         │  │  Tracking now    ● 2 │    │
+│  │  ████ ██████ ████████ ██████ ███        │  │  ● James Wilson      │    │
+│  │                                        │  │    Website · 1h 23m  │    │
+│  │                                        │  │  ● Priya Patel       │    │
+│  └────────────────────────────────────────┘  └──────────────────────┘    │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Stat cards:**
-- **Today** — total hours logged today (stopped entries only)
-- **Active now** — number of members currently running a timer
-- **This week** — total hours this Mon–Sun with % change vs last week (green = up, red = down)
-- **Screenshots today** — number of screenshots captured and uploaded today
+### Choosing the date range
 
-**Bar chart** — last 7 days, one bar per day. Hover a bar to see the exact hours.
+Everything on the dashboard — the KPI cards and the hours chart — reflects the date range you select. There are two ways to set it:
 
-**Tracking now** — live panel listing every member currently running a timer, with their project name and how long their current session has been running. This list updates on page refresh.
+- **Preset dropdown** — pick from **Last 7 days**, **Last 30 days**, **Last 3 months**, **Last 6 months**, **Year to date**, or **Last 12 months**.
+- **Draggable timeline** — the horizontal band above the cards is a scrubber. **Drag the middle** of the highlighted band to slide the range earlier or later, or **drag either edge** to make the range wider or narrower. Dragging the timeline switches the dropdown to a custom range.
 
----
+Click **Refresh** at any time to pull the latest numbers.
 
-## Work Diary
+**KPI cards** (all scoped to the selected range):
+- **Hours tracked** — total hours logged in the period
+- **Active now** — number of members currently running a timer (live, not range-bound)
+- **Sessions** — number of time entries in the period
+- **Screenshots** — number of screenshots captured in the period
 
-**URL:** `/work-diary`
+**Hours over period** — a bar chart of hours across the selected range. Hover a bar to see the exact value.
 
-The Work Diary is the most detailed time overview in the portal. It combines a monthly calendar with a weekly horizontal bar chart — similar to Upwork's time tracking view.
-
-```
-┌──────────────────────┐  ┌────────────────────────────────────────────────┐
-│  Member: All ▾       │  │                                                │
-├──────────────────────┤  │  Jun 1 – Jun 7                                 │
-│  June 2026     < >   │  │                                                │
-│                      │  │  1 Monday    ████████████████████  9:10 hrs    │
-│  M  T  W  T  F  S  S │  │  2 Tuesday   ████████████████████  9:10 hrs    │
-│  1  2  3  4  5  6  7 │  │  3 Wednesday █████████████████████ 10:00 hrs   │
-│  ●  ●  ●  ■  ●       │  │  4 Thursday  ████████████████■■■   8:10 hrs    │
-│  8  9 10 11 12 13 14 │  │  5 Friday    ████████              4:00 hrs    │
-│ 15 16 17 18 19 20 21 │  │  6 Saturday  ──────────────         0:00 hrs   │
-│ 22 23 24 25 26 27 28 │  │  7 Sunday    ──────────────         0:00 hrs   │
-│                      │  │                                                │
-│  ● Tracked  ■ Overtime│  │  Tracked 40:20  Overtime 0:10  Total 40:30   │
-└──────────────────────┘  └────────────────────────────────────────────────┘
-```
-
-### Calendar
-
-- Each day shows a **green dot** if there are tracked entries that day
-- A **red square** appears when a member logged more than 8 hours (overtime)
-- Click any day to select that **whole week** — the bar chart on the right updates to show Mon–Sun for that week
-- The **< >** arrows navigate between months
-
-### Weekly bar chart
-
-Each row represents one day of the selected week:
-
-| Bar colour | Meaning |
-|---|---|
-| Green | Regular hours (up to 8h for that day) |
-| Red extension | Overtime — hours beyond 8 on that day |
-| Grey | No time logged |
-
-The bar widths are proportional — the longest bar in the week fills the full width. Hours are shown as `H:MM hrs`.
-
-**Click any row** to open the day detail panel for that date.
-
-**Footer row** shows totals for the selected week: total tracked hours, overtime, and combined total.
-
-**Member picker** — use the dropdown at the top-right to filter the entire Work Diary view to one team member. This is useful when reviewing an individual's week.
-
-### Day detail — sessions and screenshots
-
-Clicking a day bar opens a slide-in panel from the right:
-
-```
-┌───────────────────────────────────────────────────────────────┐
-│  Monday, June 2                                          [X]  │
-│  Total: 9:10 hrs  ●  2 sessions                              │
-├───────────────────────────────────────────────────────────────┤
-│  ┌───────────────────────────────────────────────────────┐    │
-│  │ ● 9:00 AM – 11:30 AM (2:30 hrs)            82% avg   │    │
-│  │ Website Redesign · Hero section layout                │    │
-│  ├───────────────────────────────────────────────────────┤    │
-│  │ [9:10] [9:20] [9:30] [9:40] [9:50] [10:00] ──────►  │    │
-│  └───────────────────────────────────────────────────────┘    │
-│                                                               │
-│  ┌───────────────────────────────────────────────────────┐    │
-│  │ ● 13:00 PM – 16:00 PM (3:00 hrs)           75% avg   │    │
-│  │ Website Redesign · API integration                    │    │
-│  ├───────────────────────────────────────────────────────┤    │
-│  │ [13:10][13:20][13:30][13:40][13:50][14:00] ──────►   │    │
-│  └───────────────────────────────────────────────────────┘    │
-└───────────────────────────────────────────────────────────────┘
-```
-
-Each **session block** shows:
-- A colored dot matching the project colour
-- Start time – end time and total duration
-- Average activity % across all screenshots in the session
-- A horizontally scrollable **screenshot filmstrip** — each thumbnail shows the raw capture, the capture time, and a coloured activity bar at the bottom (green ≥70%, yellow ≥40%, red <40%)
-
-For employees with multiple monitors, each capture event produces one thumbnail per display. A small `S1/2`, `S2/2` badge in the top-right of each tile identifies which screen it came from.
-
-**Click any screenshot thumbnail** to open the full screenshot modal.
-
-### Screenshot modal
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│  James Wilson · Mon Jun 2 · 9:00 AM – 11:30 AM         12 of 14    │
-├──────────────────────────────────────────────┬───────────────────────┤
-│                                              │  Activity Level       │
-│   [Raw screenshot of the work session]       │  ██████████  9/10 min │
-│                                              │                       │
-│   Active window:                             │  Activity             │
-│   Visual Studio Code — index.ts             │  ┌────────┬─────┬────┐│
-│                                              │  │ Time   │ Key │ Mse││
-│   ⌨ 342 keystrokes                          │  │ 9:10   │  32 │ 18 ││
-│   🖱 187 mouse events                        │  │ 9:11   │  14 │ 27 ││
-│                                              │  │ 9:12   │  48 │ 11 ││
-│                                              │  │ ...    │ ... │ ...││
-│                                              │  └────────┴─────┴────┘│
-├──────────────────────────────────────────────┴───────────────────────┤
-│  ← Previous   [🖼][🖼][🖼][🖼][🖼]   Next →                           │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-**Left side:**
-- The captured screenshot at full resolution — **raw, no blur** (Upwork-style). Use this to verify the work being done
-- For employees with multiple monitors, the header shows `Screen N of M` and each display appears as its own tile in the filmstrip
-- Active window title — which application was in focus
-- Total keystroke and mouse event counts for this 10-minute window
-
-**Right side:**
-- **Activity Level** — 10 coloured blocks representing each minute of the window; filled blocks = active minute
-- **Per-minute breakdown table** — exact Time, Keyboard events, and Mouse events for each of the 10 minutes
-
-**Navigation:**
-- **← Previous / Next →** buttons or **arrow keys** on your keyboard
-- Thumbnail filmstrip at the bottom — click any frame to jump directly
-- **Escape** or click outside to close
-
-> **Interpreting low activity:** A screenshot with 3/10 or 4/10 active minutes is not necessarily a problem. Reading documentation, attending a meeting on a second device, or reviewing designs will show low input activity. Use the active window title and screenshot context to judge.
+**Tracking now** — a live panel listing every member currently running a timer, with their project and how long the current session has been running. The green badge shows how many people are active, and the list auto-refreshes about once a minute. **Click any member** to jump straight to their detail page.
 
 ---
 
@@ -240,11 +143,15 @@ The Timesheets page shows every time entry across all team members in a paginate
     35 total entries                         Prev  1 / 2  Next
 ```
 
-Each row shows: member avatar + name, start time, project (with colour dot), description snippet, duration, and status badge.
+Each row shows: member avatar + name, start time, project (with colour dot), description snippet, duration, and a colour-coded status badge. The table is paginated (25 entries per page).
 
-Click **any row** to open the entry detail panel.
+> **Status colours.** Status badges are colour-coded throughout the portal: **green** = active / running, **yellow** = paused, **red** = stopped or failed, **grey** = inactive / archived.
 
-### Entry detail panel
+Click **any row** to open the entry detail drawer.
+
+### Entry detail drawer
+
+Clicking a row slides a **floating detail drawer** in from the right. The rest of the page **dims and blurs** behind it so you can focus on the entry. Close the drawer with the **X** button or by clicking the blurred backdrop.
 
 ```
 ┌──────────────────────────────────────────────────────┐
@@ -260,25 +167,79 @@ Click **any row** to open the entry detail panel.
 ├──────────────────────────────────────────────────────┤
 │  ⌨ 1,847 keystrokes  🖱 923 mouse events  📷 14 shots │
 ├──────────────────────────────────────────────────────┤
-│  Activity timeline                                   │
-│  ▓▓▓▓▓▓░░▓▓▓▓▓▓▓▓░░▓▓▓▓▓▓▓▓▓▓░░▓▓▓▓▓▓▓▓▓▓▓▓        │
-│  9:00              10:00             11:30           │
-├──────────────────────────────────────────────────────┤
-│  Screenshots                                         │
-│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ...  │
-│  │ 9:10 │ │ 9:20 │ │ 9:30 │ │ 9:40 │ │ 9:50 │      │
-│  │ 82%  │ │ 71%  │ │ 90%  │ │ 85%  │ │ 78%  │      │
-│  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘      │
+│  Screenshots               Sort: [ Newest first ▾ ]  │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐        │
+│  │ 9:10 │ │ 9:20 │ │ 9:30 │ │ 9:40 │ │ 9:50 │        │
+│  │ 82%  │ │ 71%  │ │ 90%  │ │ 85%  │ │ 78%  │        │
+│  └──────┘ └──────┘ └──────┘ └──────┘ └──────┘        │
+│                                       Prev 1/2 Next   │
 └──────────────────────────────────────────────────────┘
 ```
 
-The panel contains:
+The drawer contains:
 - **4 stat boxes**: Duration, Started, Ended, Average activity %
-- **Input totals**: Keystroke count, mouse event count, screenshot count for the whole session
-- **Activity timeline**: A bar chart where each bar = one 10-minute screenshot window; height and colour reflect activity level
-- **Screenshot grid**: 3-column grid of thumbnails. Click any to open the [Screenshot modal](#screenshot-modal)
+- **Input totals**: keystroke count, mouse event count, and screenshot count for the whole session
+- **Screenshot grid** (see below)
+- For entries that are still **running** or **paused**, a **Stop tracker** button (see [Force-stopping a stuck tracker](#force-stopping-a-stuck-tracker))
 
-Close the panel by clicking **X** or clicking outside it.
+### Screenshot grid
+
+The screenshots for the entry are shown in a grid, **10 per page**. Use the **Sort** dropdown to order them by **Newest first**, **Oldest first**, **Most active**, or **Least active**, and the **Prev / Next** controls to page through them.
+
+Each tile shows the raw thumbnail, the capture time, the activity % (colour-coded: green ≥70%, yellow ≥40%, red <40%), and the input counts. For employees with multiple monitors, a small badge marks which screen the image came from (`Screen 1 of 2`, etc.).
+
+**Click any thumbnail** to open the full screenshot viewer.
+
+### Screenshot viewer
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  James Wilson · Mon Jun 2 · 9:00 AM – 11:30 AM         12 of 14    │
+├──────────────────────────────────────────────┬───────────────────────┤
+│                                              │  Activity Level       │
+│   [Raw screenshot of the work session]       │  ██████████  9/10 min │
+│                                              │                       │
+│   Active window:                             │  Activity             │
+│   Visual Studio Code — index.ts             │  ┌────────┬─────┬────┐│
+│                                              │  │ Time   │ Key │ Mse││
+│   ⌨ 342 keystrokes                          │  │ 9:10   │  32 │ 18 ││
+│   🖱 187 mouse events                        │  │ 9:11   │  14 │ 27 ││
+│                                              │  │ ...    │ ... │ ...││
+├──────────────────────────────────────────────┴───────────────────────┤
+│  ← Prev   [🖼][🖼][🖼][🖼][🖼]   Next →     [ − ] 150% [ + ] [ ⤢ ]   │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+**Left side:**
+- The captured screenshot at full resolution — **raw, no blur** (Upwork-style). Use this to verify the work being done
+- For employees with multiple monitors, the header shows `Screen N of M` and each display appears as its own tile in the filmstrip
+- Active window title — which application was in focus
+- Total keystroke and mouse event counts for this window
+
+**Right side:**
+- **Activity Level** — coloured blocks representing each minute of the window; filled blocks = active minute
+- **Per-minute breakdown table** — exact Time, Keyboard events, and Mouse events for each minute
+
+**Zooming and panning:**
+- **Zoom** between 100% and 400% using the **scroll wheel**, the **+ / −** buttons, or **double-click** to toggle 2× zoom. The current zoom level is shown in the control bar; the **reset** button (⤢) returns to 100%.
+- When zoomed in, **drag the image** to pan around it.
+
+**Navigation:**
+- **← Previous / Next →** buttons or the **left / right arrow keys**
+- Thumbnail filmstrip at the bottom — click any frame to jump directly
+- **Escape** to close
+
+> **Interpreting low activity:** A screenshot with 3/10 or 4/10 active minutes is not necessarily a problem. Reading documentation, attending a meeting on a second device, or reviewing designs will show low input activity. Use the active window title and screenshot context to judge.
+
+### Force-stopping a stuck tracker
+
+If a member's timer is still **running** or **paused** — for example, they forgot to stop at the end of the day, or their machine went offline mid-session — you can close it from the server side:
+
+1. Open the entry's detail drawer from the **Timesheets** table.
+2. Click **Stop tracker**.
+3. Confirm in the dialog ("Force-stop {name}'s tracker? The entry will be closed now.").
+
+The entry is closed immediately and recorded as stopped. The member's desktop app reconciles with the server on its next check.
 
 ---
 
@@ -289,26 +250,27 @@ Close the panel by clicking **X** or clicking outside it.
 The Team page lists every member in the system.
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  Team  6 members                          [ Invite member ]      │
-├──────────────────────────────────────────────────────────────────┤
-│  Member              Role    Status    This week  Timezone       │
-├──────────────────────────────────────────────────────────────────┤
-│  [SA] Sarah Chen     admin   Active    32.5h      America/NY     │
-│  [JW] James Wilson   member  Active    28.0h      America/CH     │
-│  [PP] Priya Patel    member  Active    25.5h      America/LA     │
-│  [MJ] Marcus Johnson member  Active    18.0h      Europe/London  │
-│  [ER] Emily Rodriguez member Inactive   0.0h      America/NY     │
-│  [AK] Alex Kim       member  Active    12.5h      Asia/Seoul     │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│  Team  6 members    [⬇ macOS] [⬇ Windows]            [ Invite member ]    │
+│  [ Employees · 5 ]  [ Admins · 1 ]                                         │
+├──────────────────────────────────────────────────────────────────────────┤
+│  Member              Role    Status    Signup    This week  Timezone   ⋮  │
+├──────────────────────────────────────────────────────────────────────────┤
+│  [JW] James Wilson   member  Active    Accepted  28.0h      America/CH  🗑 │
+│  [PP] Priya Patel    member  Active    Accepted  25.5h      America/LA  🗑 │
+│  [MJ] Marcus Johnson member  Active    Pending   18.0h      Europe/Lon  🗑 │
+│  [AK] Alex Kim       member  Active    Accepted  12.5h      Asia/Seoul  🗑 │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Columns:**
-- **Member**: Avatar (initials), full name (click to go to their profile), email
-- **Role**: `admin` or `member` badge
+The page has **Employees** and **Admins** tabs (each shows a count). Columns:
+- **Member**: avatar (initials), full name (click to open their detail page), email
+- **Role**: colour-coded `admin` or `member` badge
 - **Status**: `Active` (can log in) or `Inactive` (access blocked)
-- **This week**: Total tracked hours Mon–Sun for the current week
-- **Timezone**: The member's configured timezone
+- **Signup**: invite status — **Pending** (invited, not yet set a password) or **Accepted**
+- **This week**: total tracked hours Mon–Sun for the current week
+- **Timezone**: the member's configured timezone
+- A **delete** (trash) action on each row
 
 ### Inviting a new member
 
@@ -316,45 +278,73 @@ Click **Invite member** to open the invite modal:
 
 1. **Full name** — the member's display name
 2. **Email** — their work email address; must be unique
-3. **Role** — `member` for employees, `admin` for managers
-4. **Temporary password** — minimum 8 characters; share this securely with the new member and ask them to change it
+3. **Role** — `Member` for employees, `Admin` for managers
+4. **Timezone** — the member's working timezone
+5. **Temporary password** *(optional)* — minimum 8 characters
 
-Click **Send invite** — the user account is created immediately and the member can log in to the desktop app right away.
+Click **Send invite**.
 
-> **Note:** Clockwork creates the account directly. If you have Supabase email confirmation enabled, the member may need to verify their email first.
+- If you **leave the temporary password blank**, the member receives an **email with a set-password link** plus links to download the Mac and Windows desktop apps. The account becomes usable once they choose their password.
+- If you **set a temporary password**, the account is ready immediately — share the password securely and ask the member to change it after first login.
 
-### Member profile
+> Their **Signup** status shows **Pending** until they set a password (or log in), then flips to **Accepted**.
 
-Click any member's name to see their detail page:
+### Member detail page
+
+Click any member's name to open their detail page. At the top you'll see their profile (name, email, role, status, timezone, current week's hours). The page has tabs:
+
+- **Overview** — recent time entries and a summary of the member's activity
+- **Work diary** — see below
+
+> When viewing a member, the top-bar timezone switcher gains the **Employee's time** option, letting you read all their times in their own timezone.
+
+### Work diary tab
+
+The **work diary** (previously a separate top-nav page) now lives as a tab on each member's detail page: **Team → click a member → Work diary**. It is the most detailed time overview for that one employee, combining a monthly calendar with a weekly bar chart — similar to Upwork's time tracking view.
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│  [PP]  Priya Patel           member  Active       25.5h/week     │
-│        priya@clockwork.app   America/Los_Angeles                 │
-├──────────────────────────────────────────────────────────────────┤
-│  Recent activity                                                 │
-├──────────────────────────────────────────────────────────────────┤
-│  Date         Project          Description         Duration  Sts  │
-│  Jun 2, 9:00  Mobile App v2   Auth screens        2:30      ✓    │
-│  Jun 2, 10:00 Mobile App v2   Push notifications  1:30      ✓    │
-│  Jun 1, 9:30  Backend Infra   Docker refactor     3:00      ✓    │
-│  ...                                                             │
-└──────────────────────────────────────────────────────────────────┘
+┌──────────────────────┐  ┌────────────────────────────────────────────────┐
+│  June 2026     < >   │  │  Jun 1 – Jun 7                                 │
+│                      │  │  1 Monday    ████████████████████  9:10 hrs    │
+│  M  T  W  T  F  S  S │  │  2 Tuesday   ████████████████████  9:10 hrs    │
+│  1  2  3  4  5  6  7 │  │  3 Wednesday █████████████████████ 10:00 hrs   │
+│  ●  ●  ●  ■  ●       │  │  4 Thursday  ████████████████■■■   8:10 hrs    │
+│  8  9 10 11 12 13 14 │  │  5 Friday    ████████              4:00 hrs    │
+│ 15 16 17 18 19 20 21 │  │  6 Saturday  ──────────────         0:00 hrs   │
+│ 22 23 24 25 26 27 28 │  │  7 Sunday    ──────────────         0:00 hrs   │
+│  ● Tracked  ■ Overtime│  │  Tracked 40:20  Overtime 0:10  Total 40:30   │
+└──────────────────────┘  └────────────────────────────────────────────────┘
 ```
 
-This page shows the member's profile, current week's hours, and their last 10 time entries.
+**Calendar (left):**
+- Each day shows a **green dot** if there are tracked entries that day
+- A **red square** appears when the member logged more than 8 hours that day (overtime)
+- Click any day to select that **whole week** — the bar chart updates to show Mon–Sun for that week
+- The **< >** arrows navigate between months
 
-### Deactivating a member
+**Weekly bar chart (centre):** one row per day of the selected week.
 
-When someone leaves the team:
+| Bar colour | Meaning |
+|---|---|
+| Green | Regular hours (up to 8h for that day) |
+| Red extension | Overtime — hours beyond 8 on that day |
+| Grey | No time logged |
 
-1. Go to **Team** → click the member's name → their profile doesn't have a deactivate button directly
-2. Use the team list: click **PATCH /users/:id** via the API, or
-3. Alternatively — in the Supabase dashboard, set `is_active = false` for that user row
+Bar widths are proportional. The footer shows the week's totals: tracked hours, overtime, and combined total.
 
-> Deactivated members **cannot log in** to either the desktop app or the admin portal, even with a valid JWT. Their historical time data is preserved.
+**Day drill-down:** click any day's bar (when it has hours) to open a detail panel listing that day's sessions and screenshots. Each session shows the project, start/end times, duration, average activity %, and a screenshot filmstrip; clicking a screenshot opens the same [screenshot viewer](#screenshot-viewer) described above.
 
-**Restoring access:** Set `is_active = true` in the users table.
+### Deleting a member
+
+When someone leaves the team, click the **trash** icon on their row.
+
+> **Warning:** A confirmation dialog appears stating that deleting a member also **deletes all of their time entries and screenshots**, and that this **cannot be undone**. Export any reports you need first.
+
+Confirm with **Delete permanently** to remove the member and all their data.
+
+### Downloading the installers
+
+The Team page header has **macOS** and **Windows** download buttons that link to the latest desktop installers (served from the public `installers` bucket). Use these to grab the apps yourself, or point new members at the download links included in their invite email.
 
 ---
 
@@ -466,14 +456,19 @@ Clockwork can post a daily summary to a Slack channel at **09:00 UTC** each morn
 
 ### How do I see who is working right now?
 
-Go to **Dashboard** — the "Tracking now" panel shows every member currently running a timer with elapsed time.
+Go to **Dashboard** — the "Tracking now" panel shows every member currently running a timer with elapsed time. Click a member to jump to their detail page.
 
 ### How do I review a specific person's work for a day?
 
-1. Go to **Work Diary**
-2. Select the member from the dropdown
-3. Click the day on the calendar or on the bar chart
+1. Go to **Team** → click the member's name
+2. Open the **Work diary** tab
+3. Click the day on the calendar (this selects its week), then click the day's bar
 4. The day detail panel shows each session and all screenshots
+
+### How do I close a timer a member forgot to stop?
+
+1. Go to **Timesheets** and click the running/paused entry to open its drawer
+2. Click **Stop tracker** and confirm. The entry is closed immediately.
 
 ### How do I dispute or correct a time entry?
 

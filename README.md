@@ -8,12 +8,14 @@
 ### Admin Portal
 | Feature | Details |
 |---|---|
-| **Dashboard** | Live stats (today's hours, active members, weekly total, screenshots), 7-day bar chart, real-time active members panel with elapsed timers |
-| **Work Diary** | Upwork-style monthly calendar with activity dots, horizontal weekly bar chart (green = regular, red = overtime), member picker, click any day to drill into sessions |
-| **Day Detail** | Slide-in panel showing every session for a day; each session has a scrollable screenshot filmstrip with per-screenshot activity bars |
-| **Timesheets** | Paginated table of all entries; click any row to open a detail panel showing duration stats, keystroke + mouse totals, paused time, activity timeline, and a screenshot grid — click any screenshot to open the full viewer |
-| **Screenshot Modal** | Full-screen screenshot viewer with active window name, 10-block activity level indicator, per-minute keyboard/mouse breakdown table, prev/next navigation (keyboard arrows supported) |
-| **Team** | Member list with weekly hours; invite new members by email (Resend) — they get a secure set-your-password link + desktop download links; per-member profile page with recent activity |
+| **Theme** | Light "Steep-inspired" editorial theme (fog canvas, white cards with 24px radius + soft shadow) plus a dark/light toggle in the top bar; tokens are CSS-variable driven (`:root` light + `.dark` on `<html>`), persisted to localStorage with a no-flash boot script. Fonts: Inter (UI), Newsreader (serif headings), Geist Mono (data). See `apps/admin/DESIGN.md` |
+| **Dashboard** | Range-scoped KPI cards (Hours tracked, Active now, Sessions, Screenshots), a Mercury-style scrubbable/draggable timeline with a preset dropdown (7d / 30d / 3m / 6m / YTD / 12m), a bucketed hours bar chart, and a live "Tracking now" roster (click a member → detail page). Manual Refresh + 60s auto-refresh |
+| **Work Diary** | Now a "Work diary" tab on the Team member detail page (`/team/[userId]`); Upwork-style activity view with per-day sessions and screenshot filmstrips. The standalone `/work-diary` route redirects to `/team` |
+| **Timesheets** | Paginated table of all entries; click any row to open a floating detail drawer (rounded, inset, elevated) over a blurred backdrop — portaled to `<body>` with background scroll locked. Drawer shows duration stats, an activity timeline, and a paginated (10/page) + sortable screenshot grid (thumbnails only; thumbnails auto-generated). Click any screenshot to open the full viewer |
+| **Screenshot Viewer** | Modal that loads thumbnail → full image with shimmer skeletons; zoom 100–400% (wheel / buttons / double-click) + drag-to-pan, prev/next navigation, per-minute activity table, and a filmstrip |
+| **Status tags** | Colour-coded: active (green), paused (yellow), stopped (red), admin (blue), inactive (grey) |
+| **Team** | Employees / Admins tabs; invite new members by email (Resend) — they get a secure set-your-password link + installer download links; pending / accepted invite status; optional temporary password; timezone; delete member (cascades entries + screenshots); per-member profile with Work diary tab |
+| **Timezone** | Switcher in the top bar — My time / UTC / Employee's time |
 | **Projects** | CRUD with hex color picker, total hours tracked per project, archive/unarchive |
 | **Reports** | Date-range CSV export, printable HTML report download |
 | **Settings** | Screenshot interval, company name, timezone, Slack webhook with test-send button |
@@ -21,20 +23,26 @@
 ### Desktop App
 | Feature | Details |
 |---|---|
-| **Timer** | One-click start / **pause** / resume / stop; project + description selection; `HH:MM:SS` live counter. Paused time is excluded from tracked duration and recorded per entry |
-| **Screenshots** | `desktopCapturer` every N minutes (configurable); captures **every connected display** as raw PNG — no blur, no post-processing (Upwork-style). One upload per display per capture event, sharing `captured_at` |
+| **Window** | Frameless window with a CLOCKWORK title text and macOS traffic-light padding |
+| **Timer** | One-click start / **pause** / resume / stop; project + description selection; `HH:MM:SS` live counter. Paused time is excluded from tracked duration and recorded per entry. **Stop** halts locally instantly and syncs the server in the background — all desktop API requests are time-bounded via `AbortController` with retries |
+| **Reconciliation** | On launch it reconciles against the server (`GET /time-entries/current`) to re-adopt an open entry, so the timer never gets stuck; requires a fresh login on version change and validates a stale token |
+| **Screenshots** | `desktopCapturer` every N minutes (configurable); captures **every connected display** as a raw PNG **and** a small JPEG thumbnail (both uploaded) — no blur (Upwork-style). One upload per display per capture event, sharing `captured_at` |
 | **Activity tracking** | Global keystroke + mouse counting (`uiohook-napi`) and foreground-window capture (`active-win`); per-minute keyboard/mouse breakdown + activity % uploaded with each screenshot. Requires macOS Accessibility + Screen Recording permission (auto-prompted; persists reliably only on a notarized build) |
-| **Session storage** | Auth token + user + timer state persisted as JSON in the per-user app-data directory (`app.getPath('userData')/session.json`), so the session survives restarts. (No OS keychain — an ad-hoc-signed app can't hold keychain access, so it would prompt endlessly) |
-| **System tray** | Tray icon updates to show tracking state; context menu for show/hide and quit |
-| **Auto-update** | `electron-updater` checks GitHub Releases on launch and installs silently |
+| **Session storage** | Auth token + user + timer state persisted as version-stamped JSON in the per-user app-data directory (`app.getPath('userData')/session.json`), so the session survives restarts. (No OS keychain — an ad-hoc-signed app can't hold keychain access, so it would prompt endlessly) |
+| **System tray** | Blinking green tray dot while tracking; context menu for show/hide and quit |
+| **Auto-update** | `electron-updater` checks GitHub Releases on launch and installs silently. macOS builds are arm64-only |
 
 ### API
 | Feature | Details |
 |---|---|
 | **Auth** | Supabase JWT validation on every request; `is_active` check; role-based guards (`admin` / `member`) |
 | **One-timer constraint** | Partial unique index in PostgreSQL prevents two running entries per user — no race condition possible |
-| **Screenshot upload** | Multipart endpoint; accepts one file per display with `screenNumber` + `displayCount`; stores to private Supabase Storage bucket; generates 1-hour signed URLs on read |
-| **Dashboard stats** | Aggregated today/week/active-now counts computed server-side |
+| **Screenshot upload** | Multipart endpoint; accepts one file per display with `screenNumber` + `displayCount`; server-side `sharp` thumbnail generation (`thumbnail_path`); stores to private Supabase Storage bucket; `GET` list [admin] returns 1-hour signed URLs (full + thumbnail); `POST backfill-thumbnails` [admin] regenerates missing thumbnails |
+| **Time entries** | `start` / `stop` / `pause` / `resume`; `GET current` (caller's open entry); `GET active` [admin]; `POST :id/admin-stop` [admin] |
+| **Reports** | `GET /reports/range?from&to&bucket=day\|week\|month` → `{ totalHours, activeNow, screenshots, entries, series[] }`; plus `stats`, `weekly-chart`, `csv`, and `pdf`/`html` exports |
+| **Email** | Global email module — Resend wrapper for invites + password reset (`auth forgot-password`) |
+| **Config** | `GET` (any authed user; Slack webhook hidden from non-admins) + `PATCH` [admin] of the `app_config` row |
+| **Health** | Public `GET /api/v1/health` (used by the Docker healthcheck) |
 | **Daily Slack cron** | `@nestjs/schedule` posts yesterday's team summary to Slack at 09:00 UTC |
 | **Swagger docs** | Interactive docs at `/api/docs` |
 
@@ -77,6 +85,7 @@
 │                                                                      │
 │  AuthModule  UsersModule  ProjectsModule  TimeEntriesModule          │
 │  ScreenshotsModule  ReportsModule  WebhooksModule  ConfigModule      │
+│  EmailModule (Resend, global)  HealthModule (public /health)        │
 │                                                                      │
 │  @nestjs/schedule ──► dailySummary() @ 09:00 UTC ──► Slack          │
 │  Swagger UI at /api/docs                                             │
@@ -88,6 +97,7 @@
 │                                                                      │
 │  PostgreSQL + RLS policies      Auth (JWT issuer)                   │
 │  Storage: screenshots bucket    is_admin() helper function           │
+│           installers bucket     (public — hosts desktop installers)  │
 │  Partial unique index: one running timer per user                    │
 └──────────────────────────────────────────────────────────────────────┘
                                     ▲
@@ -95,10 +105,12 @@
 ┌──────────────────────────────────────────────────────────────────────┐
 │               Next.js Admin Portal (apps/admin)  :3000              │
 │                                                                      │
-│  /login  /dashboard  /work-diary  /team  /team/[userId]             │
+│  /login  /dashboard  /team  /team/[userId] (Work diary tab)         │
 │  /timesheets  /projects  /reports  /settings                        │
+│  (/work-diary → redirects to /team)                                 │
 │                                                                      │
-│  Geist font · #0A0A0A base · Tailwind CSS · Recharts                │
+│  Light "Steep" theme + dark/light toggle (CSS variables)           │
+│  Inter / Newsreader / Geist Mono · Tailwind CSS · Recharts         │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -127,10 +139,11 @@ Employee                  Desktop App              API                   Databas
    │  [Every 10 min]          │                     │                       │
    │                          │  desktopCapturer    │                       │
    │                          │  → ALL displays     │                       │
-   │                          │  (raw PNG, no blur) │                       │
+   │                          │  (raw PNG + JPEG    │                       │
+   │                          │   thumbnail, no blur)│                      │
    │                          │  for each screen:   │                       │
    │                          │    POST /screenshots/upload                 │
-   │                          │    { file, screenNumber, displayCount }     │
+   │                          │    { file, thumb, screenNumber, displayCount }│
    │                          │────────────────────►│                       │
    │                          │                     │  → Supabase Storage   │
    │                          │                     │  INSERT screenshots   │
@@ -183,9 +196,10 @@ Client (Desktop or Admin)          API                      Supabase
 ### Work Diary — Screenshot Detail Flow (Admin Portal)
 
 ```
-Admin                 Work Diary Page           Day Panel          Screenshot Modal
+Admin             Team Member ▸ Work diary tab     Day Panel          Screenshot Modal
   │                        │                        │                     │
-  │  Open /work-diary      │                        │                     │
+  │  Open /team/[userId]   │                        │                     │
+  │  → Work diary tab      │                        │                     │
   │───────────────────────►│                        │                     │
   │  [Calendar + Bar chart]│                        │                     │
   │◄───────────────────────│                        │                     │
@@ -246,8 +260,10 @@ Admin                 Work Diary Page           Day Panel          Screenshot Mo
 │  is_archived   │   │  started_at     TIMESTAMPTZ            │
 │  created_by FK │   │  ended_at       TIMESTAMPTZ            │
 │  created_at    │   │  duration_seconds INTEGER              │
-│  updated_at    │   │  status         'running' | 'stopped'  │
-└────────────────┘   │  created_at     TIMESTAMPTZ            │
+│  updated_at    │   │  paused_seconds INTEGER                │
+└────────────────┘   │  pauses         JSONB                  │
+                     │  status   'running'|'paused'|'stopped' │
+                     │  created_at     TIMESTAMPTZ            │
                      └──────────────┬─────────────────────────┘
                                     │
                     UNIQUE INDEX one_running_entry_per_user
@@ -260,8 +276,13 @@ Admin                 Work Diary Page           Day Panel          Screenshot Mo
                      │  user_id          UUID FK → users      │
                      │  time_entry_id    UUID FK (nullable)   │
                      │  storage_path     TEXT                 │
+                     │  thumbnail_path   TEXT (nullable)      │  ← small JPEG thumb
                      │  captured_at      TIMESTAMPTZ          │
                      │  activity_percent INTEGER (0–100)      │
+                     │  key_count        INTEGER              │
+                     │  mouse_count      INTEGER              │
+                     │  active_window    TEXT                 │
+                     │  minute_activity  JSONB                │  ← per-minute breakdown
                      │  screen_number    INTEGER ≥ 1          │  ← 1-based display index
                      │  display_count    INTEGER ≥ 1          │  ← total displays this capture
                      │  created_at       TIMESTAMPTZ          │
@@ -299,36 +320,42 @@ clockwork/
 │   │       ├── filters/             # HttpExceptionFilter
 │   │       ├── supabase/            # Global SupabaseService (service role)
 │   │       └── modules/
-│   │           ├── auth/            # login, logout, /me
-│   │           ├── users/           # list+weeklyHours, invite, patch
+│   │           ├── auth/            # login, logout, /me, forgot-password
+│   │           ├── users/           # list+weeklyHours, invite, patch, delete
 │   │           ├── projects/        # CRUD + totalHours
-│   │           ├── time-entries/    # start, stop, list, active, delete
-│   │           ├── screenshots/     # multipart upload, list+signed URLs
-│   │           ├── reports/         # stats, weekly-chart, CSV, HTML
+│   │           ├── time-entries/    # start/stop/pause/resume, current, active, admin-stop
+│   │           ├── screenshots/     # multipart upload + sharp thumbnails, list+signed URLs, backfill
+│   │           ├── reports/         # stats, weekly-chart, range, CSV, PDF/HTML
 │   │           ├── webhooks/        # Slack test + daily cron
-│   │           └── config/          # get/patch app_config row
+│   │           ├── config/          # get/patch app_config row
+│   │           ├── email/           # global Resend wrapper (invites + reset)
+│   │           └── health/          # public GET /health (Docker healthcheck)
 │   │
 │   ├── admin/                       # Next.js 15 App Router
 │   │   └── src/
 │   │       ├── app/
-│   │       │   ├── (auth)/          # login, access-denied (AuthProvider)
+│   │       │   ├── (auth)/          # login, forgot/reset-password, access-denied
 │   │       │   └── (dashboard)/     # guarded layout + all pages
-│   │       │       ├── dashboard/   # stats + chart + active members
-│   │       │       ├── work-diary/  # calendar + weekly bars + day detail
-│   │       │       ├── timesheets/  # paginated entries + detail panel
-│   │       │       ├── team/        # member list + [userId] profile
+│   │       │       ├── dashboard/   # KPI cards + timeline + chart + live roster
+│   │       │       ├── work-diary/  # redirects → /team
+│   │       │       ├── timesheets/  # paginated entries + floating detail drawer
+│   │       │       ├── team/        # list + [userId] profile (Work diary tab)
 │   │       │       ├── projects/    # CRUD
 │   │       │       ├── reports/     # export
 │   │       │       └── settings/    # config form
 │   │       ├── components/
-│   │       │   ├── EntryDetailPanel.tsx   # timesheets slide-in panel
+│   │       │   ├── EntryDetailPanel.tsx   # timesheets floating drawer
 │   │       │   ├── DayDetailPanel.tsx     # work diary day sessions
-│   │       │   ├── ScreenshotModal.tsx    # full-screen screenshot + activity
+│   │       │   ├── WorkDiary.tsx          # per-member work diary view
+│   │       │   ├── DashboardTimeline.tsx  # Mercury-style scrubbable timeline
+│   │       │   ├── ScreenshotModal.tsx    # full viewer + zoom/pan + activity
 │   │       │   ├── SidebarLayout.tsx      # fixed left nav
+│   │       │   ├── ThemeToggle.tsx        # dark/light toggle (top bar)
+│   │       │   ├── TimezoneSelect.tsx     # My time / UTC / Employee's time
 │   │       │   ├── DataTable.tsx          # generic typed table
 │   │       │   ├── StatCard.tsx           # KPI card
 │   │       │   ├── Avatar.tsx             # initials avatar
-│   │       │   ├── StatusBadge.tsx        # role/status pill
+│   │       │   ├── StatusBadge.tsx        # colour-coded role/status pill
 │   │       │   ├── Modal.tsx              # generic overlay
 │   │       │   ├── PageHeader.tsx         # title + action slot
 │   │       │   ├── EmptyState.tsx
@@ -372,7 +399,8 @@ clockwork/
 │       ├── 003_multi_screen.sql     # screen_number + display_count
 │       ├── 004_activity_detail.sql  # key/mouse counts, active window, per-minute
 │       ├── 005_pause_tracking.sql   # paused status + paused_seconds + pauses
-│       └── 006_installers_bucket.sql # public bucket hosting the installers
+│       ├── 006_installers_bucket.sql # public bucket hosting the installers
+│       └── 007_screenshot_thumbnails.sql # thumbnail_path on screenshots
 │
 ├── package.json                     # root workspace scripts
 ├── pnpm-workspace.yaml
@@ -392,7 +420,7 @@ clockwork/
 | Database | Supabase PostgreSQL | RLS on all tables |
 | Auth | Supabase Auth JWT | Validated server-side on every request |
 | Storage | Supabase Storage | Private bucket, signed URLs |
-| Admin portal | Next.js 15 App Router | Tailwind CSS, Geist font, Recharts 3 |
+| Admin portal | Next.js 15 App Router | Tailwind CSS v3, Inter / Newsreader / Geist Mono, Recharts 3 |
 | Desktop shell | Electron 30 | `contextIsolation`, `nodeIntegration: false`; `sandbox: false` so the preload can require `@clockwork/shared` |
 | Renderer build | Vite 5 + React 19 | HMR in dev mode; `base: './'` for relative asset paths under `file://` |
 | Screenshot capture | electron `desktopCapturer` + `screen.getAllDisplays()` | Raw PNG per display, no post-processing (Upwork-style) |
@@ -400,7 +428,7 @@ clockwork/
 | Session storage | plain JSON in `userData` | `session.json` (token/user/timer); no OS keychain — keeps ad-hoc builds prompt-free |
 | Auto-updates | electron-updater | GitHub Releases |
 | Cron | @nestjs/schedule | Daily Slack summary at 09:00 UTC |
-| Design tokens | CSS variables | `#0A0A0A` base · `#2A2A2A` border · `#FFFFFF` accent |
+| Design tokens | CSS variables (light + dark) | `:root` light "Steep" theme + `.dark` override on `<html>`; channel-triplet colours via `rgb(var(--x) / <alpha>)`; see `apps/admin/DESIGN.md` |
 
 ---
 
@@ -429,6 +457,7 @@ cp apps/admin/.env.example  apps/admin/.env.local
 # 3. Run Supabase migrations (SQL Editor in Supabase dashboard), in order:
 #    001_initial.sql  002_storage.sql  003_multi_screen.sql
 #    004_activity_detail.sql  005_pause_tracking.sql  006_installers_bucket.sql
+#    007_screenshot_thumbnails.sql
 
 # 4. Promote your first admin (Supabase SQL Editor)
 UPDATE public.users SET role = 'admin' WHERE email = 'you@example.com';

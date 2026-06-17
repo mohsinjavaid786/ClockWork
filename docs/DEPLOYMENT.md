@@ -100,10 +100,15 @@ Employees                 Admins
 
 1. Create a project at [supabase.com](https://supabase.com) (free tier works)
 
-2. In **SQL Editor**, run both migration files in order:
+2. In **SQL Editor**, run the migration files in order:
    ```
    supabase/migrations/001_initial.sql
    supabase/migrations/002_storage.sql
+   supabase/migrations/003_multi_screen.sql
+   supabase/migrations/004_activity_detail.sql
+   supabase/migrations/005_pause_tracking.sql
+   supabase/migrations/006_installers_bucket.sql
+   supabase/migrations/007_screenshot_thumbnails.sql   # screenshot thumbnails
    ```
 
 3. Under **Storage**, confirm a `screenshots` bucket exists. Set it to **Private**.
@@ -134,7 +139,7 @@ The API is a standard Node.js app. Railway is the simplest host.
    lockfile live at the repo root, so the build context must be the whole repo.
    The included [`railway.json`](../railway.json) tells Railway to build with
    `apps/api/Dockerfile` (which compiles `@clockwork/shared` then the API) and to
-   health-check `/api/v1/config`. No Nixpacks / build-command setup is needed.
+   health-check `/api/v1/health`. No Nixpacks / build-command setup is needed.
 4. Under **Settings → Source → Branch**, set the deploy branch to **`production`**
 5. Add environment variables under **Variables**:
    ```
@@ -238,7 +243,7 @@ Employees need a `.dmg` (macOS) or `.exe` (Windows) to install. These are built 
    ```
 
 4. GitHub Actions automatically:
-   - Builds `Clockwork-1.0.0.dmg` on a macOS runner
+   - Builds `Clockwork-1.0.0.dmg` on a macOS runner — **Apple Silicon (arm64) only** (no Intel/x64 build)
    - Builds `Clockwork Setup 1.0.0.exe` on a Windows runner
    - Creates a GitHub Release at `https://github.com/mohsinjavaid786/clockwork/releases`
    - Uploads both installers + update manifests (`latest.yml`, `latest-mac.yml`)
@@ -407,7 +412,7 @@ The desktop app's API URL is baked into the build. When you change hosting:
 
 | What to monitor | Where |
 |---|---|
-| API health | `GET /api/v1/config` — should return 200 |
+| API health | `GET /api/v1/health` — should return 200 (the Docker `HEALTHCHECK` hits this too) |
 | API logs | Railway dashboard → Deployments → Logs |
 | Admin portal | Vercel dashboard → Deployments |
 | Supabase | Supabase dashboard → Logs & Observability |

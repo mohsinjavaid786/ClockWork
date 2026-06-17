@@ -1,6 +1,6 @@
 # apps/desktop — Clockwork Desktop App
 
-> Cross-platform Electron 30 app for employees. Time tracking with pause/resume, multi-monitor screenshot capture (raw, no blur — Upwork-style), global keyboard/mouse + active-window activity monitoring, on-disk session persistence. React 19 renderer. Supports macOS (Apple Silicon + Intel) and Windows (x64).
+> Electron 30 app (v1.1.11) for employees. Time tracking with pause/resume, multi-monitor screenshot capture (raw, no blur — Upwork-style) plus local JPEG thumbnails, global keyboard/mouse + active-window activity monitoring, on-disk session persistence with server-side reconciliation. React 19 renderer. macOS builds are Apple Silicon (arm64) only; Windows ships x64.
 
 ---
 
@@ -8,14 +8,17 @@
 
 | Feature | Details |
 |---|---|
-| **Timer** | Start / **pause** / resume / stop with project + description selection; `HH:MM:SS` counter ticks client-side from `startedAt`. Paused time is excluded from the tracked duration |
-| **Screenshot capture** | `desktopCapturer` every N minutes (interval re-fetched from `GET /config` on each timer start); captures **every connected display** as raw PNG. No blur, no post-processing — managers see actual screen content, identical to Upwork's tracker. One upload per display per capture event |
+| **Timer** | Start / **pause** / resume / stop with project + description selection; `HH:MM:SS` counter ticks client-side from `startedAt`. Paused time is excluded from the tracked duration. **Stop never hangs** — it clears state locally and returns instantly, then closes the entry on the server in the background with retries |
+| **Time-bounded requests** | Every desktop API call goes through `AbortController` with a default ~20 s timeout (10 s for the background stop), so a stalled network call can never freeze the UI |
+| **Session reconciliation** | On launch the app calls `GET /time-entries/current` and **re-adopts** any still-open entry (server is source of truth), so a reinstalled/updated client never gets stuck or starts a duplicate. If `Start` hits a 409 it adopts the existing entry rather than failing. A background poll also detects admin/server force-stops |
+| **Version-gated login** | The session is version-stamped; on any app version change a **fresh login** is required. The persisted token is also validated against the API on startup and dropped if stale/expired — fixes the "signed in but every call 401s" state |
+| **Screenshot capture** | `desktopCapturer` every N minutes (interval re-fetched from `GET /config` on login and each timer start); captures **every connected display** as a raw PNG (no blur, no post-processing — Upwork-style) AND a small JPEG thumbnail generated locally. Both are uploaded per display, sharing one `captured_at`; the API regenerates the thumbnail server-side if missing |
 | **Activity tracking** | Global keystroke + mouse counting (`uiohook-napi`) and foreground-window capture (`active-win`); per-minute breakdown + activity % uploaded with each screenshot. Paused while the timer is paused. Needs macOS Accessibility + Screen Recording |
-| **Session storage** | Token + user + timer state persisted as plain JSON in `app.getPath('userData')/session.json` — survives restarts. No OS keychain (an ad-hoc-signed app can't hold keychain access) |
-| **System tray** | App minimizes to tray on close; tray icon updates to show tracking state; context menu for Show / Quit |
-| **Auto-login** | On launch, reads the persisted session → restores the user without re-entering credentials |
+| **Session storage** | Token + user + timer state persisted as plain JSON in `app.getPath('userData')/session.json`, version-stamped — survives restarts. No OS keychain (an ad-hoc-signed app can't hold keychain access) |
+| **System tray** | App minimizes to tray on close; tray shows a **blinking green dot** while tracking (built via `nativeImage.createFromBitmap`), static when idle; context menu for Show / Quit |
+| **Auto-login** | On launch, reads the persisted session → restores the user without re-entering credentials (after version + token validation pass) |
 | **Auto-update** | `electron-updater` checks GitHub Releases on every launch; downloads and installs updates silently |
-| **Frame-free window** | 360×580 frameless window with draggable title bar (`-webkit-app-region: drag`) |
+| **Frame-free window** | 360×580 frameless window with draggable title bar; the title bar shows a **"CLOCKWORK" text wordmark** (left-padded on macOS to clear the traffic-light controls) |
 
 ---
 
@@ -33,7 +36,9 @@
 │  │                                                       │ │
 │  │  window.clockwork.auth.login()    ◄── only surface    │ │
 │  │  window.clockwork.timer.start()       available to    │ │
-│  │  window.clockwork.timer.stop()        React code      │ │
+│  │  window.clockwork.timer.pause()       React code      │ │
+│  │  window.clockwork.timer.resume()                      │ │
+│  │  window.clockwork.timer.stop()                        │ │
 │  │  window.clockwork.timer.getStatus()                   │ │
 │  │  window.clockwork.projects.list()                     │ │
 │  │  window.clockwork.app.version()                       │ │
@@ -70,7 +75,7 @@
 
 ## Screenshot Capture Flow
 
-Clockwork mirrors the Upwork tracker model: every connected display is captured as a raw PNG every N minutes — no blur, no post-processing. Each display becomes its own row in the `screenshots` table, sharing a `captured_at` timestamp so the admin portal can group them as one capture event.
+Clockwork mirrors the Upwork tracker model: every connected display is captured as a raw PNG every N minutes — no blur, no post-processing. A small JPEG thumbnail is also generated locally (`nativeImage` resize → `toJPEG`, no native deps) and uploaded alongside the PNG so the portal can render grids fast; the API regenerates a thumbnail server-side if one is missing. Each display becomes its own row in the `screenshots` table, sharing a `captured_at` timestamp so the admin portal can group them as one capture event.
 
 ```
 ScreenshotService.captureAndUpload()
@@ -88,12 +93,14 @@ ActivityService.getActivityPercent()       ← reset counters after reading
         │
         ▼
 for each source (1..N):
-   source.thumbnail.toPNG()  →  Buffer  (raw, unmodified)
+   source.thumbnail.toPNG()             →  Buffer  (raw, unmodified)
+   source.thumbnail.resize(480).toJPEG(70) →  Buffer  (local thumbnail)
         │
         ▼
    FormData {
-     file,
-     activityPercent,
+     file,            ← raw PNG
+     thumbnail,       ← local JPEG
+     activityPercent, keyCount, mouseCount, minuteActivity, activeWindow?,
      screenNumber:  idx + 1,
      displayCount,
      capturedAt,
@@ -149,12 +156,14 @@ Renderer                    Preload                    Main
    │                           │                        │
    │  .timer.stop()            │                        │
    │──────────────────────────►│  'timer:stop'         │
-   │                           │───────────────────────►│  POST /time-entries/:id/stop
-   │                           │                        │  clearTimerState()
+   │                           │───────────────────────►│  clearTimerState()      ← local, instant
    │                           │                        │  stopScreenshotLoop()
    │                           │                        │  updateTrayMenu(false)
-   │  { running: false }       │◄───────────────────────│
+   │  { running: false }       │◄───────────────────────│  (returns immediately)
    │◄──────────────────────────│                        │
+   │                           │                        │  ░ background ░
+   │                           │                        │  POST /time-entries/:id/stop
+   │                           │                        │  (retries; never blocks UI)
 ```
 
 ---
@@ -169,13 +178,16 @@ Defined in `@clockwork/shared` as the `IPC` constant object.
 | `IPC.AUTH_LOGOUT` | `auth:logout` | Logout, clear all stored state |
 | `IPC.AUTH_GET_TOKEN` | `auth:get-token` | Return decrypted token |
 | `IPC.AUTH_GET_USER` | `auth:get-user` | Return stored user object |
-| `IPC.TIMER_START` | `timer:start` | Start a time entry (re-fetches the screenshot interval) |
-| `IPC.TIMER_PAUSE` | `timer:pause` | Pause the current entry (stops captures + activity) |
+| `IPC.TIMER_START` | `timer:start` | Start a time entry (re-fetches the screenshot interval; adopts an existing entry on 409) |
+| `IPC.TIMER_PAUSE` | `timer:pause` | Pause the current entry (captures once, then stops captures + activity) |
 | `IPC.TIMER_RESUME` | `timer:resume` | Resume a paused entry |
-| `IPC.TIMER_STOP` | `timer:stop` | Stop current entry |
+| `IPC.TIMER_STOP` | `timer:stop` | Stop locally and return instantly; close on the server in the background |
 | `IPC.TIMER_GET_STATUS` | `timer:get-status` | Current timer state |
-| `IPC.ACTIVITY_GET` | `activity:get` | Activity % + reset counters |
-| `IPC.CONFIG_GET` | `config:get` | Fetch `screenshotIntervalMinutes` |
+| `IPC.TIMER_REMOTE_STOP` | `timer:remote-stop` | **Main → renderer push** — the open entry was stopped server-side (admin override) |
+| `IPC.SCREENSHOT_CAPTURE` | `screenshot:capture` | Reserved channel constant |
+| `IPC.SCREENSHOT_UPLOAD` | `screenshot:upload` | Reserved channel constant |
+| `IPC.ACTIVITY_GET` | `activity:get` | Activity % |
+| `IPC.CONFIG_GET` | `config:get` | Fetch `screenshotIntervalMinutes` (+ company/timezone) |
 | `IPC.PROJECTS_LIST` | `projects:list` | Project list for dropdown |
 | `IPC.APP_VERSION` | `app:version` | `app.getVersion()` |
 
@@ -255,7 +267,7 @@ src/
 │  │     Stop tracking        │  │
 │  └──────────────────────────┘  │
 │                                │
-│           v1.0.0               │
+│           v1.1.11              │
 └────────────────────────────────┘
 ```
 
@@ -284,7 +296,7 @@ API_URL=http://localhost:3001   # dev only
 ```bash
 pnpm dev       # Vite :5173 + Electron (with HMR)
 pnpm build     # vite build + tsc -p tsconfig.electron.json
-pnpm package   # electron-builder → release/ (.dmg, .exe)
+pnpm package   # electron-builder → release/ (.dmg + .zip arm64, .exe x64)
 ```
 
 > **Local packaging caveat:** `electron-builder`'s `extraMetadata` rewrites this
@@ -296,8 +308,8 @@ pnpm package   # electron-builder → release/ (.dmg, .exe)
 ### Publishing an update
 1. Bump version in `package.json`
 2. `git tag v1.x.x && git push origin main --tags`
-3. The **Release** GitHub Action builds the macOS `.dmg` + Windows `.exe`, bakes in the `API_URL` repo variable, and publishes a GitHub Release automatically
-4. `electron-updater` on the next client launch downloads + installs silently
+3. The **Release** GitHub Action builds the macOS `.dmg` + `.zip` (arm64) and Windows `.exe` (x64), bakes in the `API_URL` repo variable, and publishes a GitHub Release automatically
+4. `electron-updater` on the next client launch downloads + installs silently — on macOS the `.dmg` is the user-facing installer and the `.zip` is what the updater consumes
 
 > macOS note: builds are **ad-hoc signed** (no Apple Developer cert), so macOS
 > shows an "unverified developer" prompt and won't durably persist Accessibility /

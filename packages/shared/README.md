@@ -13,7 +13,7 @@ A single source of truth: changing a field on `TimeEntry` immediately surfaces a
 | **Domain types** | `User`, `Project`, `TimeEntry`, `Screenshot`, `AppConfig`, `DashboardStats`, `ActiveMember`, `WeeklyChartData`, `PaginatedResponse<T>`, `ApiError` |
 | **Status enum** | `EntryStatus = 'running' \| 'stopped'` — replaces the old `isRunning: boolean` pattern |
 | **Role type** | `UserRole = 'admin' \| 'member'` |
-| **IPC channels** | `IPC` const map — all 13 Electron IPC channel strings, used in both `preload/index.ts` and `main/index.ts` |
+| **IPC channels** | `IPC` const map — all 15 Electron IPC channel strings, used in both `preload/index.ts` and `main/index.ts` |
 | **Zero deps** | No runtime dependencies — safe to import from any environment |
 
 ---
@@ -35,7 +35,8 @@ A single source of truth: changing a field on `TimeEntry` immediately surfaces a
 │   │                      durationSeconds?, status: EntryStatus, user?: User, project?: Project }
 │   │
 │   ├── Screenshot    ── { id, userId, timeEntryId?, storagePath, capturedAt,
-│   │                      activityPercent, signedUrl?, user?: User }
+│   │                      activityPercent, screenNumber, displayCount,
+│   │                      signedUrl?, user?: User }
 │   │
 │   ├── AppConfig     ── { screenshotIntervalMinutes, companyName, timezone, slackWebhookUrl? }
 │   │
@@ -53,19 +54,22 @@ A single source of truth: changing a field on `TimeEntry` immediately surfaces a
 └── ipc-channels.ts
     │
     └── IPC (const map)
-        ├── AUTH_LOGIN        'auth:login'
-        ├── AUTH_LOGOUT       'auth:logout'
-        ├── AUTH_GET_TOKEN    'auth:get-token'
-        ├── AUTH_GET_USER     'auth:get-user'
-        ├── TIMER_START       'timer:start'
-        ├── TIMER_STOP        'timer:stop'
-        ├── TIMER_GET_STATUS  'timer:get-status'
+        ├── AUTH_LOGIN         'auth:login'
+        ├── AUTH_LOGOUT        'auth:logout'
+        ├── AUTH_GET_TOKEN     'auth:get-token'
+        ├── AUTH_GET_USER      'auth:get-user'
+        ├── TIMER_START        'timer:start'
+        ├── TIMER_STOP         'timer:stop'
+        ├── TIMER_PAUSE        'timer:pause'
+        ├── TIMER_RESUME       'timer:resume'
+        ├── TIMER_GET_STATUS   'timer:get-status'
+        ├── TIMER_REMOTE_STOP  'timer:remote-stop'   ← main → renderer push
         ├── SCREENSHOT_CAPTURE 'screenshot:capture'
         ├── SCREENSHOT_UPLOAD  'screenshot:upload'
-        ├── ACTIVITY_GET      'activity:get'
-        ├── CONFIG_GET        'config:get'
-        ├── PROJECTS_LIST     'projects:list'
-        └── APP_VERSION       'app:version'
+        ├── ACTIVITY_GET       'activity:get'
+        ├── CONFIG_GET         'config:get'
+        ├── PROJECTS_LIST      'projects:list'
+        └── APP_VERSION        'app:version'
 ```
 
 ---

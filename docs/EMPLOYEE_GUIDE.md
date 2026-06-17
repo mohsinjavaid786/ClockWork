@@ -87,9 +87,11 @@ When you open Clockwork for the first time you'll see the login screen:
 2. Enter the **password** your admin gave you (you should change this in your profile after first login)
 3. Click **Sign in**
 
-Once logged in, Clockwork remembers your session. On future launches you'll go straight to the tracker without logging in again.
+Once logged in, Clockwork remembers your session. On future launches you'll go straight to the tracker without logging in again — **except after an app update**, when you'll be asked to sign in once more (this is normal).
 
 > **If sign-in fails:** check that Caps Lock is off, and that you're using the exact email address your admin registered for you. Contact your admin if the problem persists.
+
+> **Set-password invites:** if your admin invited you without a temporary password, you'll receive an email with a **set-password link** (and links to download the app). Set your password there first, then sign in with it.
 
 ---
 
@@ -141,9 +143,9 @@ Paused time is **not** counted toward your tracked hours, so you don't need to s
 
 **To stop tracking:**
 1. Click **Stop**
-2. The timer stops and your session is saved
+2. The timer stops **instantly** and your session is saved
 
-That's it. Your time entry — including any screenshots taken during the session — is automatically uploaded.
+Stopping is immediate — it never hangs while waiting on the network. The app stops locally right away and quietly syncs the finished session to the server in the background. Your time entry — including any screenshots taken during the session — is uploaded automatically.
 
 ---
 
@@ -188,6 +190,15 @@ Every few minutes (your admin configures the interval — typically 10 minutes),
 3. **Calculates your activity percentage** — how active your keyboard and mouse were during that window
 4. **Uploads the screenshots** to the team's secure server along with your activity data. Each image is tagged with which screen it came from (`Screen 1 of 2`, `Screen 2 of 2`, etc.)
 
+### macOS permissions
+
+On macOS, Clockwork needs two system permissions to work fully. The first time you start a timer, macOS may prompt you — or you can grant them ahead of time in **System Settings → Privacy & Security**:
+
+- **Screen Recording** — required to capture screenshots. Without it, screenshots will be blank.
+- **Accessibility** — required to count keyboard and mouse activity. Without it, your activity percentage will read 0% even while you work.
+
+After granting either permission you may need to quit and reopen Clockwork. (Windows does not require these steps.)
+
 ### What the activity percentage means
 
 | Level | What it signals |
@@ -224,8 +235,8 @@ Windows tray:     [...] → [🕐]
 ```
 
 **Tray icon states:**
-- **Grey / default** — no timer is running
-- **Highlighted / active** — a timer is currently running
+- **Default (no dot)** — no timer is running
+- **Blinking green dot** — a timer is currently running. A small green dot blinks on the tray/menu-bar icon as a quick visual confirmation that tracking is live.
 
 **Right-click the tray icon** to get the context menu:
 
@@ -259,13 +270,17 @@ Signing out clears your stored session. The next time you open Clockwork you'll 
 
 ## Getting app updates
 
-Clockwork checks for updates automatically every time it launches. When a new version is available:
+Clockwork checks for updates automatically every time it launches. Updates are published to **GitHub Releases**, and the app pulls them down on its own. When a new version is available:
 
 1. The update downloads silently in the background
 2. A notification appears when it's ready
 3. The app installs the update on the next restart
 
 You don't need to do anything — updates are fully automatic. If you want the latest version immediately, quit and relaunch the app.
+
+> **After an update, you'll be asked to sign in again.** This is expected — just log in with your usual credentials and your tracker is back to normal.
+
+> **macOS note:** the Mac build is **Apple Silicon (arm64) only**. It runs on M1/M2/M3-and-later Macs. (Intel Macs are not currently supported.)
 
 ---
 
@@ -281,7 +296,7 @@ A: Clockwork is lightweight — under 50 MB of RAM. Screenshot capture (every 10
 A: Ask your admin to log a manual time entry through the admin portal. Clockwork itself only records time while the timer is running.
 
 **Q: What happens if the app crashes mid-session?**
-A: When you relaunch, Clockwork attempts to restore the session state. If it can't, the in-progress entry will remain as "running" on the server — your admin can close it manually.
+A: When you relaunch, Clockwork **reconciles with the server** — the server is the source of truth. If a session is still open server-side, the app picks it back up; if it was already closed, the app clears it. So relaunching is the fix for almost any session that looks stuck. (If anything still looks off, your admin can also force-stop the entry from the portal.)
 
 **Q: Can I see my own time data?**
 A: Currently only admins can view the full dashboard. Ask your admin for a summary of your tracked time.
