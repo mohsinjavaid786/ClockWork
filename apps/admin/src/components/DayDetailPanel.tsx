@@ -206,17 +206,17 @@ export function DayDetailPanel({ date, userId, onClose }: Props) {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — blurs everything behind so the drawer is in prime focus */}
       <div
         onClick={onClose}
-        className="fixed inset-0 z-40 bg-black/[0.32] backdrop-blur-[2px]"
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-md"
         style={{ opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none', transition: 'opacity 200ms ease' }}
       />
 
-      {/* Panel */}
+      {/* Floating panel — detached from the edges, rounded, elevated */}
       <div
-        className="fixed right-0 top-0 z-50 h-full w-full max-w-[680px] bg-card border-l border-hair shadow-modal overflow-y-auto"
-        style={{ transform: open ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 250ms cubic-bezier(0.4,0,0.2,1)' }}
+        className="fixed bottom-4 right-4 top-4 z-50 w-[calc(100%-2rem)] max-w-[680px] overflow-y-auto rounded-card bg-card shadow-modal"
+        style={{ transform: open ? 'translateX(0)' : 'translateX(calc(100% + 1.5rem))', transition: 'transform 280ms cubic-bezier(0.4,0,0.2,1)' }}
       >
         {date && (
           <div className="flex flex-col">
