@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Response } from 'express';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { dbError } from '../../common/db';
 import { ReportQueryDto } from './dto/report.dto';
 
 interface EntryRow {
@@ -18,6 +19,25 @@ interface OpenEntry {
   status: string;
   paused_seconds: number | null;
   pauses: Array<{ pausedAt?: string; resumedAt?: string | null }> | null;
+}
+
+// Neutralise spreadsheet formula injection: a cell beginning with =, +, -, @
+// (or a control char) is executed as a formula when opened in Excel/Sheets. We
+// prefix such values with a single quote, then quote the whole field and double
+// any internal quotes per RFC 4180.
+function csvCell(value: string): string {
+  const guarded = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return `"${guarded.replace(/"/g, '""')}"`;
+}
+
+// Escape user-supplied text before interpolating into the PDF/HTML report so a
+// description like "<script>" can't inject markup.
+function htmlEscape(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 @Injectable()
@@ -53,7 +73,7 @@ export class ReportsService {
     if (query.to) q = q.lte('started_at', query.to);
 
     const { data, error } = await q;
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
     return (data ?? []) as unknown as EntryRow[];
   }
 
@@ -63,12 +83,12 @@ export class ReportsService {
     const header = 'Date,User,Email,Project,Description,Duration (hours)\n';
     const rows = entries.map((e) => {
       const date = new Date(e.started_at).toISOString().split('T')[0];
-      const userName = e.user?.name ?? '';
-      const email = e.user?.email ?? '';
-      const project = e.project?.name ?? '';
-      const desc = (e.description ?? '').replace(/"/g, '""');
+      const userName = csvCell(e.user?.name ?? '');
+      const email = csvCell(e.user?.email ?? '');
+      const project = csvCell(e.project?.name ?? '');
+      const desc = csvCell(e.description ?? '');
       const hours = e.duration_seconds ? (e.duration_seconds / 3600).toFixed(2) : '0.00';
-      return `${date},"${userName}","${email}","${project}","${desc}",${hours}`;
+      return `${date},${userName},${email},${project},${desc},${hours}`;
     });
 
     const csv = header + rows.join('\n');
@@ -87,9 +107,9 @@ export class ReportsService {
     const rows = entries
       .map((e) => {
         const date = new Date(e.started_at).toISOString().split('T')[0];
-        const user = e.user?.name ?? '';
-        const project = e.project?.name ?? 'No project';
-        const desc = e.description ?? '';
+        const user = htmlEscape(e.user?.name ?? '');
+        const project = htmlEscape(e.project?.name ?? 'No project');
+        const desc = htmlEscape(e.description ?? '');
         const hours = e.duration_seconds ? (e.duration_seconds / 3600).toFixed(2) : '0.00';
         return `<tr><td>${date}</td><td>${user}</td><td>${project}</td><td>${desc}</td><td>${hours}h</td></tr>`;
       })
@@ -126,7 +146,9 @@ tr:nth-child(even) td { background: #f9f9f9; }
     todayStart.setHours(0, 0, 0, 0);
 
     const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - now.getDay());
+    // Monday-based week, matching getRange()/getWeeklyChart() so "this week"
+    // means the same window everywhere (getDay() is 0 for Sunday).
+    weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
     weekStart.setHours(0, 0, 0, 0);
 
     const prevWeekStart = new Date(weekStart);
