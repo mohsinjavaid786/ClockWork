@@ -157,6 +157,17 @@ export const api = {
       ),
     weeklyChart: () =>
       request<Array<{ day: string; date: string; hours: number }>>('/reports/weekly-chart'),
+    range: (params: { from: string; to: string; bucket: 'day' | 'week' | 'month'; userId?: string }) => {
+      const qs = new URLSearchParams({ from: params.from, to: params.to, bucket: params.bucket });
+      if (params.userId) qs.set('userId', params.userId);
+      return request<{
+        totalHours: number;
+        activeNow: number;
+        screenshots: number;
+        entries: number;
+        series: Array<{ label: string; date: string; hours: number }>;
+      }>(`/reports/range?${qs.toString()}`);
+    },
     csvUrl: (params?: Record<string, string>) => {
       const qs = params ? '?' + new URLSearchParams(params).toString() : '';
       return `${BASE}/api/v1/reports/csv${qs}`;
