@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { X, ChevronLeft, ChevronRight, Keyboard, Mouse } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { X, ChevronLeft, ChevronRight, Keyboard, Mouse, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import type { Screenshot } from '@/lib/types';
 import { useTimezone } from '@/context/timezone-context';
 
@@ -32,14 +32,46 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
   // Reset per shot.
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // Zoom + pan for inspecting detail. Scale 1–4; drag to pan when zoomed in.
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+
   useEffect(() => {
     setFailed(false);
     setLoaded(false);
+    setScale(1);
+    setOffset({ x: 0, y: 0 });
   }, [shot.id]);
 
+  function zoomTo(next: number) {
+    const s = Math.min(4, Math.max(1, Math.round(next * 10) / 10));
+    setScale(s);
+    if (s === 1) setOffset({ x: 0, y: 0 });
+  }
+
   if (shot.signedUrl && !failed) {
+    const zoomed = scale > 1;
     return (
-      <div className="relative w-full overflow-hidden rounded-field border border-hair bg-black" style={{ aspectRatio: '16/9' }}>
+      <div
+        className="group relative w-full overflow-hidden rounded-field border border-hair bg-black"
+        style={{ aspectRatio: '16/9' }}
+        onWheel={(e) => {
+          if (!loaded) return;
+          e.preventDefault();
+          zoomTo(scale + (e.deltaY < 0 ? 0.3 : -0.3));
+        }}
+        onPointerDown={(e) => {
+          if (!zoomed) return;
+          drag.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          if (!drag.current) return;
+          setOffset({ x: drag.current.ox + (e.clientX - drag.current.x), y: drag.current.oy + (e.clientY - drag.current.y) });
+        }}
+        onPointerUp={() => { drag.current = null; }}
+      >
         {shot.thumbnailUrl && (
           <img
             src={shot.thumbnailUrl}
@@ -52,10 +84,47 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
         <img
           src={shot.signedUrl}
           alt={`Screen ${shot.screenNumber}`}
-          className={`cw-img-fade absolute inset-0 h-full w-full object-contain ${loaded ? 'is-loaded' : ''}`}
+          draggable={false}
+          className={`cw-img-fade absolute inset-0 h-full w-full select-none object-contain ${loaded ? 'is-loaded' : ''}`}
+          style={{
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+            transformOrigin: 'center',
+            transition: drag.current ? 'none' : 'transform 120ms ease-out',
+            cursor: zoomed ? (drag.current ? 'grabbing' : 'grab') : 'default',
+          }}
           onLoad={() => setLoaded(true)}
           onError={() => setFailed(true)}
         />
+
+        {/* Zoom controls */}
+        <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/60 p-1 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+          <button
+            onClick={() => zoomTo(scale - 0.5)}
+            disabled={scale <= 1}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-white/90 hover:bg-white/15 disabled:opacity-30"
+            title="Zoom out"
+          >
+            <ZoomOut size={14} />
+          </button>
+          <span className="min-w-[34px] text-center font-mono text-[11px] text-white/90">{Math.round(scale * 100)}%</span>
+          <button
+            onClick={() => zoomTo(scale + 0.5)}
+            disabled={scale >= 4}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-white/90 hover:bg-white/15 disabled:opacity-30"
+            title="Zoom in"
+          >
+            <ZoomIn size={14} />
+          </button>
+          {zoomed && (
+            <button
+              onClick={() => zoomTo(1)}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-white/90 hover:bg-white/15"
+              title="Reset zoom"
+            >
+              <Maximize2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
     );
   }
