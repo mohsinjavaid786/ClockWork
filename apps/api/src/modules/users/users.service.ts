@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../supabase/supabase.service';
+import { dbError } from '../../common/db';
 import { EmailService } from '../email/email.service';
 import { InviteUserDto } from './dto/invite-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -22,7 +23,7 @@ export class UsersService {
       .select('id, name, email, role, is_active, timezone, avatar_url, created_at')
       .order('created_at', { ascending: false });
 
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
 
     const now = new Date();
     const weekStart = new Date(now);
@@ -183,7 +184,7 @@ export class UsersService {
 
     if (error) {
       await this.supabase.client.auth.admin.deleteUser(authUserId);
-      throw new BadRequestException(error.message);
+      throw dbError(error);
     }
 
     // Email the employee (set-password link when there's no temp password,
@@ -235,16 +236,23 @@ export class UsersService {
     if (!existing) throw new NotFoundException('User not found');
 
     // Best-effort: remove the user's screenshot files from storage (DB rows are
-    // cascade-deleted with the user, but the bucket objects are not).
+    // cascade-deleted with the user, but the bucket objects are not). list() is
+    // NOT recursive, so we clean each folder separately — full images live at
+    // `<id>/*` and thumbnails at `<id>/thumbs/*`; listing only `<id>` would leave
+    // every thumbnail orphaned in the bucket.
     try {
-      const { data: files } = await this.supabase.client.storage
-        .from('screenshots')
-        .list(id, { limit: 1000 });
-      if (files?.length) {
-        await this.supabase.client.storage
-          .from('screenshots')
-          .remove(files.map((f) => `${id}/${f.name}`));
+      const bucket = this.supabase.client.storage.from('screenshots');
+      const paths: string[] = [];
+      for (const prefix of [id, `${id}/thumbs`]) {
+        const { data: files } = await bucket.list(prefix, { limit: 1000 });
+        for (const f of files ?? []) {
+          // Skip the `thumbs` subfolder pseudo-entry returned when listing `<id>`
+          // (it has no id/metadata); its contents are removed via the deeper list.
+          if (prefix === id && f.id === null) continue;
+          paths.push(`${prefix}/${f.name}`);
+        }
       }
+      if (paths.length) await bucket.remove(paths);
     } catch {
       // ignore storage cleanup failures — the account + DB rows still get removed
     }
@@ -252,7 +260,7 @@ export class UsersService {
     // Deleting the auth user cascades to public.users, time_entries and
     // screenshots (ON DELETE CASCADE), removing all of the employee's data.
     const { error } = await this.supabase.client.auth.admin.deleteUser(id);
-    if (error) throw new BadRequestException(error.message);
+    if (error) throw dbError(error);
 
     return { success: true };
   }
