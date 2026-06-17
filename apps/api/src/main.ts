@@ -9,8 +9,24 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
 
+  // Allow one or more comma-separated portal origins. Only fall back to
+  // localhost in development — in production a missing ADMIN_URL must NOT
+  // silently allow localhost with credentials, so we reject all origins and log
+  // loudly instead of opening a credentialed hole.
+  const isProd = process.env['NODE_ENV'] === 'production';
+  const adminUrls = (process.env['ADMIN_URL'] ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!adminUrls.length && !isProd) adminUrls.push('http://localhost:3000');
+  if (!adminUrls.length) {
+    Logger.warn(
+      'ADMIN_URL is not set — CORS will reject browser origins. Set ADMIN_URL to the portal origin(s).',
+      'Bootstrap',
+    );
+  }
   app.enableCors({
-    origin: process.env['ADMIN_URL'] ?? 'http://localhost:3000',
+    origin: adminUrls.length ? adminUrls : false,
     credentials: true,
   });
 
