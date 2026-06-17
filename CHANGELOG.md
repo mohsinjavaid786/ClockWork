@@ -11,6 +11,8 @@ listed under **[Unreleased]**.
 
 ## [Unreleased]
 
+## [1.1.12] - 2026-06-17
+
 ### Added
 - **Dark / light mode** — a theme toggle in the top bar; tokens are CSS-variable
   driven so the whole portal flips instantly (persisted, no flash on load).
