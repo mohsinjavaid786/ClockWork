@@ -11,6 +11,7 @@ import { DataTable } from '@/components/DataTable';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { EmptyState } from '@/components/EmptyState';
 import { EntryDetailPanel, type TimeEntry } from '@/components/EntryDetailPanel';
+import { WorkDiary } from '@/components/WorkDiary';
 import { useTimezone } from '@/context/timezone-context';
 import { formatDuration } from '@/lib/utils';
 
@@ -42,6 +43,7 @@ export default function UserDetailPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<TimeEntry | null>(null);
+  const [tab, setTab] = useState<'activity' | 'diary'>('activity');
 
   useEffect(() => {
     api.users
@@ -156,30 +158,49 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      <div>
-        <h2 className="mb-3 text-xs font-medium uppercase tracking-widest text-graphite">
-          Recent activity
-          <span className="ml-2 normal-case tracking-normal text-dove">
-            — click an entry to see screenshots &amp; activity
-          </span>
-        </h2>
-        {profile.recentEntries.length === 0 ? (
-          <EmptyState title="No time entries yet" />
-        ) : (
-          <DataTable
-            columns={columns}
-            data={profile.recentEntries}
-            keyFn={(r) => r.id}
-            onRowClick={(r) =>
-              setSelected({
-                ...r,
-                paused_seconds: null,
-                user: { id: profile.id, name: profile.name, email: profile.email },
-              })
-            }
-          />
-        )}
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-hair">
+        {([
+          ['activity', 'Recent activity'],
+          ['diary', 'Work diary'],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm transition-colors ${
+              tab === key
+                ? 'border-ink font-medium text-ink'
+                : 'border-transparent text-graphite hover:text-ink'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
+
+      {tab === 'activity' ? (
+        <div>
+          <p className="mb-3 text-xs text-dove">Click an entry to see screenshots &amp; activity.</p>
+          {profile.recentEntries.length === 0 ? (
+            <EmptyState title="No time entries yet" />
+          ) : (
+            <DataTable
+              columns={columns}
+              data={profile.recentEntries}
+              keyFn={(r) => r.id}
+              onRowClick={(r) =>
+                setSelected({
+                  ...r,
+                  paused_seconds: null,
+                  user: { id: profile.id, name: profile.name, email: profile.email },
+                })
+              }
+            />
+          )}
+        </div>
+      ) : (
+        <WorkDiary userId={profile.id} />
+      )}
 
       <EntryDetailPanel entry={selected} onClose={() => setSelected(null)} />
     </div>
