@@ -12,13 +12,14 @@ listed under **[Unreleased]**.
 ## [Unreleased]
 
 ### Changed
-- **Dashboard redesign ("Régulateur")** — the admin dashboard is reimagined as a
-  precision-instrument panel: an engraved guilloché hero with a large "logged
-  today" readout on a chronometer-style dial rim and an hours tick-rail, brass
-  engraving as the accent, and lume-green reserved strictly for live/active
-  state. The week chart is an engraved barograph (today highlighted in lume), and
-  "Tracking now" is a live roster with pulsing lume indicators and a chronometer
-  elapsed readout. Includes a live clock, manual refresh, and clickable members.
+- **Admin portal redesign (light, editorial)** — the entire portal moves from the
+  dark monochrome theme to a light "Steep-inspired" editorial system: a fog
+  canvas with white cards (24px radius, soft elevation), Inter + Newsreader
+  (serif headings) typography, pill buttons, and rust/blue as the only chart
+  voices. Applied across the dashboard, timesheets, team, work diary, projects,
+  reports, settings, drawers, and auth screens. Tokens live in
+  `tailwind.config.ts`; the system is documented in `apps/admin/DESIGN.md`. The
+  dashboard keeps its live refresh, Tracking Now roster, and clickable members.
 
 ## [1.1.11] - 2026-06-16
 
