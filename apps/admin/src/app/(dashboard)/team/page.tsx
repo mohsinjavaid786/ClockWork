@@ -135,11 +135,11 @@ export default function TeamPage() {
           <div>
             <Link
               href={`/team/${row.id}`}
-              className="text-sm font-medium text-white hover:underline"
+              className="text-sm font-medium text-ink hover:underline"
             >
               {row.name}
             </Link>
-            <p className="text-xs text-[#666666]">{row.email}</p>
+            <p className="text-xs text-graphite">{row.email}</p>
           </div>
         </div>
       ),
@@ -170,13 +170,13 @@ export default function TeamPage() {
       key: 'weeklyHours',
       header: 'This week',
       cell: (row: Member) => (
-        <span className="font-mono text-sm text-white">{row.weeklyHours.toFixed(1)}h</span>
+        <span className="font-mono text-sm text-ink">{row.weeklyHours.toFixed(1)}h</span>
       ),
     },
     {
       key: 'timezone',
       header: 'Timezone',
-      cell: (row: Member) => <span className="text-xs text-[#666666]">{row.timezone}</span>,
+      cell: (row: Member) => <span className="text-xs text-graphite">{row.timezone}</span>,
     },
     {
       key: 'actions',
@@ -184,7 +184,7 @@ export default function TeamPage() {
       className: 'text-right',
       cell: (row: Member) =>
         row.id === currentUser?.id ? (
-          <span className="text-xs text-[#444]">You</span>
+          <span className="text-xs text-dove">You</span>
         ) : (
           <button
             onClick={() => {
@@ -193,7 +193,7 @@ export default function TeamPage() {
             }}
             title="Delete"
             aria-label={`Delete ${row.name}`}
-            className="inline-flex items-center rounded p-1.5 text-[#666666] transition-colors hover:bg-[#1c0a0a] hover:text-[#ef4444]"
+            className="inline-flex items-center rounded p-1.5 text-graphite transition-colors hover:bg-error-bg hover:text-error"
           >
             <Trash2 size={15} />
           </button>
@@ -220,7 +220,7 @@ export default function TeamPage() {
             {MAC_URL && (
               <a
                 href={MAC_URL}
-                className="flex items-center gap-2 rounded-md border border-[#2A2A2A] px-3 py-2 text-xs font-medium text-[#A1A1A1] transition-colors hover:bg-[#1A1A1A] hover:text-white"
+                className="flex items-center gap-2 rounded-full border border-dove px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-black/[0.03]"
                 title="Download the macOS installer to share with an employee"
               >
                 <Apple size={13} />
@@ -230,7 +230,7 @@ export default function TeamPage() {
             {WIN_URL && (
               <a
                 href={WIN_URL}
-                className="flex items-center gap-2 rounded-md border border-[#2A2A2A] px-3 py-2 text-xs font-medium text-[#A1A1A1] transition-colors hover:bg-[#1A1A1A] hover:text-white"
+                className="flex items-center gap-2 rounded-full border border-dove px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-black/[0.03]"
                 title="Download the Windows installer to share with an employee"
               >
                 <Monitor size={13} />
@@ -239,7 +239,7 @@ export default function TeamPage() {
             )}
             <button
               onClick={() => setInviteOpen(true)}
-              className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs font-medium text-black hover:bg-[#e5e5e5] transition-colors"
+              className="flex items-center gap-2 rounded-full bg-ink px-5 py-2 text-xs font-medium text-white transition-colors hover:bg-ink/90"
             >
               <UserPlus size={13} />
               Invite member
@@ -248,19 +248,19 @@ export default function TeamPage() {
         }
       />
 
-      <div className="flex items-center gap-1 border-b border-[#2A2A2A]">
+      <div className="flex items-center gap-1 border-b border-hair">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
               tab === t.key
-                ? 'border-white text-white'
-                : 'border-transparent text-[#666666] hover:text-[#A1A1A1]'
+                ? 'border-ink text-ink'
+                : 'border-transparent text-graphite hover:text-ink'
             }`}
           >
             {t.label}
-            <span className="ml-2 rounded-full bg-[#1A1A1A] px-2 py-0.5 font-mono text-xs text-[#A1A1A1]">
+            <span className="ml-2 rounded-full bg-fog px-2 py-0.5 font-mono text-xs text-graphite">
               {t.count}
             </span>
           </button>
@@ -283,45 +283,45 @@ export default function TeamPage() {
       <Modal open={inviteOpen} onClose={() => setInviteOpen(false)} title="Invite team member">
         <form onSubmit={handleInvite} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">Full name</label>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">Full name</label>
             <input
               value={inviteForm.name}
               onChange={(e) => setInviteForm((p) => ({ ...p, name: e.target.value }))}
               required
               placeholder="Jane Smith"
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink placeholder:text-graphite outline-none focus:border-ink"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">Email</label>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">Email</label>
             <input
               type="email"
               value={inviteForm.email}
               onChange={(e) => setInviteForm((p) => ({ ...p, email: e.target.value }))}
               required
               placeholder="jane@company.com"
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink placeholder:text-graphite outline-none focus:border-ink"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">Role</label>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">Role</label>
             <select
               value={inviteForm.role}
               onChange={(e) =>
                 setInviteForm((p) => ({ ...p, role: e.target.value as 'admin' | 'member' }))
               }
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink outline-none focus:border-ink"
             >
               <option value="member">Member</option>
               <option value="admin">Admin</option>
             </select>
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">Timezone</label>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">Timezone</label>
             <select
               value={inviteForm.timezone}
               onChange={(e) => setInviteForm((p) => ({ ...p, timezone: e.target.value }))}
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink outline-none focus:border-ink"
             >
               {TIMEZONES.map((tz) => (
                 <option key={tz.value} value={tz.value}>
@@ -329,13 +329,13 @@ export default function TeamPage() {
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] text-[#666666]">
+            <p className="mt-1 text-[11px] text-graphite">
               Lets you view their entries in their local time.
             </p>
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">
-              Temporary password <span className="text-[#666666]">(optional)</span>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">
+              Temporary password <span className="text-graphite">(optional)</span>
             </label>
             <input
               type="text"
@@ -344,17 +344,17 @@ export default function TeamPage() {
               minLength={8}
               placeholder="Leave blank to email a set-password link"
               autoComplete="off"
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink placeholder:text-graphite outline-none focus:border-ink"
             />
           </div>
-          <p className="rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-xs text-[#666666]">
+          <p className="rounded-field border border-hair bg-fog px-4 py-2.5 text-xs text-graphite">
             {inviteForm.password.trim()
               ? 'The account will be ready immediately — share this password with the employee so they can sign in and start the tracker.'
               : "We'll email an invitation with a secure link for them to set their own password, plus the desktop app downloads."}
           </p>
 
           {inviteError && (
-            <p className="rounded border border-[#3f1515] bg-[#1c0a0a] px-3 py-2 text-xs text-[#ef4444]">
+            <p className="rounded-field border border-error-bg bg-error-bg px-4 py-2.5 text-xs text-error">
               {inviteError}
             </p>
           )}
@@ -363,14 +363,14 @@ export default function TeamPage() {
             <button
               type="button"
               onClick={() => setInviteOpen(false)}
-              className="flex-1 rounded-md border border-[#2A2A2A] px-4 py-2 text-sm text-[#A1A1A1] hover:bg-[#1A1A1A] transition-colors"
+              className="flex-1 rounded-full border border-dove px-4 py-2 text-sm text-ink transition-colors hover:bg-black/[0.03]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={inviting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-[#e5e5e5] disabled:opacity-50 transition-colors"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
             >
               {inviting && <LoadingSpinner size="sm" />}
               Send invite
@@ -381,12 +381,12 @@ export default function TeamPage() {
 
       <Modal open={!!toDelete} onClose={() => setToDelete(null)} title="Delete employee">
         <div className="space-y-4">
-          <div className="flex gap-3 rounded-md border border-[#3f1515] bg-[#1c0a0a] p-3">
-            <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-[#ef4444]" />
-            <div className="text-xs leading-relaxed text-[#f5a3a3]">
-              <p className="font-medium text-[#ef4444]">This permanently deletes everything.</p>
+          <div className="flex gap-3 rounded-field border border-error-bg bg-error-bg p-3">
+            <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-error" />
+            <div className="text-xs leading-relaxed text-error">
+              <p className="font-medium text-error">This permanently deletes everything.</p>
               <p className="mt-1">
-                Deleting <span className="font-medium text-white">{toDelete?.name}</span> also
+                Deleting <span className="font-medium text-ink">{toDelete?.name}</span> also
                 deletes <span className="font-medium">all their time entries and screenshots</span>.
                 This cannot be undone — proceed with caution.
               </p>
@@ -394,7 +394,7 @@ export default function TeamPage() {
           </div>
 
           {deleteError && (
-            <p className="rounded border border-[#3f1515] bg-[#1c0a0a] px-3 py-2 text-xs text-[#ef4444]">
+            <p className="rounded-field border border-error-bg bg-error-bg px-4 py-2.5 text-xs text-error">
               {deleteError}
             </p>
           )}
@@ -403,7 +403,7 @@ export default function TeamPage() {
             <button
               type="button"
               onClick={() => setToDelete(null)}
-              className="flex-1 rounded-md border border-[#2A2A2A] px-4 py-2 text-sm text-[#A1A1A1] transition-colors hover:bg-[#1A1A1A]"
+              className="flex-1 rounded-full border border-dove px-4 py-2 text-sm text-ink transition-colors hover:bg-black/[0.03]"
             >
               Cancel
             </button>
@@ -411,7 +411,7 @@ export default function TeamPage() {
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              className="flex flex-1 items-center justify-center gap-2 rounded-md bg-[#dc2626] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#b91c1c] disabled:opacity-50"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-error px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-error/90 disabled:opacity-50"
             >
               {deleting && <LoadingSpinner size="sm" />}
               Delete permanently

@@ -79,14 +79,14 @@ function Calendar({ month, onPrev, onNext, selectedWeekMon, onSelectWeek, dayMet
   }
 
   return (
-    <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] p-4">
+    <div className="rounded-card bg-card p-4 shadow-card">
       {/* Month nav */}
       <div className="mb-4 flex items-center justify-between">
-        <button onClick={onPrev} className="rounded p-1.5 text-[#666666] hover:bg-[#1A1A1A] hover:text-white transition-colors">
+        <button onClick={onPrev} className="rounded p-1.5 text-graphite hover:bg-fog hover:text-ink transition-colors">
           <ChevronLeft size={14} />
         </button>
-        <span className="font-mono text-sm font-semibold text-white">{fmtMonth(month)}</span>
-        <button onClick={onNext} className="rounded p-1.5 text-[#666666] hover:bg-[#1A1A1A] hover:text-white transition-colors">
+        <span className="font-mono text-sm font-semibold text-ink">{fmtMonth(month)}</span>
+        <button onClick={onNext} className="rounded p-1.5 text-graphite hover:bg-fog hover:text-ink transition-colors">
           <ChevronRight size={14} />
         </button>
       </div>
@@ -94,7 +94,7 @@ function Calendar({ month, onPrev, onNext, selectedWeekMon, onSelectWeek, dayMet
       {/* Day headers */}
       <div className="mb-1 grid grid-cols-7">
         {DOW.map(d => (
-          <div key={d} className="text-center text-[10px] font-medium uppercase tracking-wider text-[#444]">{d}</div>
+          <div key={d} className="text-center text-[10px] font-medium uppercase tracking-wider text-graphite">{d}</div>
         ))}
       </div>
 
@@ -113,15 +113,15 @@ function Calendar({ month, onPrev, onNext, selectedWeekMon, onSelectWeek, dayMet
               onClick={() => onSelectWeek(mondayOf(d))}
               className="relative flex flex-col items-center py-1 transition-colors"
               style={{
-                background: inWeek ? '#1A1A1A' : 'transparent',
+                background: inWeek ? '#f7f7f8' : 'transparent',
                 borderRadius: inWeek ? (i % 7 === 0 ? '6px 0 0 6px' : i % 7 === 6 ? '0 6px 6px 0' : '0') : '6px',
               }}
             >
               <span
                 className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium transition-colors"
                 style={{
-                  background: isToday ? '#fff' : 'transparent',
-                  color: isToday ? '#000' : inMonth ? '#A1A1A1' : '#333',
+                  background: isToday ? '#17191c' : 'transparent',
+                  color: isToday ? '#fff' : inMonth ? '#17191c' : '#a3a6af',
                 }}
               >
                 {d.getDate()}
@@ -141,11 +141,11 @@ function Calendar({ month, onPrev, onNext, selectedWeekMon, onSelectWeek, dayMet
       </div>
 
       {/* Legend */}
-      <div className="mt-4 flex items-center gap-4 border-t border-[#2A2A2A] pt-3">
-        <div className="flex items-center gap-1.5 text-[11px] text-[#666666]">
+      <div className="mt-4 flex items-center gap-4 border-t border-hair pt-3">
+        <div className="flex items-center gap-1.5 text-[11px] text-graphite">
           <span className="h-2 w-2 rounded-full bg-[#22c55e]" /> Tracked
         </div>
-        <div className="flex items-center gap-1.5 text-[11px] text-[#666666]">
+        <div className="flex items-center gap-1.5 text-[11px] text-graphite">
           <span className="h-2 w-2 rounded-sm bg-[#ef4444]" /> Overtime
         </div>
       </div>
@@ -173,10 +173,10 @@ function WeekBars({ weekMon, dayMeta, onClickDay }: WeekBarProps) {
   const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   return (
-    <div className="flex flex-1 flex-col rounded-xl border border-[#2A2A2A] bg-[#111111] overflow-hidden">
+    <div className="flex flex-1 flex-col rounded-card bg-card shadow-card overflow-hidden">
       {/* Week header */}
-      <div className="border-b border-[#2A2A2A] px-5 py-3">
-        <span className="font-mono text-sm font-semibold text-white">{fmtWeekRange(weekMon)}</span>
+      <div className="border-b border-hair px-5 py-3">
+        <span className="font-mono text-sm font-semibold text-ink">{fmtWeekRange(weekMon)}</span>
       </div>
 
       {/* Bars */}
@@ -192,14 +192,14 @@ function WeekBars({ weekMon, dayMeta, onClickDay }: WeekBarProps) {
             <button
               key={ds}
               onClick={() => h > 0 && onClickDay(ds)}
-              className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-[#1A1A1A]"
+              className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-fog"
               style={{ cursor: h > 0 ? 'pointer' : 'default' }}
             >
-              <span className="w-28 text-left text-sm" style={{ color: isToday ? '#fff' : '#666666' }}>
-                <span className="mr-1.5 font-mono text-xs text-[#444]">{d.getDate()}</span>
+              <span className="w-28 text-left text-sm" style={{ color: isToday ? '#17191c' : '#777b86' }}>
+                <span className="mr-1.5 font-mono text-xs text-dove">{d.getDate()}</span>
                 {DAY_NAMES[i]}
               </span>
-              <div className="relative flex-1 h-6 rounded overflow-hidden" style={{ background: '#1A1A1A' }}>
+              <div className="relative flex-1 h-6 rounded overflow-hidden" style={{ background: '#f7f7f8' }}>
                 {/* Regular hours */}
                 {regularPct > 0 && (
                   <div
@@ -215,7 +215,7 @@ function WeekBars({ weekMon, dayMeta, onClickDay }: WeekBarProps) {
                   />
                 )}
               </div>
-              <span className="w-20 text-right font-mono text-sm" style={{ color: h > 0 ? '#fff' : '#333' }}>
+              <span className="w-20 text-right font-mono text-sm" style={{ color: h > 0 ? '#17191c' : '#a3a6af' }}>
                 {fmtHHMM(h)}
               </span>
             </button>
@@ -224,26 +224,26 @@ function WeekBars({ weekMon, dayMeta, onClickDay }: WeekBarProps) {
       </div>
 
       {/* Footer totals */}
-      <div className="grid grid-cols-3 border-t border-[#2A2A2A] px-5 py-4">
+      <div className="grid grid-cols-3 border-t border-hair px-5 py-4">
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" />
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-[#444]">Tracked</p>
-            <p className="font-mono text-sm font-semibold text-white">{fmtHHMM(totalTracked)}</p>
+            <p className="text-[10px] uppercase tracking-wider text-graphite">Tracked</p>
+            <p className="font-mono text-sm font-semibold text-ink">{fmtHHMM(totalTracked)}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="h-2.5 w-2.5 rounded-sm bg-[#ef4444]" />
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-[#444]">Overtime</p>
-            <p className="font-mono text-sm font-semibold" style={{ color: totalOvertime > 0 ? '#ef4444' : '#333' }}>
+            <p className="text-[10px] uppercase tracking-wider text-graphite">Overtime</p>
+            <p className="font-mono text-sm font-semibold" style={{ color: totalOvertime > 0 ? '#ef4444' : '#a3a6af' }}>
               {totalOvertime > 0 ? fmtHHMM(totalOvertime) : '—'}
             </p>
           </div>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-[#444]">Total this week</p>
-          <p className="font-mono text-sm font-semibold text-white">{fmtHHMM(totalHours)}</p>
+          <p className="text-[10px] uppercase tracking-wider text-graphite">Total this week</p>
+          <p className="font-mono text-sm font-semibold text-ink">{fmtHHMM(totalHours)}</p>
         </div>
       </div>
     </div>
@@ -337,7 +337,7 @@ export default function WorkDiaryPage() {
           <select
             value={selectedUserId}
             onChange={e => setSelectedUserId(e.target.value)}
-            className="rounded-md border border-[#2A2A2A] bg-[#111111] px-3 py-2 text-sm text-white outline-none focus:border-[#444]"
+            className="rounded-field border border-dove bg-card px-4 py-2.5 text-[15px] text-ink outline-none focus:border-ink"
           >
             <option value="">All members</option>
             {members.map(m => (
@@ -354,9 +354,9 @@ export default function WorkDiaryPage() {
             { label: 'Last week',      value: fmtHHMM(lastWeek),  sub: undefined as string | undefined, subUp: true },
             { label: 'Since start',    value: fmtHHMM(sinceStart), sub: undefined as string | undefined, subUp: true },
           ].map(({ label, value, sub, subUp }) => (
-            <div key={label} className="rounded-xl border border-[#2A2A2A] bg-[#111111] px-5 py-4">
-              <p className="text-xs text-[#666666]">{label}</p>
-              <p className="mt-1.5 font-mono text-2xl font-semibold text-white">{value}</p>
+            <div key={label} className="rounded-card bg-card px-5 py-4 shadow-card">
+              <p className="text-xs text-graphite">{label}</p>
+              <p className="mt-1.5 font-mono text-2xl font-semibold text-ink">{value}</p>
               {sub && <p className="mt-0.5 text-xs" style={{ color: subUp ? '#22c55e' : '#ef4444' }}>{sub}</p>}
             </div>
           ))}

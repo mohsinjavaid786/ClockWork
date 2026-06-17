@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Clock } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -29,18 +30,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-fog px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="ClockWork" className="mx-auto h-14 w-auto" />
-          <p className="mt-3 text-sm text-[#666666]">Sign in to your account</p>
-        </div>
+        <div className="rounded-card bg-card p-8 shadow-card">
+          <div className="mb-7 flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink">
+              <Clock size={15} className="text-white" strokeWidth={2} />
+            </span>
+            <span className="font-display text-[19px] font-medium tracking-tight text-ink">Clockwork</span>
+          </div>
 
-        <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">
+              <label className="mb-1.5 block text-[14px] font-medium text-ink">
                 Email
               </label>
               <input
@@ -49,17 +51,17 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="you@company.com"
-                className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none ring-0 transition-colors focus:border-[#444]"
+                className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-ink placeholder:text-graphite outline-none transition-colors focus:border-ink"
               />
             </div>
             <div>
               <div className="mb-1.5 flex items-center justify-between">
-                <label className="block text-xs font-medium text-[#A1A1A1]">
+                <label className="block text-[14px] font-medium text-ink">
                   Password
                 </label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-[#666666] underline-offset-4 hover:text-[#A1A1A1] hover:underline"
+                  className="text-xs text-ink underline-offset-2 hover:underline"
                 >
                   Forgot password?
                 </Link>
@@ -70,12 +72,12 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 placeholder="••••••••"
-                className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none ring-0 transition-colors focus:border-[#444]"
+                className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-ink placeholder:text-graphite outline-none transition-colors focus:border-ink"
               />
             </div>
 
             {error && (
-              <p className="rounded-md border border-[#3f1515] bg-[#1c0a0a] px-3 py-2 text-xs text-[#ef4444]">
+              <p className="rounded-field border border-error-bg bg-error-bg px-3 py-2 text-xs text-error">
                 {error}
               </p>
             )}
@@ -83,7 +85,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-[#e5e5e5] disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
             >
               {loading && <LoadingSpinner size="sm" />}
               Sign in

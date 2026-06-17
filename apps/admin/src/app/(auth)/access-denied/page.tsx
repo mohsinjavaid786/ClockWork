@@ -11,19 +11,19 @@ export default function AccessDeniedPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] px-4">
-      <div className="max-w-sm text-center">
-        <p className="font-mono text-5xl font-semibold text-white">403</p>
-        <p className="mt-3 text-sm text-[#A1A1A1]">
+    <div className="flex min-h-screen items-center justify-center bg-fog px-4">
+      <div className="max-w-sm rounded-card bg-card p-8 text-center shadow-card">
+        <p className="font-display text-5xl font-medium text-ink">403</p>
+        <p className="mt-3 text-sm text-ash">
           This portal is for administrators only.
         </p>
-        <p className="mt-2 text-xs text-[#666666]">
+        <p className="mt-2 text-xs text-graphite">
           If you&apos;re an employee, use the Clockwork desktop app to track your time. If you
           believe you should have admin access, contact your administrator.
         </p>
         <button
           onClick={signOut}
-          className="mt-6 inline-flex items-center rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-[#e5e5e5]"
+          className="mt-6 inline-flex items-center rounded-full border border-dove px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-black/[0.03]"
         >
           Back to sign in
         </button>

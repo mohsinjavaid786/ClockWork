@@ -77,34 +77,34 @@ export default function SettingsPage() {
       <PageHeader title="Settings" description="Application-wide configuration" />
 
       <form onSubmit={handleSave} className="space-y-6">
-        <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] p-6 space-y-5">
-          <h2 className="font-mono text-sm font-semibold text-white">General</h2>
+        <div className="rounded-card bg-card p-6 shadow-card space-y-5">
+          <h2 className="text-[15px] font-medium text-ink">General</h2>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">
               Company name
             </label>
             <input
               value={config.companyName}
               onChange={(e) => setConfig((p) => p && { ...p, companyName: e.target.value })}
               required
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink outline-none focus:border-ink"
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">Timezone</label>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">Timezone</label>
             <input
               value={config.timezone}
               onChange={(e) => setConfig((p) => p && { ...p, timezone: e.target.value })}
               required
               placeholder="UTC"
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink placeholder:text-graphite outline-none focus:border-ink"
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">
               Screenshot interval (minutes)
             </label>
             <input
@@ -116,16 +116,16 @@ export default function SettingsPage() {
                 setConfig((p) => p && { ...p, screenshotIntervalMinutes: Number(e.target.value) })
               }
               required
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink outline-none focus:border-ink"
             />
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] p-6 space-y-5">
-          <h2 className="font-mono text-sm font-semibold text-white">Slack integration</h2>
+        <div className="rounded-card bg-card p-6 shadow-card space-y-5">
+          <h2 className="text-[15px] font-medium text-ink">Slack integration</h2>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">
               Webhook URL
             </label>
             <input
@@ -135,7 +135,7 @@ export default function SettingsPage() {
                 setConfig((p) => p && { ...p, slackWebhookUrl: e.target.value || undefined })
               }
               placeholder="https://hooks.slack.com/services/..."
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink placeholder:text-graphite outline-none focus:border-ink"
             />
           </div>
 
@@ -143,7 +143,7 @@ export default function SettingsPage() {
             type="button"
             onClick={handleTestSlack}
             disabled={testing || !config.slackWebhookUrl}
-            className="flex items-center gap-2 rounded-md border border-[#2A2A2A] px-4 py-2 text-xs text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white disabled:opacity-40 transition-colors"
+            className="flex items-center gap-2 rounded-full border border-dove px-4 py-2 text-xs text-ink hover:bg-black/[0.03] disabled:opacity-40 transition-colors"
           >
             {testing && <LoadingSpinner size="sm" />}
             {testStatus === 'ok'
@@ -158,16 +158,16 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 rounded-md bg-white px-5 py-2 text-sm font-medium text-black hover:bg-[#e5e5e5] disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 rounded-full bg-ink px-5 py-2 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-50 transition-colors"
           >
             {saving && <LoadingSpinner size="sm" />}
             Save changes
           </button>
           {saveStatus === 'saved' && (
-            <span className="text-xs text-[#22c55e]">Saved successfully</span>
+            <span className="text-xs text-success">Saved successfully</span>
           )}
           {saveStatus === 'error' && (
-            <span className="text-xs text-[#ef4444]">Failed to save</span>
+            <span className="text-xs text-error">Failed to save</span>
           )}
         </div>
       </form>

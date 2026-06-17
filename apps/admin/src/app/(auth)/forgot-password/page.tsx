@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { Clock } from 'lucide-react';
 import { api } from '@/lib/api';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 
@@ -25,24 +26,25 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-fog px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="ClockWork" className="mx-auto h-14 w-auto" />
-          <p className="mt-3 text-sm text-[#666666]">Reset your password</p>
-        </div>
+        <div className="rounded-card bg-card p-8 shadow-card">
+          <div className="mb-7 flex items-center gap-2.5">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink">
+              <Clock size={15} className="text-white" strokeWidth={2} />
+            </span>
+            <span className="font-display text-[19px] font-medium tracking-tight text-ink">Clockwork</span>
+          </div>
 
-        <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] p-6">
           {sent ? (
-            <div className="space-y-4 text-center">
-              <p className="text-sm text-[#A1A1A1]">
-                If an account exists for <span className="text-white">{email}</span>, a reset link
+            <div className="space-y-4">
+              <p className="text-sm text-ash">
+                If an account exists for <span className="text-ink">{email}</span>, a reset link
                 is on its way. Check your inbox (and spam folder).
               </p>
               <Link
                 href="/login"
-                className="inline-block text-sm font-medium text-white underline-offset-4 hover:underline"
+                className="inline-block text-sm font-medium text-ink underline-offset-2 hover:underline"
               >
                 Back to sign in
               </Link>
@@ -50,21 +52,21 @@ export default function ForgotPasswordPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">Email</label>
+                <label className="mb-1.5 block text-[14px] font-medium text-ink">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="you@company.com"
-                  className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none ring-0 transition-colors focus:border-[#444]"
+                  className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-ink placeholder:text-graphite outline-none transition-colors focus:border-ink"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black transition-colors hover:bg-[#e5e5e5] disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-ink py-2.5 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
               >
                 {loading && <LoadingSpinner size="sm" />}
                 Send reset link
@@ -73,7 +75,7 @@ export default function ForgotPasswordPage() {
               <div className="text-center">
                 <Link
                   href="/login"
-                  className="text-xs text-[#666666] underline-offset-4 hover:text-[#A1A1A1] hover:underline"
+                  className="text-xs text-ink underline-offset-2 hover:underline"
                 >
                   Back to sign in
                 </Link>

@@ -48,24 +48,24 @@ export default function ReportsPage() {
         description="Export time data for any date range"
       />
 
-      <div className="rounded-xl border border-[#2A2A2A] bg-[#111111] p-6 space-y-6">
+      <div className="rounded-card bg-card p-6 shadow-card space-y-6">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">From</label>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">From</label>
             <input
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white outline-none focus:border-[#444] [color-scheme:dark]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink outline-none focus:border-ink"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">To</label>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">To</label>
             <input
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white outline-none focus:border-[#444] [color-scheme:dark]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink outline-none focus:border-ink"
             />
           </div>
         </div>
@@ -74,7 +74,7 @@ export default function ReportsPage() {
           <button
             onClick={() => download('csv')}
             disabled={downloading !== null}
-            className="flex items-center gap-2 rounded-md border border-[#2A2A2A] px-4 py-2 text-sm text-[#A1A1A1] hover:bg-[#1A1A1A] hover:text-white disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 rounded-full border border-dove px-4 py-2 text-sm text-ink hover:bg-black/[0.03] disabled:opacity-50 transition-colors"
           >
             <Download size={13} />
             {downloading === 'csv' ? 'Downloading…' : 'Export CSV'}
@@ -82,14 +82,14 @@ export default function ReportsPage() {
           <button
             onClick={() => download('pdf')}
             disabled={downloading !== null}
-            className="flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-[#e5e5e5] disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 rounded-full bg-ink px-5 py-2 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-50 transition-colors"
           >
             <Download size={13} />
             {downloading === 'pdf' ? 'Downloading…' : 'Export HTML Report'}
           </button>
         </div>
 
-        <p className="text-xs text-[#444]">
+        <p className="text-xs text-graphite">
           Leave date fields empty to export all time. The report includes all entries for the selected period across all team members.
         </p>
       </div>

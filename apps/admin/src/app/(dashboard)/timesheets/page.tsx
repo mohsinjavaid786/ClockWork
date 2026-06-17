@@ -54,14 +54,14 @@ export default function TimesheetsPage() {
           <EmptyState title="No time entries found" />
         ) : (
           <>
-            <div className="overflow-x-auto rounded-lg border border-[#2A2A2A]">
+            <div className="overflow-x-auto rounded-card bg-card shadow-card">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#2A2A2A] bg-[#111111]">
+                  <tr className="border-b border-hair">
                     {['Member', 'Started', 'Project', 'Description', 'Duration', 'Status', ''].map((h) => (
                       <th
                         key={h}
-                        className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[#666666]"
+                        className="px-4 py-3 text-left text-[13px] font-medium uppercase tracking-[0.04em] text-graphite"
                       >
                         {h}
                       </th>
@@ -73,16 +73,16 @@ export default function TimesheetsPage() {
                     <tr
                       key={row.id}
                       onClick={() => setSelected(row)}
-                      className="group cursor-pointer border-b border-[#1F1F1F] bg-[#0A0A0A] transition-colors hover:bg-[#111111]"
+                      className="group cursor-pointer border-b border-hair transition-colors hover:bg-fog"
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <Avatar name={row.user?.name ?? '?'} size="sm" />
-                          <span className="text-sm font-medium text-white">{row.user?.name ?? '—'}</span>
+                          <span className="text-sm font-medium text-ink">{row.user?.name ?? '—'}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="text-xs text-[#A1A1A1]">
+                        <span className="text-xs text-ash">
                           {format(row.started_at, {
                             month: 'short',
                             day: 'numeric',
@@ -98,19 +98,19 @@ export default function TimesheetsPage() {
                               className="h-2 w-2 flex-shrink-0 rounded-full"
                               style={{ background: row.project.color }}
                             />
-                            <span className="text-xs text-[#A1A1A1]">{row.project.name}</span>
+                            <span className="text-xs text-ash">{row.project.name}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-[#444]">—</span>
+                          <span className="text-xs text-dove">—</span>
                         )}
                       </td>
                       <td className="max-w-[200px] px-4 py-3">
-                        <span className="block truncate text-xs text-[#666666]">
+                        <span className="block truncate text-xs text-graphite">
                           {row.description ?? '—'}
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-mono text-sm text-white">
+                        <span className="font-mono text-sm text-ink">
                           {row.duration_seconds != null ? formatDuration(row.duration_seconds) : '—'}
                         </span>
                       </td>
@@ -120,7 +120,7 @@ export default function TimesheetsPage() {
                       <td className="px-4 py-3">
                         <ChevronRight
                           size={14}
-                          className="text-[#333] transition-colors group-hover:text-[#666666]"
+                          className="text-dove transition-colors group-hover:text-graphite"
                         />
                       </td>
                     </tr>
@@ -129,13 +129,13 @@ export default function TimesheetsPage() {
               </table>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-[#666666]">
+            <div className="flex items-center justify-between text-xs text-graphite">
               <span>{result.total} total entries</span>
               <div className="flex items-center gap-2">
                 <button
                   disabled={page === 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="rounded border border-[#2A2A2A] px-3 py-1.5 disabled:opacity-30 hover:bg-[#1A1A1A] transition-colors"
+                  className="rounded-full border border-dove px-3 py-1.5 text-ink disabled:opacity-30 hover:bg-black/[0.03] transition-colors"
                 >
                   Prev
                 </button>
@@ -143,7 +143,7 @@ export default function TimesheetsPage() {
                 <button
                   disabled={page >= result.totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="rounded border border-[#2A2A2A] px-3 py-1.5 disabled:opacity-30 hover:bg-[#1A1A1A] transition-colors"
+                  className="rounded-full border border-dove px-3 py-1.5 text-ink disabled:opacity-30 hover:bg-black/[0.03] transition-colors"
                 >
                   Next
                 </button>

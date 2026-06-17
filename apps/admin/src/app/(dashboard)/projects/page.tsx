@@ -82,9 +82,9 @@ export default function ProjectsPage() {
             style={{ background: row.color }}
           />
           <div>
-            <p className="text-sm font-medium text-white">{row.name}</p>
+            <p className="text-sm font-medium text-ink">{row.name}</p>
             {row.description && (
-              <p className="text-xs text-[#666666]">{row.description}</p>
+              <p className="text-xs text-graphite">{row.description}</p>
             )}
           </div>
         </div>
@@ -104,14 +104,14 @@ export default function ProjectsPage() {
       key: 'hours',
       header: 'Total hours',
       cell: (row: Project) => (
-        <span className="font-mono text-sm text-white">{row.totalHours.toFixed(1)}h</span>
+        <span className="font-mono text-sm text-ink">{row.totalHours.toFixed(1)}h</span>
       ),
     },
     {
       key: 'created',
       header: 'Created',
       cell: (row: Project) => (
-        <span className="text-xs text-[#666666]">{formatDate(row.createdAt)}</span>
+        <span className="text-xs text-graphite">{formatDate(row.createdAt)}</span>
       ),
     },
     {
@@ -120,7 +120,7 @@ export default function ProjectsPage() {
       cell: (row: Project) => (
         <button
           onClick={() => handleDelete(row.id, row.name)}
-          className="rounded p-1 text-[#444] hover:text-[#ef4444] transition-colors"
+          className="rounded p-1 text-dove hover:text-error transition-colors"
         >
           <Trash2 size={13} />
         </button>
@@ -136,7 +136,7 @@ export default function ProjectsPage() {
         action={
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center gap-2 rounded-md bg-white px-3 py-2 text-xs font-medium text-black hover:bg-[#e5e5e5] transition-colors"
+            className="flex items-center gap-2 rounded-full bg-ink px-5 py-2 text-xs font-medium text-white hover:bg-ink/90 transition-colors"
           >
             <Plus size={13} />
             New project
@@ -157,28 +157,28 @@ export default function ProjectsPage() {
       <Modal open={open} onClose={() => setOpen(false)} title="New project">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">Name</label>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">Name</label>
             <input
               value={form.name}
               onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
               required
               placeholder="Website Redesign"
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink placeholder:text-graphite outline-none focus:border-ink"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">
               Description (optional)
             </label>
             <input
               value={form.description}
               onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               placeholder="What is this project about?"
-              className="w-full rounded-md border border-[#2A2A2A] bg-[#0A0A0A] px-3 py-2 text-sm text-white placeholder-[#444] outline-none focus:border-[#444]"
+              className="w-full rounded-field border border-dove bg-card px-4 py-2.5 text-sm text-ink placeholder:text-graphite outline-none focus:border-ink"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#A1A1A1]">Color</label>
+            <label className="mb-1.5 block text-[14px] font-medium text-ink">Color</label>
             <div className="flex gap-2">
               {COLORS.map((c) => (
                 <button
@@ -188,7 +188,7 @@ export default function ProjectsPage() {
                   className="h-7 w-7 rounded-full transition-transform hover:scale-110"
                   style={{
                     background: c,
-                    outline: form.color === c ? `2px solid white` : 'none',
+                    outline: form.color === c ? `2px solid #17191c` : 'none',
                     outlineOffset: '2px',
                   }}
                 />
@@ -197,7 +197,7 @@ export default function ProjectsPage() {
           </div>
 
           {error && (
-            <p className="rounded border border-[#3f1515] bg-[#1c0a0a] px-3 py-2 text-xs text-[#ef4444]">
+            <p className="rounded-field border border-error/30 bg-error-bg px-3 py-2 text-xs text-error">
               {error}
             </p>
           )}
@@ -206,14 +206,14 @@ export default function ProjectsPage() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="flex-1 rounded-md border border-[#2A2A2A] px-4 py-2 text-sm text-[#A1A1A1] hover:bg-[#1A1A1A] transition-colors"
+              className="flex-1 rounded-full border border-dove px-4 py-2 text-sm text-ink hover:bg-black/[0.03] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex flex-1 items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-[#e5e5e5] disabled:opacity-50 transition-colors"
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/90 disabled:opacity-50 transition-colors"
             >
               {saving && <LoadingSpinner size="sm" />}
               Create

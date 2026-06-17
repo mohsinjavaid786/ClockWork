@@ -75,7 +75,7 @@ export default function UserDetailPage() {
       key: 'date',
       header: 'Date',
       cell: (row: Entry) => (
-        <span className="text-xs text-[#A1A1A1]">
+        <span className="text-xs text-ash">
           {format(row.started_at, {
             month: 'short',
             day: 'numeric',
@@ -95,24 +95,24 @@ export default function UserDetailPage() {
               className="h-2 w-2 rounded-full flex-shrink-0"
               style={{ background: row.project.color }}
             />
-            <span className="text-xs text-[#A1A1A1]">{row.project.name}</span>
+            <span className="text-xs text-ash">{row.project.name}</span>
           </div>
         ) : (
-          <span className="text-xs text-[#444]">No project</span>
+          <span className="text-xs text-dove">No project</span>
         ),
     },
     {
       key: 'description',
       header: 'Description',
       cell: (row: Entry) => (
-        <span className="text-xs text-[#666666]">{row.description ?? '—'}</span>
+        <span className="text-xs text-graphite">{row.description ?? '—'}</span>
       ),
     },
     {
       key: 'duration',
       header: 'Duration',
       cell: (row: Entry) => (
-        <span className="font-mono text-xs text-white">
+        <span className="font-mono text-xs text-ink">
           {row.duration_seconds ? formatDuration(row.duration_seconds) : '—'}
         </span>
       ),
@@ -128,38 +128,38 @@ export default function UserDetailPage() {
     <div className="space-y-6">
       <Link
         href="/team"
-        className="flex items-center gap-1 text-xs text-[#666666] hover:text-white transition-colors"
+        className="flex items-center gap-1 text-xs text-graphite hover:text-ink transition-colors"
       >
         <ChevronLeft size={13} />
         Back to team
       </Link>
 
-      <div className="flex items-start gap-4 rounded-xl border border-[#2A2A2A] bg-[#111111] p-6">
+      <div className="flex items-start gap-4 rounded-card bg-card p-6 shadow-card">
         <Avatar name={profile.name} size="lg" />
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="font-mono text-xl font-semibold text-white">{profile.name}</h1>
+            <h1 className="text-xl font-semibold text-ink">{profile.name}</h1>
             <StatusBadge status={profile.role} />
             <StatusBadge
               status={profile.isActive ? 'active' : 'inactive'}
               label={profile.isActive ? 'Active' : 'Inactive'}
             />
           </div>
-          <p className="mt-1 text-sm text-[#666666]">{profile.email}</p>
-          <p className="mt-0.5 text-xs text-[#444]">{profile.timezone}</p>
+          <p className="mt-1 text-sm text-graphite">{profile.email}</p>
+          <p className="mt-0.5 text-xs text-dove">{profile.timezone}</p>
         </div>
         <div className="text-right">
-          <p className="font-mono text-2xl font-semibold text-white">
+          <p className="font-mono text-2xl font-semibold text-ink">
             {profile.weeklyHours.toFixed(1)}h
           </p>
-          <p className="text-xs text-[#666666]">this week</p>
+          <p className="text-xs text-graphite">this week</p>
         </div>
       </div>
 
       <div>
-        <h2 className="mb-3 text-xs font-medium uppercase tracking-widest text-[#666666]">
+        <h2 className="mb-3 text-xs font-medium uppercase tracking-widest text-graphite">
           Recent activity
-          <span className="ml-2 normal-case tracking-normal text-[#444]">
+          <span className="ml-2 normal-case tracking-normal text-dove">
             — click an entry to see screenshots &amp; activity
           </span>
         </h2>
