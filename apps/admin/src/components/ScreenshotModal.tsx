@@ -36,6 +36,7 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setFailed(false);
@@ -47,20 +48,34 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
   function zoomTo(next: number) {
     const s = Math.min(4, Math.max(1, Math.round(next * 10) / 10));
     setScale(s);
-    if (s === 1) setOffset({ x: 0, y: 0 });
+    if (s <= 1) setOffset({ x: 0, y: 0 });
   }
+
+  // Wheel-to-zoom needs a non-passive listener so preventDefault actually stops
+  // the page from scrolling; React's onWheel is passive and can't.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setScale((prev) => {
+        const next = Math.min(4, Math.max(1, Math.round((prev + (e.deltaY < 0 ? 0.3 : -0.3)) * 10) / 10));
+        if (next <= 1) setOffset({ x: 0, y: 0 });
+        return next;
+      });
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [shot.id]);
 
   if (shot.signedUrl && !failed) {
     const zoomed = scale > 1;
     return (
       <div
-        className="group relative w-full overflow-hidden rounded-field border border-hair bg-black"
+        ref={containerRef}
+        className="relative w-full overflow-hidden rounded-field border border-hair bg-black"
         style={{ aspectRatio: '16/9' }}
-        onWheel={(e) => {
-          if (!loaded) return;
-          e.preventDefault();
-          zoomTo(scale + (e.deltaY < 0 ? 0.3 : -0.3));
-        }}
+        onDoubleClick={() => zoomTo(zoomed ? 1 : 2)}
         onPointerDown={(e) => {
           if (!zoomed) return;
           drag.current = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
@@ -70,7 +85,10 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
           if (!drag.current) return;
           setOffset({ x: drag.current.ox + (e.clientX - drag.current.x), y: drag.current.oy + (e.clientY - drag.current.y) });
         }}
-        onPointerUp={() => { drag.current = null; }}
+        onPointerUp={(e) => {
+          drag.current = null;
+          (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+        }}
       >
         {shot.thumbnailUrl && (
           <img
@@ -96,8 +114,8 @@ function BigScreenshot({ shot }: { shot: Screenshot }) {
           onError={() => setFailed(true)}
         />
 
-        {/* Zoom controls */}
-        <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/60 p-1 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
+        {/* Zoom controls — always visible */}
+        <div className="absolute bottom-2.5 right-2.5 flex items-center gap-1 rounded-full bg-black/60 p-1 backdrop-blur-sm">
           <button
             onClick={() => zoomTo(scale - 0.5)}
             disabled={scale <= 1}
