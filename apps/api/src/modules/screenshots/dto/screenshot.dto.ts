@@ -74,6 +74,7 @@ export class ListScreenshotsQueryDto {
   @Type(() => Number)
   @IsNumber()
   @Min(1)
+  @Max(100)
   limit?: number = 20;
 
   @ApiPropertyOptional()

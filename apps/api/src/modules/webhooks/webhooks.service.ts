@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SupabaseService } from '../../supabase/supabase.service';
 
@@ -9,8 +9,20 @@ export class WebhooksService {
   constructor(private readonly supabase: SupabaseService) {}
 
   async sendSlackMessage(webhookUrl: string, text: string): Promise<void> {
+    let url: URL;
+    try { url = new URL(webhookUrl); } catch {
+      throw new BadRequestException('Invalid Slack webhook URL');
+    }
+    if (url.protocol !== 'https:' ||
+        !['hooks.slack.com', 'hooks.slack-gov.com'].includes(url.hostname) ||
+        url.username || url.password || url.port || url.search || url.hash ||
+        !/^\/services\/[^/]+\/[^/]+\/[^/]+$/.test(url.pathname)) {
+      throw new BadRequestException('Invalid Slack webhook URL');
+    }
     const res = await fetch(webhookUrl, {
       method: 'POST',
+      redirect: 'error',
+      signal: AbortSignal.timeout(10000),
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     });

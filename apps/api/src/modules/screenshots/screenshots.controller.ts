@@ -7,6 +7,7 @@ import {
   UploadedFiles,
   UseInterceptors,
   Body,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -31,7 +32,16 @@ export class ScreenshotsController {
     FileFieldsInterceptor([
       { name: 'file', maxCount: 1 },
       { name: 'thumbnail', maxCount: 1 },
-    ]),
+    ], {
+      limits: { fileSize: 20 * 1024 * 1024, files: 2, fields: 12, fieldSize: 64 * 1024, parts: 14 },
+      fileFilter: (_req, file, cb) => {
+        if (!['image/png', 'image/jpeg'].includes(file.mimetype)) {
+          cb(new BadRequestException('Only PNG and JPEG screenshots are accepted'), false);
+          return;
+        }
+        cb(null, true);
+      },
+    }),
   )
   upload(
     @CurrentUser() user: AuthUser,

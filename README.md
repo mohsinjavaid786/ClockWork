@@ -6,7 +6,9 @@ ClockWork brings desktop time tracking, screenshot review, and team reporting in
 
 Built for agencies, remote teams, and internal operations that want to run and customize their own tracking system.
 
-[Get started](#local-setup) · [Employee guide](docs/EMPLOYEE_GUIDE.md) · [Admin guide](docs/ADMIN_GUIDE.md) · [Deployment](#deployment) · [Releases](https://github.com/mohsinjavaid786/ClockWork/releases) · [Changelog](CHANGELOG.md)
+[Get started](#local-setup) · [Employee guide](docs/EMPLOYEE_GUIDE.md) · [Admin guide](docs/ADMIN_GUIDE.md) · [Deployment](#deployment) · [Security](SECURITY.md) · [Releases](https://github.com/mohsinjavaid786/ClockWork/releases) · [Changelog](CHANGELOG.md)
+
+**Before deploying:** apply migration `009_api_only_access.sql` and follow the [security deployment requirements](SECURITY.md#deployment-requirements). Source updates do not automatically change hosted Supabase policies.
 
 ## What you can do
 

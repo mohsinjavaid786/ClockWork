@@ -11,6 +11,40 @@ allowBuilds:
   '@scarf/scarf': false
   active-win: true
   electron: true
+  # Releases use NSIS, not Squirrel. Do not run its optional installer script.
+  electron-winstaller: false
   esbuild: true
   sharp: true
   uiohook-napi: true
+
+# Security fixes for transitive dependencies whose parents retain old ranges.
+overrides:
+  sharp: ^0.35.5
+  multer: ^2.5.0
+  tar: ^7.5.23
+  postcss: ^8.5.33
+  qs: ^6.17.1
+  "js-yaml@^3": ^3.15.2
+  "js-yaml@^4": ^4.3.2
+  "brace-expansion@^1": ^1.1.21
+  "brace-expansion@^2": ^2.1.7
+  builder-util-runtime: ^9.7.0
+  ip-address: ^10.7.6
+  "nanoid@^3": ^3.3.18
+  source-map-js: ^1.2.2
+  proxy-addr: ^2.0.8
+  "body-parser@^2": ^2.4.0
+  "brace-expansion@^5": ^5.0.13
+  tmp: ^0.2.7
+  form-data: ^4.0.6
+  shell-quote: ^1.11.0
+  fast-uri: ^3.1.7
+  extract-zip: ^2.0.2
+  browserslist: ^4.28.7
+  axios: ^1.20.0
+  "@xmldom/xmldom": ^0.9.12
+  "joi@^18": ^18.3.1
+  handlebars: ^4.7.10
+  follow-redirects: ^1.16.2
+  "plist@^3": ^3.1.1
+  "postcss-selector-parser@^6": ^6.1.5

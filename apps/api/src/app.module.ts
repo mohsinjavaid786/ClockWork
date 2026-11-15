@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { SupabaseModule } from './supabase/supabase.module';
 import { EmailModule } from './modules/email/email.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -17,6 +18,7 @@ import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
     ScheduleModule.forRoot(),
     SupabaseModule,
     EmailModule,
@@ -31,6 +33,7 @@ import { RolesGuard } from './guards/roles.guard';
     HealthModule,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: SupabaseAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

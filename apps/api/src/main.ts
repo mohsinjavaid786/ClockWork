@@ -7,6 +7,13 @@ import { HttpExceptionFilter } from './filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
+  const proxyHops = Number(process.env['TRUST_PROXY_HOPS'] ?? 0);
+  if (!Number.isInteger(proxyHops) || proxyHops < 0 || proxyHops > 5) {
+    throw new Error('TRUST_PROXY_HOPS must be an integer between 0 and 5');
+  }
+  app.getHttpAdapter().getInstance().set('trust proxy', proxyHops);
+
   app.setGlobalPrefix('api/v1');
 
   // Allow one or more comma-separated portal origins. Only fall back to
@@ -40,18 +47,20 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const swagger = new DocumentBuilder()
-    .setTitle('Clockwork API')
-    .setDescription('Internal time tracking API')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swagger));
+  if (!isProd) {
+    const swagger = new DocumentBuilder()
+      .setTitle('Clockwork API')
+      .setDescription('Internal time tracking API')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swagger));
+  }
 
   const port = process.env['PORT'] ?? 3001;
   await app.listen(port);
   Logger.log(`API listening on http://localhost:${port}`, 'Bootstrap');
-  Logger.log(`Swagger at http://localhost:${port}/api/docs`, 'Bootstrap');
+  if (!isProd) Logger.log(`Swagger at http://localhost:${port}/api/docs`, 'Bootstrap');
 }
 
 bootstrap();
