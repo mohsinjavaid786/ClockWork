@@ -37,6 +37,16 @@ export class ScreenshotsService {
   ) {
     if (!file) throw new BadRequestException('No screenshot file uploaded');
 
+    if (dto.timeEntryId) {
+      const { data: entry, error } = await this.supabase.client
+        .from('time_entries')
+        .select('id')
+        .eq('id', dto.timeEntryId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error || !entry) throw new NotFoundException('Time entry not found');
+    }
+
     const ext = file.mimetype === 'image/png' ? 'png' : 'jpg';
     const screenSuffix = dto.screenNumber ? `-screen-${dto.screenNumber}` : '';
     const stamp = Date.now();
