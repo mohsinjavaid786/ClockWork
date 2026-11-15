@@ -11,6 +11,8 @@ allowBuilds:
   '@scarf/scarf': false
   active-win: true
   electron: true
+  # Releases use NSIS, not Squirrel. Do not run its optional installer script.
+  electron-winstaller: false
   esbuild: true
   sharp: true
   uiohook-napi: true
