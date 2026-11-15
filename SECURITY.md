@@ -24,7 +24,7 @@ The database permission test is in `supabase/tests/api_boundary.sql`. Run it aft
 
 ## Desktop limitations
 
-The existing desktop release uses Electron 30 and ad-hoc macOS signing. Move to a supported Electron release and sign/notarize installers before treating desktop distribution as production hardened. This review builds the desktop source but does not certify or replace existing installers.
+The source now uses Electron 45.3.2 and updated desktop packaging tools. Existing published installers still contain their original runtime until a new release is built and distributed. Sign/notarize installers before treating desktop distribution as production hardened; the current configuration uses ad-hoc macOS signing.
 
 The desktop stores its session in a local JSON file; it is not encrypted at rest. Use separate OS accounts and encrypted disks on managed devices. The portal stores a bearer token in browser local storage, so protecting against script injection and keeping dependencies current is essential.
 
@@ -33,4 +33,5 @@ The desktop stores its session in a local JSON file; it is not encrypted at rest
 - Gitleaks found no secrets in 147 scanned commits across fetched branches/tags. A separate pattern scan checked 677 historical text blobs. Only `.env.example` files were tracked.
 - Public portal bundles fetched during the review contained no Gitleaks findings. The Railway API origin embedded in that portal returned HTTP 404 for health, config, users, screenshots and API docs, so live API authorization could not be verified there.
 - API tests cover screenshot ownership, unsafe webhook destinations, redirect handling and password-reset rate limits. A disposable PostgreSQL-compatible database verified the SQL permission boundary.
-- Production dependency audit passed with zero reported vulnerabilities after updating the lockfile. Native desktop packaging, existing release binaries, hosted Supabase settings, stored employee data and deployed database policies were not certified.
+- Production dependency audit passed with zero reported vulnerabilities after updating the lockfile. The full dependency audit has no high or critical findings; remaining lower-severity tooling advisories need follow-up.
+- API/admin/desktop source builds and admin type checking passed. A macOS ARM64 application bundle was built and its active-win/uiohook native modules loaded under Electron 45.3.2. Local signing initially encountered Finder metadata; removing only FinderInfo/ResourceFork metadata from the generated bundle allowed ad-hoc signing. Full timer/screenshot behavior, Windows packaging, published installers, hosted Supabase settings, stored employee data and deployed database policies were not certified.
