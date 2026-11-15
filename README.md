@@ -253,3 +253,9 @@ For desktop installers, use the release workflow, which applies the dependency-h
 - [Deployment guide](docs/DEPLOYMENT.md): hosting, environment configuration, desktop distribution, and CI/CD.
 - [Changelog](CHANGELOG.md): release history.
 - [Issues](https://github.com/mohsinjavaid786/ClockWork/issues): bug reports and improvement requests.
+
+## Maintainer
+
+Maintained by [**Mohsin Javaid**](https://github.com/mohsinjavaid786), Partner & Head of Product Delivery at [Turing Technologies](https://www.turingtechnologies.org/), based in Islamabad, Pakistan.
+
+[More personal projects](https://github.com/mohsinjavaid786#featured-personal-projects) · [LinkedIn](https://www.linkedin.com/in/mohsinjavaid47/)
