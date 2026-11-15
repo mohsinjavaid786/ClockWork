@@ -1,551 +1,255 @@
-# Clockwork
+# ClockWork
 
-> Self-hosted employee time tracking — screenshot capture, activity monitoring, admin dashboard, and native desktop app.
----
+### Time tracking for teams, on your infrastructure.
 
-## Features
+ClockWork brings desktop time tracking, screenshot review, and team reporting into one self-hosted workspace. Team members track time against projects; managers review sessions, work diaries, and reports from a web dashboard.
 
-### Admin Portal
-| Feature | Details |
+Built for agencies, remote teams, and internal operations that want to run and customize their own tracking system.
+
+[Get started](#local-setup) · [Employee guide](docs/EMPLOYEE_GUIDE.md) · [Admin guide](docs/ADMIN_GUIDE.md) · [Deployment](#deployment) · [Releases](https://github.com/mohsinjavaid786/ClockWork/releases) · [Changelog](CHANGELOG.md)
+
+## What you can do
+
+| Capability | How it helps |
 |---|---|
-| **Theme** | Light "Steep-inspired" editorial theme (fog canvas, white cards with 24px radius + soft shadow) plus a dark/light toggle in the top bar; tokens are CSS-variable driven (`:root` light + `.dark` on `<html>`), persisted to localStorage with a no-flash boot script. Fonts: Inter (UI), Newsreader (serif headings), Geist Mono (data). See `apps/admin/DESIGN.md` |
-| **Dashboard** | Range-scoped KPI cards (Hours tracked, Active now, Sessions, Screenshots), a Mercury-style scrubbable/draggable timeline with a preset dropdown (7d / 30d / 3m / 6m / YTD / 12m), a bucketed hours bar chart, and a live "Tracking now" roster (click a member → detail page). Manual Refresh + 60s auto-refresh |
-| **Work Diary** | Now a "Work diary" tab on the Team member detail page (`/team/[userId]`); Upwork-style activity view with per-day sessions and screenshot filmstrips. The standalone `/work-diary` route redirects to `/team` |
-| **Timesheets** | Paginated table of all entries; click any row to open a floating detail drawer (rounded, inset, elevated) over a blurred backdrop — portaled to `<body>` with background scroll locked. Drawer shows duration stats, an activity timeline, and a paginated (10/page) + sortable screenshot grid (thumbnails only; thumbnails auto-generated). Click any screenshot to open the full viewer |
-| **Screenshot Viewer** | Modal that loads thumbnail → full image with shimmer skeletons; zoom 100–400% (wheel / buttons / double-click) + drag-to-pan, prev/next navigation, per-minute activity table, and a filmstrip |
-| **Status tags** | Colour-coded: active (green), paused (yellow), stopped (red), admin (blue), inactive (grey) |
-| **Team** | Employees / Admins tabs; invite new members by email (Resend) — they get a secure set-your-password link + installer download links; pending / accepted invite status; optional temporary password; timezone; delete member (cascades entries + screenshots); per-member profile with Work diary tab |
-| **Timezone** | Switcher in the top bar — My time / UTC / Employee's time |
-| **Projects** | CRUD with hex color picker, total hours tracked per project, archive/unarchive |
-| **Reports** | Date-range CSV export, printable HTML report download |
-| **Settings** | Screenshot interval, company name, timezone, Slack webhook with test-send button |
+| **Track project time** | Start, pause, resume, and stop a desktop timer with a project and work description. Paused time is excluded from tracked duration. |
+| **See team activity** | Review tracked hours, sessions, screenshots, and who is tracking now. Explore trends by date range. |
+| **Review work diaries** | Open a team member's profile to inspect daily sessions, screenshot filmstrips, and activity details. |
+| **Capture multiple displays** | Capture each connected display at a configurable interval, with lightweight thumbnails for browsing. |
+| **Inspect sessions** | Open timesheet details and zoom or pan through screenshots alongside per-minute keyboard and mouse counts and foreground-window information. |
+| **Manage people and projects** | Invite members, manage roles and account status, and create or archive projects. |
+| **Share reports** | Export date-range CSVs and printable HTML reports. Configure a daily Slack summary. |
+| **Make it your own** | Configure the company name, screenshot interval, timezone, and light or dark dashboard appearance. |
 
-### Desktop App
-| Feature | Details |
-|---|---|
-| **Window** | Frameless window with a CLOCKWORK title text and macOS traffic-light padding |
-| **Timer** | One-click start / **pause** / resume / stop; project + description selection; `HH:MM:SS` live counter. Paused time is excluded from tracked duration and recorded per entry. **Stop** halts locally instantly and syncs the server in the background — all desktop API requests are time-bounded via `AbortController` with retries |
-| **Reconciliation** | On launch it reconciles against the server (`GET /time-entries/current`) to re-adopt an open entry, so the timer never gets stuck; requires a fresh login on version change and validates a stale token |
-| **Screenshots** | `desktopCapturer` every N minutes (configurable); captures **every connected display** as a raw PNG **and** a small JPEG thumbnail (both uploaded) — no blur (Upwork-style). One upload per display per capture event, sharing `captured_at` |
-| **Activity tracking** | Global keystroke + mouse counting (`uiohook-napi`) and foreground-window capture (`active-win`); per-minute keyboard/mouse breakdown + activity % uploaded with each screenshot. Requires macOS Accessibility + Screen Recording permission (auto-prompted; persists reliably only on a notarized build) |
-| **Session storage** | Auth token + user + timer state persisted as version-stamped JSON in the per-user app-data directory (`app.getPath('userData')/session.json`), so the session survives restarts. (No OS keychain — an ad-hoc-signed app can't hold keychain access, so it would prompt endlessly) |
-| **System tray** | Blinking green tray dot while tracking; context menu for show/hide and quit |
-| **Auto-update** | `electron-updater` checks GitHub Releases on launch and installs silently. macOS builds are arm64-only |
+## A typical workday
 
-### API
-| Feature | Details |
-|---|---|
-| **Auth** | Supabase JWT validation on every request; `is_active` check; role-based guards (`admin` / `member`) |
-| **One-timer constraint** | Partial unique index in PostgreSQL prevents two running entries per user — no race condition possible |
-| **Screenshot upload** | Multipart endpoint; accepts one file per display with `screenNumber` + `displayCount`; server-side `sharp` thumbnail generation (`thumbnail_path`); stores to private Supabase Storage bucket; `GET` list [admin] returns 1-hour signed URLs (full + thumbnail); `POST backfill-thumbnails` [admin] regenerates missing thumbnails |
-| **Time entries** | `start` / `stop` / `pause` / `resume`; `GET current` (caller's open entry); `GET active` [admin]; `POST :id/admin-stop` [admin] |
-| **Reports** | `GET /reports/range?from&to&bucket=day\|week\|month` → `{ totalHours, activeNow, screenshots, entries, series[] }`; plus `stats`, `weekly-chart`, `csv`, and `pdf`/`html` exports |
-| **Email** | Global email module — Resend wrapper for invites + password reset (`auth forgot-password`) |
-| **Config** | `GET` (any authed user; Slack webhook hidden from non-admins) + `PATCH` [admin] of the `app_config` row |
-| **Health** | Public `GET /api/v1/health` (used by the Docker healthcheck) |
-| **Daily Slack cron** | `@nestjs/schedule` posts yesterday's team summary to Slack at 09:00 UTC |
-| **Swagger docs** | Interactive docs at `/api/docs` |
+1. An admin creates projects and invites team members.
+2. A member installs the desktop app, signs in, selects a project, and starts tracking.
+3. ClockWork records the session and periodically uploads screenshots and activity summaries.
+4. The member pauses for a break, resumes, and stops when finished.
+5. The admin reviews the work diary or timesheet and exports a report.
 
----
+The desktop app includes a tray indicator, local session persistence, reconciliation with an existing server session on launch, and GitHub Releases update integration.
 
-## Architecture
+## How it works
 
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         Employee Machine                             │
-│                                                                      │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │                  Electron Desktop App (Electron 30.x)          │  │
-│  │                                                                │  │
-│  │  ┌──────────────────┐  contextBridge  ┌────────────────────┐  │  │
-│  │  │  Renderer        │◄───────────────►│  Main Process      │  │  │
-│  │  │  React 19 + Vite │  window.clockwork│                    │  │  │
-│  │  │                  │                 │  TimerService      │  │  │
-│  │  │  LoginScreen     │                 │  ScreenshotService │  │  │
-│  │  │  TrackerScreen   │                 │  ActivityService   │  │  │
-│  │  │  (HH:MM:SS)      │                 │  System Tray       │  │  │
-│  │  └──────────────────┘                 │  electron-updater  │  │  │
-│  │    preload/index.ts                   └────────────────────┘  │  │
-│  │    (sandbox: false,                       │ session.json        │  │
-│  │     contextIsolation: true)               │ (userData dir)      │  │
-│  └───────────────────────────────────────────┼─────────────────────┘  │
-└─────────────────────────────────────────────│────────────────────────┘
-                              HTTPS REST       │
-                              POST /time-entries/start
-                              POST /screenshots/upload
-                                              ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                    NestJS API  (apps/api)  :3001                     │
-│                    Global prefix: /api/v1                            │
-│                                                                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────────┐ │
-│  │ SupabaseAuth │  │  RolesGuard  │  │  HttpExceptionFilter       │ │
-│  │ Guard (JWT)  │  │  @Roles()    │  │  { statusCode, error }     │ │
-│  └──────────────┘  └──────────────┘  └────────────────────────────┘ │
-│                                                                      │
-│  AuthModule  UsersModule  ProjectsModule  TimeEntriesModule          │
-│  ScreenshotsModule  ReportsModule  WebhooksModule  ConfigModule      │
-│  EmailModule (Resend, global)  HealthModule (public /health)        │
-│                                                                      │
-│  @nestjs/schedule ──► dailySummary() @ 09:00 UTC ──► Slack          │
-│  Swagger UI at /api/docs                                             │
-└───────────────────────────────────┬──────────────────────────────────┘
-                                    │ Supabase JS v2 (service role key)
-                                    ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                           Supabase                                   │
-│                                                                      │
-│  PostgreSQL + RLS policies      Auth (JWT issuer)                   │
-│  Storage: screenshots bucket    is_admin() helper function           │
-│           installers bucket     (public — hosts desktop installers)  │
-│  Partial unique index: one running timer per user                    │
-└──────────────────────────────────────────────────────────────────────┘
-                                    ▲
-                                    │ REST (NEXT_PUBLIC_API_URL)
-┌──────────────────────────────────────────────────────────────────────┐
-│               Next.js Admin Portal (apps/admin)  :3000              │
-│                                                                      │
-│  /login  /dashboard  /team  /team/[userId] (Work diary tab)         │
-│  /timesheets  /projects  /reports  /settings                        │
-│  (/work-diary → redirects to /team)                                 │
-│                                                                      │
-│  Light "Steep" theme + dark/light toggle (CSS variables)           │
-│  Inter / Newsreader / Geist Mono · Tailwind CSS · Recharts         │
-└──────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    Desktop["Desktop tracker · Electron"] -->|"Time entries and captures"| API["REST API · NestJS"]
+    Admin["Admin portal · Next.js"] -->|"Team management and reports"| API
+    Admin -->|"Password setup and recovery"| Auth["Supabase Auth"]
+    API -->|"Sign-in and token validation"| Auth
+    API -->|"Users, projects, time entries"| DB["Supabase PostgreSQL"]
+    API -->|"Screenshots and thumbnails"| Storage["Supabase Storage"]
+    API -->|"Invites and password resets"| Email["Resend"]
+    API -->|"Daily team summary"| Slack["Slack"]
 ```
 
----
+The API exposes business endpoints under `/api/v1`, with interactive Swagger documentation at `/api/docs`. Screenshot files use a private bucket; the portal receives time-limited signed URLs.
 
-## Data Flows
+### Timer lifecycle
 
-### Time Entry Lifecycle
-
-```
-Employee                  Desktop App              API                   Database
-   │                          │                     │                       │
-   │  Click "Start"           │                     │                       │
-   │─────────────────────────►│                     │                       │
-   │                          │  IPC: TIMER_START   │                       │
-   │                          │  POST /time-entries/start                   │
-   │                          │────────────────────►│                       │
-   │                          │                     │  INSERT time_entries  │
-   │                          │                     │  status='running'     │
-   │                          │                     │──────────────────────►│
-   │                          │  { entryId }        │                       │
-   │                          │◄────────────────────│                       │
-   │  HH:MM:SS ticking        │                     │                       │
-   │◄─────────────────────────│                     │                       │
-   │                          │                     │                       │
-   │  [Every 10 min]          │                     │                       │
-   │                          │  desktopCapturer    │                       │
-   │                          │  → ALL displays     │                       │
-   │                          │  (raw PNG + JPEG    │                       │
-   │                          │   thumbnail, no blur)│                      │
-   │                          │  for each screen:   │                       │
-   │                          │    POST /screenshots/upload                 │
-   │                          │    { file, thumb, screenNumber, displayCount }│
-   │                          │────────────────────►│                       │
-   │                          │                     │  → Supabase Storage   │
-   │                          │                     │  INSERT screenshots   │
-   │                          │                     │  (one row per screen) │
-   │                          │                     │──────────────────────►│
-   │                          │                     │                       │
-   │  Click "Stop"            │                     │                       │
-   │─────────────────────────►│                     │                       │
-   │                          │  POST /time-entries/:id/stop                │
-   │                          │────────────────────►│                       │
-   │                          │                     │  UPDATE time_entries  │
-   │                          │                     │  status='stopped'     │
-   │                          │                     │  duration_seconds=…   │
-   │                          │                     │──────────────────────►│
+```mermaid
+stateDiagram-v2
+    [*] --> Running: Start
+    Running --> Paused: Pause
+    Paused --> Running: Resume
+    Running --> Stopped: Stop
+    Paused --> Stopped: Stop
+    Stopped --> [*]
 ```
 
-### Authentication Flow
+A database constraint allows at most one open entry—running or paused—per user. Apply migration `008_one_open_entry.sql` to enable that constraint.
 
-```
-Client (Desktop or Admin)          API                      Supabase
-         │                           │                          │
-         │  POST /auth/login         │                          │
-         │  { email, password }      │                          │
-         │──────────────────────────►│                          │
-         │                           │  signInWithPassword()   │
-         │                           │─────────────────────────►│
-         │                           │  { user, session }      │
-         │                           │◄─────────────────────────│
-         │                           │  SELECT role, is_active  │
-         │                           │  FROM public.users       │
-         │                           │─────────────────────────►│
-         │                           │  { role, is_active }    │
-         │                           │◄─────────────────────────│
-         │  { accessToken, user }    │                          │
-         │◄──────────────────────────│                          │
-         │                           │                          │
-         │  [Subsequent requests]    │                          │
-         │  Authorization: Bearer …  │                          │
-         │──────────────────────────►│                          │
-         │                           │  auth.getUser(token)    │
-         │                           │─────────────────────────►│
-         │                           │  { id, email }          │
-         │                           │◄─────────────────────────│
-         │                           │  SupabaseAuthGuard ✓    │
-         │                           │  RolesGuard ✓           │
-         │  200 { data }             │                          │
-         │◄──────────────────────────│                          │
+## Local setup
+
+### 1. Install prerequisites
+
+- **Node.js 22 or newer**, as declared in the root package.
+- **pnpm 11.4.0**, pinned by the repository's `packageManager` field.
+- A **Supabase project** for PostgreSQL, authentication, and file storage.
+- **Resend credentials** to deliver invitation and password-reset emails.
+- macOS or Windows for the desktop workflow. The current packaging configuration targets **macOS Apple Silicon (arm64)** and **Windows x64**.
+
+Install the pinned package manager if needed:
+
+```bash
+npm install -g pnpm@11.4.0
 ```
 
-### Work Diary — Screenshot Detail Flow (Admin Portal)
+### 2. Clone and prepare
 
-```
-Admin             Team Member ▸ Work diary tab     Day Panel          Screenshot Modal
-  │                        │                        │                     │
-  │  Open /team/[userId]   │                        │                     │
-  │  → Work diary tab      │                        │                     │
-  │───────────────────────►│                        │                     │
-  │  [Calendar + Bar chart]│                        │                     │
-  │◄───────────────────────│                        │                     │
-  │                        │                        │                     │
-  │  Click day bar         │                        │                     │
-  │───────────────────────►│                        │                     │
-  │                        │  Fetch entries for day │                     │
-  │                        │───────────────────────►│                     │
-  │                        │  [Sessions + filmstrips│                     │
-  │                        │   with screenshot tiles│                     │
-  │                        │   activity % bars]     │                     │
-  │                        │◄───────────────────────│                     │
-  │                        │                        │                     │
-  │  Click screenshot tile │                        │                     │
-  │───────────────────────────────────────────────►│                     │
-  │                        │                        │  Open modal         │
-  │                        │                        │────────────────────►│
-  │                        │                        │  [Large screenshot  │
-  │                        │                        │   Active window     │
-  │                        │                        │   Activity level    │
-  │                        │                        │   Per-min table]    │
-  │  ← → keyboard nav      │                        │                     │
-  │────────────────────────────────────────────────────────────────────►│
+```bash
+git clone https://github.com/mohsinjavaid786/ClockWork.git
+cd ClockWork
+pnpm install --frozen-lockfile
+
+cp apps/api/.env.example apps/api/.env
+cp apps/admin/.env.example apps/admin/.env.local
+
+pnpm --filter @clockwork/shared build
 ```
 
----
+### 3. Configure the apps
 
-## Database Schema
+Edit the copied files using the values from your Supabase project:
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  auth.users  (Supabase-managed)                                         │
-│  id · email · created_at                                                │
-└───────────────────────────┬─────────────────────────────────────────────┘
-                            │ FK (ON DELETE CASCADE)
-                            ▼
-┌───────────────────────────────────────────┐
-│  public.users                             │
-│  id           UUID PK                     │
-│  name         TEXT                        │
-│  email        TEXT UNIQUE                 │
-│  role         'admin' | 'member'          │
-│  is_active    BOOLEAN DEFAULT true        │
-│  timezone     TEXT    DEFAULT 'UTC'       │
-│  avatar_url   TEXT                        │
-│  created_at   TIMESTAMPTZ                 │
-│  updated_at   TIMESTAMPTZ (trigger)       │
-└──────┬──────────────────────┬─────────────┘
-       │                      │
-       │ created_by           │ user_id
-       ▼                      ▼
-┌────────────────┐   ┌────────────────────────────────────────┐
-│  projects      │   │  time_entries                          │
-│  id  UUID PK   │   │  id             UUID PK                │
-│  name TEXT     │◄──│  user_id        UUID FK → users        │
-│  description   │   │  project_id     UUID FK → projects     │
-│  color TEXT    │   │  description    TEXT                   │
-│  is_archived   │   │  started_at     TIMESTAMPTZ            │
-│  created_by FK │   │  ended_at       TIMESTAMPTZ            │
-│  created_at    │   │  duration_seconds INTEGER              │
-│  updated_at    │   │  paused_seconds INTEGER                │
-└────────────────┘   │  pauses         JSONB                  │
-                     │  status   'running'|'paused'|'stopped' │
-                     │  created_at     TIMESTAMPTZ            │
-                     └──────────────┬─────────────────────────┘
-                                    │
-                    UNIQUE INDEX one_running_entry_per_user
-                    WHERE (status = 'running')  ← DB-level constraint
-                                    │ time_entry_id
-                                    ▼
-                     ┌─────────────────────────────────────────┐
-                     │  screenshots                            │
-                     │  id               UUID PK              │
-                     │  user_id          UUID FK → users      │
-                     │  time_entry_id    UUID FK (nullable)   │
-                     │  storage_path     TEXT                 │
-                     │  thumbnail_path   TEXT (nullable)      │  ← small JPEG thumb
-                     │  captured_at      TIMESTAMPTZ          │
-                     │  activity_percent INTEGER (0–100)      │
-                     │  key_count        INTEGER              │
-                     │  mouse_count      INTEGER              │
-                     │  active_window    TEXT                 │
-                     │  minute_activity  JSONB                │  ← per-minute breakdown
-                     │  screen_number    INTEGER ≥ 1          │  ← 1-based display index
-                     │  display_count    INTEGER ≥ 1          │  ← total displays this capture
-                     │  created_at       TIMESTAMPTZ          │
-                     └─────────────────────────────────────────┘
-                     Multi-monitor: rows sharing (user_id, captured_at)
-                     belong to the same capture event.
-
-┌──────────────────────────────────────┐
-│  app_config  (single row, id = 1)   │
-│  screenshot_interval_minutes  INT   │
-│  company_name                 TEXT  │
-│  timezone                     TEXT  │
-│  slack_webhook_url            TEXT  │
-│  updated_at                   TIMESTAMPTZ │
-└──────────────────────────────────────┘
-
-RLS: is_admin() helper → SELECT role = 'admin' FROM users WHERE id = auth.uid()
-     Members can only read/write their own rows.
-     Admins have unrestricted access.
-```
-
----
-
-## Repository Structure
-
-```
-clockwork/
-├── apps/
-│   ├── api/                         # NestJS 11 REST API
-│   │   └── src/
-│   │       ├── main.ts              # Bootstrap, /api/v1 prefix, Swagger
-│   │       ├── app.module.ts        # APP_GUARD providers (auth + roles)
-│   │       ├── guards/              # SupabaseAuthGuard, RolesGuard
-│   │       ├── decorators/          # @Public(), @Roles(), @CurrentUser()
-│   │       ├── filters/             # HttpExceptionFilter
-│   │       ├── supabase/            # Global SupabaseService (service role)
-│   │       └── modules/
-│   │           ├── auth/            # login, logout, /me, forgot-password
-│   │           ├── users/           # list+weeklyHours, invite, patch, delete
-│   │           ├── projects/        # CRUD + totalHours
-│   │           ├── time-entries/    # start/stop/pause/resume, current, active, admin-stop
-│   │           ├── screenshots/     # multipart upload + sharp thumbnails, list+signed URLs, backfill
-│   │           ├── reports/         # stats, weekly-chart, range, CSV, PDF/HTML
-│   │           ├── webhooks/        # Slack test + daily cron
-│   │           ├── config/          # get/patch app_config row
-│   │           ├── email/           # global Resend wrapper (invites + reset)
-│   │           └── health/          # public GET /health (Docker healthcheck)
-│   │
-│   ├── admin/                       # Next.js 15 App Router
-│   │   └── src/
-│   │       ├── app/
-│   │       │   ├── (auth)/          # login, forgot/reset-password, access-denied
-│   │       │   └── (dashboard)/     # guarded layout + all pages
-│   │       │       ├── dashboard/   # KPI cards + timeline + chart + live roster
-│   │       │       ├── work-diary/  # redirects → /team
-│   │       │       ├── timesheets/  # paginated entries + floating detail drawer
-│   │       │       ├── team/        # list + [userId] profile (Work diary tab)
-│   │       │       ├── projects/    # CRUD
-│   │       │       ├── reports/     # export
-│   │       │       └── settings/    # config form
-│   │       ├── components/
-│   │       │   ├── EntryDetailPanel.tsx   # timesheets floating drawer
-│   │       │   ├── DayDetailPanel.tsx     # work diary day sessions
-│   │       │   ├── WorkDiary.tsx          # per-member work diary view
-│   │       │   ├── DashboardTimeline.tsx  # Mercury-style scrubbable timeline
-│   │       │   ├── ScreenshotModal.tsx    # full viewer + zoom/pan + activity
-│   │       │   ├── SidebarLayout.tsx      # fixed left nav
-│   │       │   ├── ThemeToggle.tsx        # dark/light toggle (top bar)
-│   │       │   ├── TimezoneSelect.tsx     # My time / UTC / Employee's time
-│   │       │   ├── DataTable.tsx          # generic typed table
-│   │       │   ├── StatCard.tsx           # KPI card
-│   │       │   ├── Avatar.tsx             # initials avatar
-│   │       │   ├── StatusBadge.tsx        # colour-coded role/status pill
-│   │       │   ├── Modal.tsx              # generic overlay
-│   │       │   ├── PageHeader.tsx         # title + action slot
-│   │       │   ├── EmptyState.tsx
-│   │       │   └── LoadingSpinner.tsx
-│   │       ├── context/
-│   │       │   └── auth-context.tsx       # AuthProvider + useAuth()
-│   │       └── lib/
-│   │           ├── api.ts                 # typed fetch wrapper (raw→camelCase mappers)
-│   │           ├── types.ts               # Screenshot / MinuteActivity / DayMeta types
-│   │           └── utils.ts              # cn(), formatDuration(), etc.
-│   │
-│   └── desktop/                     # Electron 30 + React 19 + Vite
-│       └── src/
-│           ├── main/
-│           │   ├── index.ts         # BrowserWindow, IPC, tray, updater
-│           │   ├── config.ts        # single source of truth for API_BASE
-│           │   ├── tray.ts          # system tray
-│           │   └── services/
-│           │       ├── timer.service.ts      # session.json persistence (token/user/timer)
-│           │       ├── screenshot.service.ts # capture every display + upload (no blur)
-│           │       └── activity.service.ts   # uiohook-napi keys/mouse + active-win window
-│           ├── preload/
-│           │   └── index.ts         # contextBridge → window.clockwork
-│           └── renderer/
-│               ├── App.tsx          # auto-login gate
-│               ├── types.d.ts       # window.clockwork type declaration
-│               └── screens/
-│                   ├── LoginScreen.tsx
-│                   └── TrackerScreen.tsx
-│
-├── packages/
-│   └── shared/                      # @clockwork/shared
-│       └── src/
-│           ├── types.ts             # domain interfaces
-│           └── ipc-channels.ts      # IPC constant map
-│
-├── supabase/
-│   └── migrations/
-│       ├── 001_initial.sql          # tables, RLS, helpers, seed
-│       ├── 002_storage.sql          # screenshots bucket policy
-│       ├── 003_multi_screen.sql     # screen_number + display_count
-│       ├── 004_activity_detail.sql  # key/mouse counts, active window, per-minute
-│       ├── 005_pause_tracking.sql   # paused status + paused_seconds + pauses
-│       ├── 006_installers_bucket.sql # public bucket hosting the installers
-│       └── 007_screenshot_thumbnails.sql # thumbnail_path on screenshots
-│
-├── package.json                     # root workspace scripts
-├── pnpm-workspace.yaml
-├── tsconfig.base.json
-└── vercel.json
-```
-
----
-
-## Tech Stack
-
-| Layer | Technology | Notes |
+| File | Variable | Value or purpose |
 |---|---|---|
-| Monorepo | pnpm workspaces | Node ≥ 20 |
-| Language | TypeScript 5 strict | No `any`, no placeholder types |
-| API framework | NestJS 11 + Express | Global prefix `/api/v1` |
-| Database | Supabase PostgreSQL | RLS on all tables |
-| Auth | Supabase Auth JWT | Validated server-side on every request |
-| Storage | Supabase Storage | Private bucket, signed URLs |
-| Admin portal | Next.js 15 App Router | Tailwind CSS v3, Inter / Newsreader / Geist Mono, Recharts 3 |
-| Desktop shell | Electron 30 | `contextIsolation`, `nodeIntegration: false`; `sandbox: false` so the preload can require `@clockwork/shared` |
-| Renderer build | Vite 5 + React 19 | HMR in dev mode; `base: './'` for relative asset paths under `file://` |
-| Screenshot capture | electron `desktopCapturer` + `screen.getAllDisplays()` | Raw PNG per display, no post-processing (Upwork-style) |
-| Activity tracking | `uiohook-napi` + `active-win` + powerMonitor | Global key/mouse counts, foreground window, suspend reset |
-| Session storage | plain JSON in `userData` | `session.json` (token/user/timer); no OS keychain — keeps ad-hoc builds prompt-free |
-| Auto-updates | electron-updater | GitHub Releases |
-| Cron | @nestjs/schedule | Daily Slack summary at 09:00 UTC |
-| Design tokens | CSS variables (light + dark) | `:root` light "Steep" theme + `.dark` override on `<html>`; channel-triplet colours via `rgb(var(--x) / <alpha>)`; see `apps/admin/DESIGN.md` |
+| `apps/api/.env` | `SUPABASE_URL` | Your Supabase project URL. |
+| `apps/api/.env` | `SUPABASE_SERVICE_ROLE_KEY` | Server-side service-role key. Keep it out of client apps and Git. |
+| `apps/api/.env` | `PORT` | `3001` for local development. |
+| `apps/api/.env` | `ADMIN_URL` | `http://localhost:3000`; used for CORS and email redirects. |
+| `apps/api/.env` | `RESEND_API_KEY`, `RESEND_FROM` | Email delivery credentials and sender. Remove the placeholder API key if testing without email. |
+| `apps/api/.env` | `COMPANY_NAME` | Company name used in emails. |
+| `apps/admin/.env.local` | `NEXT_PUBLIC_API_URL` | `http://localhost:3001` — the API origin, without `/api/v1`. |
+| `apps/admin/.env.local` | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL, used by password setup and recovery. |
+| `apps/admin/.env.local` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase public anon key for those browser flows. |
 
----
+In Supabase Authentication, enable email sign-in and allow `http://localhost:3000/reset-password` as a redirect URL. Add your deployed portal's equivalent URL when deploying.
 
-## Prerequisites
+Without a Resend API key, email sends are suppressed and logged. Resend's test sender only delivers to your own Resend account email; configure a verified sender domain for team invitations.
 
-- **Node.js** ≥ 20
-- **pnpm** ≥ 9 — `npm install -g pnpm`
-- A **Supabase project** — [supabase.com](https://supabase.com) (free tier works)
-- macOS recommended for desktop packaging (Windows also supported)
+The desktop reads `API_URL` from its process environment. The local default is `http://localhost:3001`; creating a desktop `.env` file alone does not configure it.
 
----
+### 4. Initialize the database
 
-## Quick Start
+For a fresh Supabase project, open **SQL Editor** and run the files in [supabase/migrations](supabase/migrations) in filename order:
+
+| Order | Migration |
+|---|---|
+| 1 | `001_initial.sql` |
+| 2 | `002_storage.sql` |
+| 3 | `003_multi_screen.sql` |
+| 4 | `004_activity_detail.sql` |
+| 5 | `005_pause_tracking.sql` |
+| 6 | `006_installers_bucket.sql` |
+| 7 | `007_screenshot_thumbnails.sql` |
+| 8 | `008_one_open_entry.sql` |
+
+For an existing installation, apply only migrations that have not already run. Keep the `screenshots` bucket private. The separate `installers` bucket is public for desktop downloads.
+
+### 5. Create the first admin
+
+In **Supabase → Authentication → Users**, add your user with an email and password and confirm the email. Then create the matching application profile in SQL Editor, replacing the example email and name:
+
+```sql
+insert into public.users (id, name, email, role, is_active, timezone)
+select id, 'Your Name', email, 'admin', true, 'UTC'
+from auth.users
+where email = 'you@example.com'
+on conflict (id) do update
+set role = 'admin', is_active = true;
+```
+
+Confirm that the user appears in `public.users` with the same ID as `auth.users`. Login requires both records; changing a role with `UPDATE` alone does not create a missing profile.
+
+### 6. Start the API, portal, and desktop
+
+Run each app in a **separate terminal**, starting from the repository root.
+
+**API:** the current API does not automatically load `.env`. Use Node's environment-file loader so the watch process inherits the configured values:
 
 ```bash
-# 1. Clone and install
-git clone https://github.com/mohsinjavaid786/clockwork.git
-cd clockwork
-pnpm install
-
-# 2. Configure environment
-cp apps/api/.env.example    apps/api/.env
-cp apps/admin/.env.example  apps/admin/.env.local
-# Fill in SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in apps/api/.env
-
-# 3. Run Supabase migrations (SQL Editor in Supabase dashboard), in order:
-#    001_initial.sql  002_storage.sql  003_multi_screen.sql
-#    004_activity_detail.sql  005_pause_tracking.sql  006_installers_bucket.sql
-#    007_screenshot_thumbnails.sql
-
-# 4. Promote your first admin (Supabase SQL Editor)
-UPDATE public.users SET role = 'admin' WHERE email = 'you@example.com';
-
-# 5. Start
-pnpm dev:api      # → http://localhost:3001  (Swagger: /api/docs)
-pnpm dev:admin    # → http://localhost:3000
-pnpm dev:desktop  # → Electron window
+pnpm --filter api exec node --env-file=.env node_modules/@nestjs/cli/bin/nest.js start --watch
 ```
 
----
+If you already export the API variables in your shell or hosting environment, use `pnpm dev:api`.
 
-## Environment Variables
-
-### `apps/api/.env`
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key   # server-side only
-PORT=3001
-ADMIN_URL=http://localhost:3000                    # CORS origin
-```
-
-### `apps/admin/.env.local`
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3001
-```
-
-### `apps/desktop/.env`
-```env
-API_URL=http://localhost:3001
-```
-> The desktop API URL is resolved dynamically (`apps/desktop/src/main/config.ts`),
-> never hardcoded: `API_URL` env var in dev → value injected into the packaged
-> `package.json` at build time via electron-builder `extraMetadata` → localhost
-> default. For releases, set a GitHub **repository variable** `API_URL` (Settings
-> → Secrets and variables → Actions → Variables); the release workflow bakes it in.
-
----
-
-## Building for Production
+**Admin portal:**
 
 ```bash
-pnpm --filter @clockwork/shared build  # shared types (other apps depend on this)
-pnpm --filter api build                # nest build → dist/
-pnpm --filter admin build              # next build → .next/
-pnpm --filter desktop build            # vite + tsc → dist-renderer/ + dist-electron/
-cd apps/desktop && pnpm package        # create .dmg / .exe → release/
+pnpm dev:admin
 ```
 
----
+**Desktop:** build once before launching; rebuild after changes to the main or preload code.
+
+```bash
+pnpm build:desktop
+API_URL=http://localhost:3001 pnpm dev:desktop
+```
+
+The inline `API_URL=...` syntax is for macOS/Linux shells. In PowerShell, set `$env:API_URL = "http://localhost:3001"` before running `pnpm dev:desktop`.
+
+| Service | Local address |
+|---|---|
+| Admin portal | [http://localhost:3000](http://localhost:3000) |
+| API health | [http://localhost:3001/api/v1/health](http://localhost:3001/api/v1/health) |
+| API documentation | [http://localhost:3001/api/docs](http://localhost:3001/api/docs) |
+
+### 7. Try your first session
+
+Sign in to the portal, create a project, then sign in to the desktop app with an active team account. Start a timer, pause and resume it, and stop. Check the resulting entry in **Timesheets** and the member's **Work diary** tab.
+
+On macOS, grant **Screen Recording** and **Accessibility** permissions when prompted. Screenshot capture and activity tracking depend on OS permissions and native module availability.
 
 ## Deployment
 
-| Target | How |
+| Component | Deployment path |
 |---|---|
-| **Admin portal** | `vercel --prod` — `vercel.json` at repo root points at `apps/admin` |
-| **API** | Railway / Fly.io — start command: `node dist/main.js` |
-| **Desktop updates** | Tag `v1.x.x`, run `pnpm package`, upload `release/*` to GitHub Release |
+| **API** | Use [railway.json](railway.json) and [apps/api/Dockerfile](apps/api/Dockerfile). Keep the Docker build context at the repository root so workspace dependencies are available. Configure API variables on the host. |
+| **Admin portal** | Deploy to Vercel with `apps/admin` as the project root. Set all three `NEXT_PUBLIC_*` variables before building. |
+| **Database and storage** | Apply migrations to your Supabase project and verify bucket access settings. |
+| **Desktop installers** | Set the repository Actions variable `API_URL` to the deployed API origin. The [release workflow](.github/workflows/release.yml) builds and publishes installers when a `v*.*.*` tag is pushed. |
+| **Invite download links** | The release workflow can publish installers to Supabase when its required secrets are configured. Alternatively, set `DOWNLOAD_URL_MACOS` and `DOWNLOAD_URL_WINDOWS` on the API. |
+| **Slack summaries** | Configure the webhook in portal settings. The current scheduled summary runs at **09:00 UTC**. |
 
----
+Use HTTPS for the deployed API and portal. Set `ADMIN_URL` to the deployed portal origin and allow its password-reset redirect in Supabase.
 
-## Security Notes
+See the [deployment guide](docs/DEPLOYMENT.md) for host configuration, branch conventions, and signing details. The current builder configuration produces **arm64 macOS builds**, even though some older release instructions describe universal builds.
 
-- Service role key lives only in `apps/api/.env` — never sent to browser or renderer; no secrets are committed (`.env` is git-ignored, only `.env.example` placeholders are tracked)
-- API URLs are configured dynamically (env var / build-time injection / Vercel env), never hardcoded in source
-- Electron renderer: `contextIsolation: true`, `nodeIntegration: false`. `sandbox: false` is required so the preload can require `@clockwork/shared`; the renderer still has no Node access and reaches main only through the contextBridge
-- Screenshots stored in **private** bucket — admin portal receives 1-hour signed URLs; captures are raw (no blur) so managers can verify actual work, identical to Upwork's tracker
-- Desktop session (`session.json`) is stored in the OS-protected per-user app-data directory — no OS keychain dependency
-- Deactivated users (`is_active = false`) rejected at the auth guard even with valid JWT
-- One-running-timer constraint enforced at DB level via partial unique index
+## Data and access
 
----
+ClockWork captures **unblurred screenshots of connected displays**, input-event counts, and foreground application/window information. Keyboard activity records counts rather than the text typed. Explain the capture behavior to team members before enabling it.
 
-## User Guides
+- **API access:** Supabase token validation, active-account checks, and admin/member role guards protect application routes.
+- **Storage:** screenshot access uses signed URLs. Keep the service-role key server-side; the API's database client uses it and bypasses Supabase RLS.
+- **Local credentials:** desktop authentication and timer state are stored in a plain JSON file in the user's app-data directory, rather than an OS keychain.
+- **Desktop isolation:** the renderer uses context isolation and disables Node integration; the current preload runs with the Electron sandbox disabled.
+- **Distribution:** the current macOS configuration uses ad-hoc signing rather than notarization. Test installation, permissions, and updates on your target devices before rollout.
 
-| Guide | Audience | Contents |
+## Technology and project map
+
+| Component | Stack | Source and reference |
 |---|---|---|
-| [Employee Guide](docs/EMPLOYEE_GUIDE.md) | Employees using the desktop app | Install, login, start/stop timer, screenshots, tray icon, FAQ |
-| [Admin Guide](docs/ADMIN_GUIDE.md) | Managers using the web portal | Dashboard, Work Diary, Timesheets, Team, Projects, Reports, Settings, common tasks |
-| [Deployment Guide](docs/DEPLOYMENT.md) | Project owner / DevOps | API on Railway, portal on Vercel, desktop via GitHub Releases, CI/CD, code signing |
+| Admin portal | Next.js 15, React 19, Tailwind CSS, Recharts | [apps/admin](apps/admin) · [README](apps/admin/README.md) |
+| REST API | NestJS 11, TypeScript, Supabase JS | [apps/api](apps/api) · [README](apps/api/README.md) |
+| Desktop app | Electron 30, React 19, Vite, native activity modules | [apps/desktop](apps/desktop) · [README](apps/desktop/README.md) |
+| Shared contracts | TypeScript domain types and IPC channels | [packages/shared](packages/shared) · [README](packages/shared/README.md) |
+| Persistence | Supabase PostgreSQL, Auth, Storage | [Migrations](supabase/migrations) |
+| Delivery | GitHub Actions, Docker, Railway, Vercel | [Workflows](.github/workflows) · [Deployment guide](docs/DEPLOYMENT.md) |
 
----
+### Build commands
 
-## Packages & Apps
+Build shared contracts before the applications:
 
-| Package | README |
+```bash
+pnpm --filter @clockwork/shared build
+pnpm build:api
+pnpm build:admin
+pnpm build:desktop
+```
+
+For desktop installers, use the release workflow, which applies the dependency-hoisting setup required by electron-builder. Packaging configuration lives in [electron-builder.config.js](apps/desktop/electron-builder.config.js).
+
+## Troubleshooting
+
+| Symptom | Check |
 |---|---|
-| `packages/shared` | [packages/shared/README.md](packages/shared/README.md) |
-| `apps/api` | [apps/api/README.md](apps/api/README.md) |
-| `apps/admin` | [apps/admin/README.md](apps/admin/README.md) |
-| `apps/desktop` | [apps/desktop/README.md](apps/desktop/README.md) |
+| API says Supabase variables are missing | Start it with the environment-file command above or export the variables before `pnpm dev:api`. |
+| Login says "User profile not found" | Create the `public.users` row using the same ID as the Supabase Auth user. |
+| Invitation or password-reset email never arrives | Check Resend credentials, the sender domain, and API email logs. |
+| Password setup or recovery fails | Check the portal's public Supabase variables and Supabase redirect allowlist. |
+| Browser requests fail or report CORS errors | Check `NEXT_PUBLIC_API_URL` and the API's `ADMIN_URL`; restart or rebuild after changing environment values. |
+| Desktop will not launch after cloning | Build shared contracts and desktop output before `pnpm dev:desktop`. |
+| Screenshots are missing or activity stays at zero | Check OS permissions and native module loading. Unsupported or unavailable activity modules can return zero counts. |
+| API reports missing columns or duplicate sessions | Verify all migrations through `008_one_open_entry.sql` have been applied. |
+| Packaged desktop connects to localhost | Set the Actions `API_URL` variable and rebuild the installer. |
+
+## Documentation
+
+- [Employee guide](docs/EMPLOYEE_GUIDE.md): installation, tracking, screenshots, and common questions.
+- [Admin guide](docs/ADMIN_GUIDE.md): dashboard, team management, work diaries, timesheets, and reports.
+- [Deployment guide](docs/DEPLOYMENT.md): hosting, environment configuration, desktop distribution, and CI/CD.
+- [Changelog](CHANGELOG.md): release history.
+- [Issues](https://github.com/mohsinjavaid786/ClockWork/issues): bug reports and improvement requests.
